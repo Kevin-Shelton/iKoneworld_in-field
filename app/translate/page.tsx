@@ -19,10 +19,11 @@ export default function TranslatePage() {
   const [guestLang, setGuestLang] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<Status>("ready");
-  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState<string>("");
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -36,129 +37,127 @@ export default function TranslatePage() {
 
     setUserLang(storedUserLang);
     setGuestLang(storedGuestLang);
-  }, [router]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+    // Initialize Web Speech API
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = storedUserLang;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
+      recognitionRef.current.onstart = () => {
+        setStatus("listening");
+        setError("");
+      };
+
+      recognitionRef.current.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setStatus("processing");
+
+        try {
+          // Translate the text using the API
+          const translateResponse = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              texts: [{ text: transcript }],
+              from: storedUserLang,
+              to: [storedGuestLang],
+            }),
+          });
+
+          if (!translateResponse.ok) {
+            throw new Error("Translation failed");
+          }
+
+          const translateData = await translateResponse.json();
+          const translatedText = translateData.translations?.[0]?.text || "";
+
+          // Add message
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            text: transcript,
+            translatedText,
+            speaker: "user",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, newMessage]);
+
+          // Speak the translation using Web Speech API
+          setStatus("speaking");
+          await speakText(translatedText, storedGuestLang);
+          setStatus("ready");
+        } catch (err) {
+          console.error("Translation error:", err);
+          setError("Translation failed. Please try again.");
+          setStatus("ready");
         }
       };
 
-      mediaRecorder.onstop = async () => {
-        await processAudio();
-        stream.getTracks().forEach((track) => track.stop());
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setError(`Speech recognition error: ${event.error}`);
+        setStatus("ready");
+        setIsListening(false);
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-      setStatus("listening");
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      alert("Could not access microphone. Please check permissions.");
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        if (status === "listening") {
+          setStatus("ready");
+        }
+      };
+    } else {
+      setError("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
     }
-  };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
+    synthRef.current = window.speechSynthesis;
 
-  const processAudio = async () => {
-    setStatus("processing");
-
-    try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      
-      // Step 1: Speech-to-Text
-      const sttFormData = new FormData();
-      sttFormData.append("audio", audioBlob, "recording.webm");
-      sttFormData.append("language", userLang);
-
-      const sttResponse = await fetch("/api/recognize", {
-        method: "POST",
-        body: sttFormData,
-      });
-
-      if (!sttResponse.ok) {
-        throw new Error("Speech recognition failed");
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
+    };
+  }, [router, status]);
 
-      const sttData = await sttResponse.json();
-      const originalText = sttData.text || sttData.transcript || "";
-
-      if (!originalText) {
-        setStatus("ready");
+  const speakText = (text: string, lang: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!synthRef.current) {
+        resolve();
         return;
       }
 
-      // Step 2: Translation
-      const translateResponse = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: originalText,
-          source_language: userLang,
-          target_language: guestLang,
-        }),
-      });
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      
+      synthRef.current.speak(utterance);
+    });
+  };
 
-      if (!translateResponse.ok) {
-        throw new Error("Translation failed");
-      }
+  const startListening = () => {
+    if (recognitionRef.current && !isListening) {
+      setIsListening(true);
+      setError("");
+      recognitionRef.current.start();
+    }
+  };
 
-      const translateData = await translateResponse.json();
-      const translatedText = translateData.translated_text || translateData.translation || "";
-
-      // Step 3: Text-to-Speech
-      setStatus("speaking");
-      const ttsResponse = await fetch("/api/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: translatedText,
-          language: guestLang,
-        }),
-      });
-
-      if (!ttsResponse.ok) {
-        throw new Error("Text-to-speech failed");
-      }
-
-      const ttsData = await ttsResponse.json();
-      const audioUrl = ttsData.audio_url || ttsData.url;
-
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        audio.onended = () => setStatus("ready");
-        await audio.play();
-      } else {
-        setStatus("ready");
-      }
-
-      // Add message to display
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: originalText,
-        translatedText: translatedText,
-        speaker: "user",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
-    } catch (error) {
-      console.error("Error processing audio:", error);
-      alert("An error occurred during translation. Please try again.");
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
       setStatus("ready");
     }
+  };
+
+  const endConversation = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    router.push("/");
   };
 
   const getStatusColor = () => {
@@ -211,6 +210,12 @@ export default function TranslatePage() {
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
         {/* Status and Controls */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between">
@@ -221,9 +226,9 @@ export default function TranslatePage() {
               </span>
             </div>
             <div className="flex gap-3">
-              {!isRecording ? (
+              {!isListening ? (
                 <button
-                  onClick={startRecording}
+                  onClick={startListening}
                   disabled={status !== "ready"}
                   className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
@@ -234,7 +239,7 @@ export default function TranslatePage() {
                 </button>
               ) : (
                 <button
-                  onClick={stopRecording}
+                  onClick={stopListening}
                   className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -243,6 +248,12 @@ export default function TranslatePage() {
                   Stop Speaking
                 </button>
               )}
+              <button
+                onClick={endConversation}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+              >
+                End Conversation
+              </button>
             </div>
           </div>
         </div>
@@ -306,6 +317,11 @@ export default function TranslatePage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Info */}
+        <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
+          <p>💡 Using browser's built-in speech recognition (Chrome/Edge recommended)</p>
         </div>
       </div>
     </div>

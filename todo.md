@@ -97,3 +97,8 @@
 ## Bug Fix
 - [x] Update language selection to support selecting TWO languages (user + guest)
 - [x] Fix localStorage keys to match what translate page expects
+
+## Current Bug
+- [x] Fix speech recognition API error - investigate Verbum AI STT endpoint
+- [x] Update STT implementation to use Web Speech API (browser built-in)
+- [x] Implement working translation flow with browser APIs
