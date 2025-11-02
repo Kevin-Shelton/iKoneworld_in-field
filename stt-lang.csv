@@ -1,0 +1,125 @@
+﻿code,lang,origin,display_lang,display_origin
+af-ZA,af,ZA,Afrikaans ,South Africa
+ar-AE,ar,AE,Arabic ,United Arab Emirates
+ar-BH,ar,BH,Arabic ,Bahrain
+ar-DZ,ar,DZ,Arabic ,Algeria
+ar-EG,ar,EG,Arabic ,Egypt
+ar-IL,ar,IL,Arabic ,Israel
+ar-IQ,ar,IQ,Arabic ,Iraq
+ar-JO,ar,JO,Arabic ,Jordan
+ar-KW,ar,KW,Arabic ,Kuwait
+ar-LB,ar,LB,Arabic ,Lebanon
+ar-MA,ar,MA,Arabic ,Morocco
+ar-OM,ar,OM,Arabic ,Oman
+ar-PS,ar,PS,Arabic ,State of Palestine
+ar-QA,ar,QA,Arabic ,Qatar
+ar-SA,ar,SA,Arabic ,Saudi Arabia
+ar-TN,ar,TN,Arabic ,Tunisia
+az-AZ,az,AZ,Azerbaijani ,"Latin, Azerbaijan"
+bg-BG,bg,BG,Bulgarian ,Bulgaria
+bn-BD,bn,BD,Bengali ,Bangladesh
+bn-IN,bn,IN,Bengali ,India
+bs-BA,bs,BA,Bosnian ,Bosnia and Herzegovina
+ca-ES,ca,ES,Catalan ,Spain
+cs-CZ,cs,CZ,Czech ,Czech Republic
+cy-GB,cy,GB,Welsh ,United Kingdom
+da-DK,da,DK,Danish ,Denmark
+de-AT,de,AT,German ,Austria
+de-CH,de,CH,German ,Switzerland
+de-DE,de,DE,German ,Germany
+el-GR,el,GR,Greek ,Greece
+en-AU,en,AU,English ,Australia
+en-CA,en,CA,English ,Canada
+en-GB,en,GB,English ,United Kingdom
+en-GH,en,GH,English ,Ghana
+en-IE,en,IE,English ,Ireland
+en-IN,en,IN,English ,India
+en-KE,en,KE,English ,Kenya
+en-NG,en,NG,English ,Nigeria
+en-NZ,en,NZ,English ,New Zealand
+en-PH,en,PH,English ,Philippines
+en-SG,en,SG,English ,Singapore
+en-TZ,en,TZ,English ,Tanzania
+en-US,en,US,English ,United States
+en-ZA,en,ZA,English ,South Africa
+es-AR,es,AR,Spanish ,Argentina
+es-BO,es,BO,Spanish ,Bolivia
+es-CL,es,CL,Spanish ,Chile
+es-CO,es,CO,Spanish ,Colombia
+es-CR,es,CR,Spanish ,Costa Rica
+es-DO,es,DO,Spanish ,Dominican Republic
+es-EC,es,EC,Spanish ,Ecuador
+es-ES,es,ES,Spanish ,Spain
+es-GT,es,GT,Spanish ,Guatemala
+es-HN,es,HN,Spanish ,Honduras
+es-MX,es,MX,Spanish ,Mexico
+es-NI,es,NI,Spanish ,Nicaragua
+es-PA,es,PA,Spanish ,Panama
+es-PE,es,PE,Spanish ,Peru
+es-PR,es,PR,Spanish ,Puerto Rico
+es-PY,es,PY,Spanish ,Paraguay
+es-SV,es,SV,Spanish ,El Salvador
+es-UY,es,UY,Spanish ,Uruguay
+es-VE,es,VE,Spanish ,Venezuela
+et-EE,et,EE,Estonian ,Estonia
+eu-ES,eu,ES,Basque ,Spain
+fa-IR,fa,IR,Persian ,Iran
+fi-FI,fi,FI,Finnish ,Finland
+fil-PH,fil,PH,Filipino ,Philippines
+fr-BE,fr,BE,French ,Belgium
+fr-CA,fr,CA,French ,Canada
+fr-CH,fr,CH,French ,Switzerland
+fr-FR,fr,FR,French ,France
+ga-IE,ga,IE,Irish ,Ireland
+gu-IN,gu,IN,Gujarati ,India
+he-IL,he,IL,Hebrew ,Israel
+hi-IN,hi,IN,Hindi ,India
+hr-HR,hr,HR,Croatian ,Croatia
+hu-HU,hu,HU,Hungarian ,Hungary
+hy-AM,hy,AM,Armenian ,Armenia
+id-ID,id,ID,Indonesian ,Indonesia
+is-IS,is,IS,Icelandic ,Iceland
+it-IT,it,IT,Italian ,Italy
+ja-JP,ja,JP,Japanese ,Japan
+kk-KZ,kk,KZ,Kazakh ,Kazakhstan
+km-KH,km,KH,Khmer ,Cambodia
+kn-IN,kn,IN,Kannada ,India
+ko-KR,ko,KR,Korean ,South Korea
+lo-LA,lo,LA,Lao ,Laos
+lt-LT,lt,LT,Lithuanian ,Lithuania
+lv-LV,lv,LV,Latvian ,Latvia
+ml-IN,ml,IN,Malayalam ,India
+mr-IN,mr,IN,Marathi ,India
+ms-MY,ms,MY,Malay ,Malaysia
+mt-MT,mt,MT,Maltese ,Malta
+nb-NO,nb,NO,Norwegian Bokmål ,Norway
+ne-NP,ne,NP,Nepali ,Nepal
+nl-BE,nl,BE,Dutch ,Belgium
+nl-NL,nl,NL,Dutch ,Netherlands
+pl-PL,pl,PL,Polish ,Poland
+ps-AF,ps,AF,Pashto ,Afghanistan
+pt-BR,pt,BR,Portuguese ,Brazil
+pt-PT,pt,PT,Portuguese ,Portugal
+ro-RO,ro,RO,Romanian ,Romania
+ru-RU,ru,RU,Russian ,Russia
+si-LK,si,LK,Sinhala ,Sri Lanka
+sk-SK,sk,SK,Slovak ,Slovakia
+sl-SI,sl,SI,Slovenian ,Slovenia
+sq-AL,sq,AL,Albanian ,Albania
+sr-RS,sr,RS,Serbian ,Serbia
+sv-SE,sv,SE,Swedish ,Sweden
+sw-KE,sw,KE,Swahili ,Kenya
+sw-TZ,sw,TZ,Swahili ,Tanzania
+ta-IN,ta,IN,Tamil ,India
+te-IN,te,IN,Telugu ,India
+th-TH,th,TH,Thai ,Thailand
+tr-TR,tr,TR,Turkish ,Turkey
+uk-UA,uk,UA,Ukrainian ,Ukraine
+ur-IN,ur,IN,Urdu ,India
+vi-VN,vi,VN,Vietnamese ,Vietnam
+yue-CN,yue,CN,Chinese ,"Cantonese, Simplified"
+zh-CN,zh,CN,Chinese Mandarin ,"Simplified, China"
+zh-CN-shandong,zh,CN,Chinese ,"Jilu Mandarin, Simplified, China"
+zh-CN-sichuan,zh,CN,Chinese ,"Southwestern Mandarin, Simplified, China"
+zh-HK,zh,HK,Chinese Cantonese ,"Traditional, Hong Kong SAR"
+zh-TW,zh,TW,Chinese Mandarin ,"Traditional, Taiwan"

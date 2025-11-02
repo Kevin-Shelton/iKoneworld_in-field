@@ -1,0 +1,1 @@
+ALTER TABLE `tts_voices` DROP INDEX `tts_voices_voice_unique`;
