@@ -16,11 +16,27 @@ export default function LanguageSelection() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isPlayingSample, setIsPlayingSample] = useState(false);
+  const [selectionStep, setSelectionStep] = useState<"user" | "guest">("user");
+  const [userLanguage, setUserLanguage] = useState<Language | null>(null);
   
   const [favoriteLanguages, setFavoriteLanguages] = useState<Language[]>([]);
   const [allLanguages, setAllLanguages] = useState<Language[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [loadingAll, setLoadingAll] = useState(true);
+
+  // Check if user language is already selected
+  useEffect(() => {
+    const storedUserLang = localStorage.getItem("userLanguage");
+    if (storedUserLang) {
+      try {
+        const parsed = JSON.parse(storedUserLang);
+        setUserLanguage(parsed);
+        setSelectionStep("guest");
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+    }
+  }, []);
 
   // Fetch favorite languages
   useEffect(() => {
@@ -140,14 +156,21 @@ export default function LanguageSelection() {
   const confirmLanguageSelection = () => {
     if (!selectedLanguage) return;
 
-    // Store selected language in localStorage
-    localStorage.setItem("selectedLanguage", JSON.stringify(selectedLanguage));
-    
-    toast.success(`Language set to ${selectedLanguage.name}`);
-    setIsConfirmModalOpen(false);
-    
-    // Navigate to translation page
-    router.push("/translate");
+    if (selectionStep === "user") {
+      // Store user language and move to guest selection
+      localStorage.setItem("userLanguage", selectedLanguage.code);
+      setUserLanguage(selectedLanguage);
+      setSelectionStep("guest");
+      toast.success(`Your language set to ${selectedLanguage.name}`);
+      setIsConfirmModalOpen(false);
+      setSelectedLanguage(null);
+    } else {
+      // Store guest language and navigate to translate page
+      localStorage.setItem("guestLanguage", selectedLanguage.code);
+      toast.success(`Guest language set to ${selectedLanguage.name}`);
+      setIsConfirmModalOpen(false);
+      router.push("/translate");
+    }
   };
 
   // Get flag emoji from country code
@@ -160,17 +183,41 @@ export default function LanguageSelection() {
     return String.fromCodePoint(...codePoints);
   };
 
+  const getHeaderText = () => {
+    if (selectionStep === "user") {
+      return {
+        title: "Select Your Language",
+        description: "Choose your preferred language for speaking"
+      };
+    } else {
+      return {
+        title: "Select Guest Language",
+        description: `You speak ${userLanguage?.name}. Now select the language you want to translate to.`
+      };
+    }
+  };
+
+  const headerText = getHeaderText();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto max-w-6xl py-12 px-4">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Select Your Language
+            {headerText.title}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Choose your preferred language for real-time translation
+            {headerText.description}
           </p>
+          {selectionStep === "guest" && userLanguage && (
+            <div className="mt-4 inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-lg">
+              <span className="text-2xl">{getFlagEmoji(userLanguage.countryCode)}</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                Your language: {userLanguage.name}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Favorite Languages */}
@@ -270,7 +317,7 @@ export default function LanguageSelection() {
           <DialogHeader>
             <DialogTitle>Confirm Language Selection</DialogTitle>
             <DialogDescription>
-              You have selected {selectedLanguage?.name}. Would you like to hear a sample?
+              You have selected {selectedLanguage?.name} as your {selectionStep === "user" ? "speaking" : "translation"} language. Would you like to hear a sample?
             </DialogDescription>
           </DialogHeader>
           
@@ -307,7 +354,7 @@ export default function LanguageSelection() {
                 Cancel
               </Button>
               <Button onClick={confirmLanguageSelection} className="flex-1">
-                Confirm
+                {selectionStep === "user" ? "Next: Guest Language" : "Start Conversation"}
               </Button>
             </div>
           </div>

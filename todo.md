@@ -93,3 +93,7 @@
 - [x] Add conversation controls (start/stop speaking)
 - [ ] Implement message persistence to database
 - [ ] Test end-to-end flow
+
+## Bug Fix
+- [x] Update language selection to support selecting TWO languages (user + guest)
+- [x] Fix localStorage keys to match what translate page expects
