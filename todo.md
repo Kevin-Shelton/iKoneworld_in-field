@@ -83,3 +83,13 @@
 - [ ] Add error handling and recovery
 - [ ] Create user documentation
 - [ ] Final production deployment
+
+
+## Current Session: Building Conversation Features
+- [x] Create conversation page with audio recording UI
+- [x] Implement MediaRecorder API for audio capture
+- [x] Create STT API route for speech recognition
+- [x] Build real-time translation display
+- [x] Add conversation controls (start/stop speaking)
+- [ ] Implement message persistence to database
+- [ ] Test end-to-end flow
