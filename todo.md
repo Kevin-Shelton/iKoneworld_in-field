@@ -133,3 +133,13 @@
 - [ ] Build admin UI for enterprise management
 - [ ] Test multi-tenant isolation and access control
 - [ ] Update Next.js app to use new schema
+
+## Supabase Integration
+- [x] Create Supabase client configuration files
+- [x] Create .env.local with environment variables
+- [x] Create database utility functions for conversations and messages
+- [ ] Update conversation page to save to Supabase
+- [ ] Implement audio upload to Supabase storage
+- [ ] Build admin UI for enterprise management
+- [ ] Build admin UI for store/user management
+- [ ] Test end-to-end flow with database persistence
