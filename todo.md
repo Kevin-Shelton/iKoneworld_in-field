@@ -102,3 +102,34 @@
 - [x] Fix speech recognition API error - investigate Verbum AI STT endpoint
 - [x] Update STT implementation to use Web Speech API (browser built-in)
 - [x] Implement working translation flow with browser APIs
+
+## New Feature: Supabase Storage Integration
+- [ ] Set up Supabase storage bucket for audio recordings
+- [ ] Update database schema to include audio_url field in messages table
+- [ ] Create API endpoint to upload audio to Supabase storage
+- [ ] Update translate page to record and upload audio files
+- [ ] Save conversation messages with transcripts to database
+- [ ] Add conversation history view
+
+## Updated Requirements from User
+- [ ] Add regional granularity: Region → State → City → Store
+- [ ] Support user reassignment (no history tracking needed)
+- [ ] Allow users to operate across multiple departments/stores (regional managers, executives)
+- [ ] Implement per-conversation billing model with multi-level rollup
+- [ ] Support enterprise-level accounts (multi-tenant SaaS)
+- [ ] Research complete: Enterprise retail typically uses 5-6 level hierarchy
+
+## Implementation: Enterprise Multi-Tenant Structure
+- [x] Create database migration for organizational hierarchy tables
+- [x] Update users table with enterprise_id and role enums
+- [x] Create user_assignments table for multi-role support
+- [x] Update conversations table with full hierarchy fields
+- [x] Create billing_records and invoices tables
+- [x] Implement database triggers for auto-populating hierarchy
+- [x] Create RLS policies for enterprise isolation
+- [x] Build helper functions for access control
+- [x] Create seed data script for testing
+- [x] Create comprehensive setup documentation
+- [ ] Build admin UI for enterprise management
+- [ ] Test multi-tenant isolation and access control
+- [ ] Update Next.js app to use new schema
