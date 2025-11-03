@@ -168,3 +168,8 @@
 - [x] Create password reset page for first-time users
 - [x] Add admin navigation and role checking
 - [ ] Test complete admin and user flows
+
+## Authentication Routing Fix
+- [x] Update home page (/) to redirect unauthenticated users to /login
+- [x] Redirect authenticated users from / to /dashboard
+- [ ] Test complete authentication flow
