@@ -15,7 +15,6 @@ type Message = {
 };
 
 type Status = "ready" | "listening" | "processing" | "speaking";
-type ActiveSpeaker = "user" | "guest";
 
 // Default enterprise ID for development
 const DEFAULT_ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
@@ -28,15 +27,17 @@ function TranslatePageContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<Status>("ready");
   const [isListening, setIsListening] = useState(false);
-  const [activeSpeaker, setActiveSpeaker] = useState<ActiveSpeaker>("user");
   const [error, setError] = useState<string>("");
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>("");
   const [dbUserId, setDbUserId] = useState<number | null>(null);
+  const [lastDetectedSpeaker, setLastDetectedSpeaker] = useState<"user" | "guest" | null>(null);
   
-  const recognitionRef = useRef<any>(null);
+  const userRecognitionRef = useRef<any>(null);
+  const guestRecognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -60,92 +61,109 @@ function TranslatePageContent() {
       }
     });
 
-    // Initialize Web Speech API
+    // Initialize Web Speech API for both languages
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      
+      // User language recognition
+      userRecognitionRef.current = new SpeechRecognition();
+      userRecognitionRef.current.continuous = true;
+      userRecognitionRef.current.interimResults = false;
+      userRecognitionRef.current.lang = storedUserLang;
 
-      recognitionRef.current.onstart = () => {
-        setStatus("listening");
-        setError("");
-      };
-
-      recognitionRef.current.onresult = async (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setStatus("processing");
-
-        try {
-          const currentSpeaker = activeSpeaker;
-          const sourceLang = currentSpeaker === "user" ? storedUserLang : storedGuestLang;
-          const targetLang = currentSpeaker === "user" ? storedGuestLang : storedUserLang;
-
-          // Translate the text using the API
-          const translateResponse = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              texts: [{ text: transcript }],
-              from: sourceLang,
-              to: [targetLang],
-            }),
-          });
-
-          if (!translateResponse.ok) {
-            throw new Error("Translation failed");
-          }
-
-          const translateData = await translateResponse.json();
-          console.log('[Translation Response]', translateData);
-          // Verbum AI returns: { translations: [[{ text: "...", to: "es" }]] }
-          const translatedText = translateData.translations?.[0]?.[0]?.text || "";
-
-          // Add message to UI
-          const newMessage: Message = {
-            id: Date.now().toString(),
-            text: transcript,
-            translatedText,
-            speaker: currentSpeaker,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, newMessage]);
-
-          // Save message to database
-          if (conversationId && dbUserId) {
-            saveMessageToDatabase(
-              conversationId,
-              dbUserId,
-              transcript,
-              translatedText,
-              sourceLang,
-              targetLang,
-              currentSpeaker
-            );
-          }
-
-          // Speak the translation using Web Speech API
-          setStatus("speaking");
-          await speakText(translatedText, targetLang);
-          setStatus("ready");
-        } catch (err) {
-          console.error("Translation error:", err);
-          setError("Translation failed. Please try again.");
-          setStatus("ready");
+      userRecognitionRef.current.onresult = async (event: any) => {
+        if (isProcessingRef.current) return;
+        
+        const lastResultIndex = event.results.length - 1;
+        const transcript = event.results[lastResultIndex][0].transcript;
+        const confidence = event.results[lastResultIndex][0].confidence;
+        
+        console.log(`[User Language] Detected: "${transcript}" (confidence: ${confidence})`);
+        
+        // Only process if confidence is reasonable
+        if (confidence > 0.5) {
+          await handleSpeechDetected(transcript, "user", storedUserLang, storedGuestLang);
         }
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        setError(`Speech recognition error: ${event.error}`);
-        setStatus("ready");
-        setIsListening(false);
+      userRecognitionRef.current.onerror = (event: any) => {
+        if (event.error === "no-speech" || event.error === "aborted") {
+          // These are normal, just restart
+          if (isListening) {
+            setTimeout(() => {
+              try {
+                userRecognitionRef.current?.start();
+              } catch (e) {
+                // Already started, ignore
+              }
+            }, 100);
+          }
+        } else {
+          console.error("User recognition error:", event.error);
+        }
       };
 
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-        if (status === "listening") {
-          setStatus("ready");
+      userRecognitionRef.current.onend = () => {
+        // Automatically restart if still in listening mode
+        if (isListening && !isProcessingRef.current) {
+          setTimeout(() => {
+            try {
+              userRecognitionRef.current?.start();
+            } catch (e) {
+              // Already started, ignore
+            }
+          }, 100);
+        }
+      };
+
+      // Guest language recognition
+      guestRecognitionRef.current = new SpeechRecognition();
+      guestRecognitionRef.current.continuous = true;
+      guestRecognitionRef.current.interimResults = false;
+      guestRecognitionRef.current.lang = storedGuestLang;
+
+      guestRecognitionRef.current.onresult = async (event: any) => {
+        if (isProcessingRef.current) return;
+        
+        const lastResultIndex = event.results.length - 1;
+        const transcript = event.results[lastResultIndex][0].transcript;
+        const confidence = event.results[lastResultIndex][0].confidence;
+        
+        console.log(`[Guest Language] Detected: "${transcript}" (confidence: ${confidence})`);
+        
+        // Only process if confidence is reasonable
+        if (confidence > 0.5) {
+          await handleSpeechDetected(transcript, "guest", storedGuestLang, storedUserLang);
+        }
+      };
+
+      guestRecognitionRef.current.onerror = (event: any) => {
+        if (event.error === "no-speech" || event.error === "aborted") {
+          // These are normal, just restart
+          if (isListening) {
+            setTimeout(() => {
+              try {
+                guestRecognitionRef.current?.start();
+              } catch (e) {
+                // Already started, ignore
+              }
+            }, 100);
+          }
+        } else {
+          console.error("Guest recognition error:", event.error);
+        }
+      };
+
+      guestRecognitionRef.current.onend = () => {
+        // Automatically restart if still in listening mode
+        if (isListening && !isProcessingRef.current) {
+          setTimeout(() => {
+            try {
+              guestRecognitionRef.current?.start();
+            } catch (e) {
+              // Already started, ignore
+            }
+          }, 100);
         }
       };
     } else {
@@ -155,17 +173,88 @@ function TranslatePageContent() {
     synthRef.current = window.speechSynthesis;
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      if (userRecognitionRef.current) {
+        userRecognitionRef.current.stop();
+      }
+      if (guestRecognitionRef.current) {
+        guestRecognitionRef.current.stop();
       }
     };
-  }, [router, status, activeSpeaker]);
+  }, [router]);
+
+  const handleSpeechDetected = async (
+    transcript: string,
+    speaker: "user" | "guest",
+    sourceLang: string,
+    targetLang: string
+  ) => {
+    // Prevent concurrent processing
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    setStatus("processing");
+    setLastDetectedSpeaker(speaker);
+
+    try {
+      // Translate the text using the API
+      const translateResponse = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          texts: [{ text: transcript }],
+          from: sourceLang,
+          to: [targetLang],
+        }),
+      });
+
+      if (!translateResponse.ok) {
+        throw new Error("Translation failed");
+      }
+
+      const translateData = await translateResponse.json();
+      console.log('[Translation Response]', translateData);
+      const translatedText = translateData.translations?.[0]?.[0]?.text || "";
+
+      // Add message to UI
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: transcript,
+        translatedText,
+        speaker: speaker,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Save message to database
+      if (conversationId && dbUserId) {
+        saveMessageToDatabase(
+          conversationId,
+          dbUserId,
+          transcript,
+          translatedText,
+          sourceLang,
+          targetLang,
+          speaker
+        );
+      }
+
+      // Speak the translation using Web Speech API
+      setStatus("speaking");
+      await speakText(translatedText, targetLang);
+      setStatus("listening");
+    } catch (err) {
+      console.error("Translation error:", err);
+      setError("Translation failed. Please try again.");
+      setStatus("listening");
+    } finally {
+      isProcessingRef.current = false;
+    }
+  };
 
   const fetchUserDatabaseId = async (): Promise<number | null> => {
     try {
       if (!user?.id) return null;
       
-      // First, sync user to database (creates if doesn't exist)
       const syncResponse = await fetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,7 +280,6 @@ function TranslatePageContent() {
 
   const initializeConversation = async (userLanguage: string, guestLanguage: string, userId: number) => {
     try {
-      // Create customer
       const customerResponse = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -210,7 +298,6 @@ function TranslatePageContent() {
       setCustomerId(customerData.customer.id);
       setCustomerCode(customerData.customer.customer_code);
 
-      // Create conversation
       const conversationResponse = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -233,7 +320,6 @@ function TranslatePageContent() {
       setConversationId(conversationData.conversation.id);
     } catch (err) {
       console.error("Error initializing conversation:", err);
-      // Don't block the UI, just log the error
     }
   };
 
@@ -264,7 +350,6 @@ function TranslatePageContent() {
       });
     } catch (err) {
       console.error("Error saving message:", err);
-      // Don't block the UI
     }
   };
 
@@ -284,34 +369,36 @@ function TranslatePageContent() {
     });
   };
 
-  const startListening = (speaker: ActiveSpeaker) => {
-    if (recognitionRef.current && !isListening) {
-      setActiveSpeaker(speaker);
+  const startAutoListening = () => {
+    if (!isListening) {
       setIsListening(true);
+      setStatus("listening");
       setError("");
       
-      // Set the recognition language based on who is speaking
-      const lang = speaker === "user" ? userLang : guestLang;
-      recognitionRef.current.lang = lang;
-      
-      recognitionRef.current.start();
+      try {
+        userRecognitionRef.current?.start();
+        guestRecognitionRef.current?.start();
+      } catch (e) {
+        console.error("Error starting recognition:", e);
+      }
     }
   };
 
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-      setStatus("ready");
+  const stopAutoListening = () => {
+    setIsListening(false);
+    setStatus("ready");
+    
+    try {
+      userRecognitionRef.current?.stop();
+      guestRecognitionRef.current?.stop();
+    } catch (e) {
+      console.error("Error stopping recognition:", e);
     }
   };
 
   const endConversation = async () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+    stopAutoListening();
 
-    // End conversation in database
     if (conversationId) {
       try {
         await fetch("/api/conversations", {
@@ -333,11 +420,11 @@ function TranslatePageContent() {
   const getStatusColor = () => {
     switch (status) {
       case "listening":
-        return "bg-red-500";
+        return "bg-green-500 animate-pulse";
       case "processing":
         return "bg-yellow-500";
       case "speaking":
-        return "bg-green-500";
+        return "bg-blue-500";
       default:
         return "bg-gray-400";
     }
@@ -346,13 +433,15 @@ function TranslatePageContent() {
   const getStatusText = () => {
     switch (status) {
       case "listening":
-        return `Listening to ${activeSpeaker === "user" ? "User" : "Guest"}...`;
+        return lastDetectedSpeaker 
+          ? `Listening... (Last: ${lastDetectedSpeaker === "user" ? "You" : "Guest"})`
+          : "Listening for both languages...";
       case "processing":
-        return "Processing...";
+        return "Processing translation...";
       case "speaking":
-        return "Speaking...";
+        return "Playing translation...";
       default:
-        return "Ready";
+        return "Ready to start";
     }
   };
 
@@ -370,6 +459,9 @@ function TranslatePageContent() {
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
                 Real-Time Translation
               </h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Automatic speaker detection - just speak naturally!
+              </p>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-blue-500"></span>
@@ -408,74 +500,45 @@ function TranslatePageContent() {
                   {getStatusText()}
                 </span>
               </div>
-              <button
-                onClick={endConversation}
-                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-              >
-                End Conversation
-              </button>
+              <div className="flex gap-3">
+                {!isListening ? (
+                  <button
+                    onClick={startAutoListening}
+                    className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-lg"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                    Start Auto-Listening
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopAutoListening}
+                    className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-lg"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                    </svg>
+                    Stop Listening
+                  </button>
+                )}
+                <button
+                  onClick={endConversation}
+                  className="px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  End Conversation
+                </button>
+              </div>
             </div>
             
-            {/* Speaker Control Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* User Speaking Button */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  You Speak ({userLang})
-                </label>
-                {!isListening || activeSpeaker !== "user" ? (
-                  <button
-                    onClick={() => startListening("user")}
-                    disabled={status !== "ready" || (isListening && activeSpeaker !== "user")}
-                    className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                    </svg>
-                    Start Speaking
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopListening}
-                    className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 animate-pulse"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                    </svg>
-                    Stop Speaking
-                  </button>
-                )}
+            {isListening && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  🎤 <strong>Auto-listening active:</strong> Speak in either <strong>{userLang}</strong> or <strong>{guestLang}</strong> - 
+                  the system will automatically detect which language you're using and translate accordingly.
+                </p>
               </div>
-
-              {/* Guest Speaking Button */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Guest Speaks ({guestLang})
-                </label>
-                {!isListening || activeSpeaker !== "guest" ? (
-                  <button
-                    onClick={() => startListening("guest")}
-                    disabled={status !== "ready" || (isListening && activeSpeaker !== "guest")}
-                    className="w-full px-6 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                    </svg>
-                    Start Speaking
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopListening}
-                    className="w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 animate-pulse"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
-                    </svg>
-                    Stop Speaking
-                  </button>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
