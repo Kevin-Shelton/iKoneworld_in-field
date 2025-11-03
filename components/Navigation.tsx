@@ -34,17 +34,11 @@ export default function Navigation() {
   ];
 
   return (
-    <nav
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "glass-strong shadow-lg border-b border-border"
-          : "bg-card/50 backdrop-blur-sm border-b border-border/50"
-      }`}
-    >
+    <nav className="sticky top-0 z-50 bg-black border-b border-gray-800 shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo Section */}
-          <Link href="/dashboard" className="flex items-center gap-4 group">
+          <Link href="/dashboard" className="flex items-center group">
             {/* iK OneWorld Logo */}
             <div className="relative h-8 w-32 transition-transform duration-300 group-hover:scale-105">
               <Image
@@ -55,20 +49,6 @@ export default function Navigation() {
                 priority
                 sizes="128px"
               />
-            </div>
-            {/* Invictus Branding */}
-            <div className="hidden lg:flex items-center gap-2 border-l border-border/30 pl-4">
-              <span className="text-xs text-muted-foreground">Brought to you by:</span>
-              <div className="relative h-5 w-20">
-                <Image
-                  src="/logo-invictus.png"
-                  alt="Invictus"
-                  fill
-                  className="object-contain object-left"
-                  priority
-                  sizes="80px"
-                />
-              </div>
             </div>
           </Link>
 
@@ -83,8 +63,8 @@ export default function Navigation() {
                   href={link.href}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-smooth ${
                     isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "bg-white/10 text-white font-medium"
+                      : "text-gray-300 hover:text-white hover:bg-white/5"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -97,8 +77,8 @@ export default function Navigation() {
           {/* User Menu */}
           <div className="flex items-center gap-3">
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-medium text-white">{user?.email}</p>
+              <p className="text-xs text-gray-400">
                 {(user as any)?.role === 'admin' ? 'Admin' : 'Employee'}
               </p>
             </div>
@@ -106,7 +86,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={() => router.push('/profile')}
-              className="transition-smooth hover:bg-muted px-3"
+              className="transition-smooth hover:bg-white/10 text-white px-3"
               title="Profile"
             >
               <User className="w-5 h-5" />
@@ -115,7 +95,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="transition-smooth hover:bg-muted px-3"
+              className="transition-smooth hover:bg-white/10 text-white px-3"
               title="Sign Out"
             >
               <LogOut className="w-5 h-5" />
