@@ -273,3 +273,10 @@
 - [x] Fixed all three API endpoints (translate, synthesize, recognize) to use x-api-key header
 - [x] Added TypeScript non-null assertions for environment variables
 - [ ] Test translation API with proper authentication after redeploy
+
+## Language Code Format Mismatch
+- [x] Create mapping function to convert our language codes (en-US, es-CR) to Verbum AI format (en, es)
+- [x] Handle special cases (zh-Hans, zh-Hant, pt vs pt-pt, fr vs fr-ca)
+- [x] Update translate API to use mapped language codes
+- [x] Added debug logging to show original and mapped codes
+- [ ] Test translation with mapped codes
