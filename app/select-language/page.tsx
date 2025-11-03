@@ -279,35 +279,26 @@ export default function LanguageSelection() {
     }
   };
 
-  // Get flag emoji from country code
-  const getFlagEmoji = (countryCode: string | null): string => {
-    if (!countryCode) {
-      console.log('[Flag] No country code provided');
-      return "🌐";
+  // Get flag SVG component from country code
+  const FlagIcon = ({ countryCode, size = "w-8 h-6" }: { countryCode: string | null; size?: string }) => {
+    if (!countryCode || countryCode.trim().length !== 2) {
+      return <span className="text-2xl">🌐</span>;
     }
     
-    // Clean and validate country code
-    const cleanCode = countryCode.trim().toUpperCase();
-    console.log(`[Flag] Converting "${countryCode}" -> "${cleanCode}" (length: ${cleanCode.length})`);
+    const cleanCode = countryCode.trim().toLowerCase();
     
-    // Must be exactly 2 characters
-    if (cleanCode.length !== 2) {
-      console.warn(`[Flag] Invalid country code: "${countryCode}" (length: ${cleanCode.length})`);
-      return "🌐";
-    }
-    
-    // Convert to regional indicator symbols
-    try {
-      const codePoints = cleanCode
-        .split("")
-        .map((char) => 127397 + char.charCodeAt(0));
-      const flag = String.fromCodePoint(...codePoints);
-      console.log(`[Flag] "${cleanCode}" -> codePoints: [${codePoints}] -> flag: "${flag}"`);
-      return flag;
-    } catch (error) {
-      console.error(`[Flag] Error converting country code "${countryCode}" to flag:`, error);
-      return "🌐";
-    }
+    return (
+      <img
+        src={`https://flagcdn.com/${cleanCode}.svg`}
+        alt={`${countryCode} flag`}
+        className={`${size} object-cover rounded shadow-sm`}
+        onError={(e) => {
+          // Fallback to globe emoji if flag fails to load
+          e.currentTarget.style.display = 'none';
+          e.currentTarget.insertAdjacentHTML('afterend', '🌐');
+        }}
+      />
+    );
   };
 
   const getHeaderText = () => {
@@ -339,7 +330,7 @@ export default function LanguageSelection() {
           </p>
           {selectionStep === "guest" && userLanguage && (
             <div className="mt-4 inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-lg">
-              <span className="text-2xl">{getFlagEmoji(userLanguage.countryCode)}</span>
+              <FlagIcon countryCode={userLanguage.countryCode} size="w-8 h-6" />
               <span className="font-medium text-gray-900 dark:text-white">
                 Your language: {userLanguage.name}
               </span>
@@ -352,7 +343,7 @@ export default function LanguageSelection() {
           <section className="mb-12">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-              🇺🇸 Your Favorites [v2] 🇲🇽
+              Your Favorites
             </h2>
             {loadingFavorites ? (
               <div className="flex justify-center py-12">
@@ -373,7 +364,9 @@ export default function LanguageSelection() {
                       <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                     </button>
                     <CardContent className="p-6 text-center">
-                      <div className="text-5xl mb-3">{getFlagEmoji(language.countryCode)}</div>
+                      <div className="flex justify-center mb-3">
+                        <FlagIcon countryCode={language.countryCode} size="w-16 h-12" />
+                      </div>
                       <h3 className="font-semibold text-gray-900 dark:text-white">
                         {language.name}
                       </h3>
@@ -445,7 +438,7 @@ export default function LanguageSelection() {
                           />
                         </button>
                         <CardContent className="p-4 flex items-center gap-3">
-                          <div className="text-3xl">{getFlagEmoji(language.countryCode)}</div>
+                          <FlagIcon countryCode={language.countryCode} size="w-10 h-7" />
                           <div className="flex-1">
                             <h3 className="font-medium text-gray-900 dark:text-white">
                               {language.name}
@@ -485,7 +478,9 @@ export default function LanguageSelection() {
           
           <div className="flex flex-col gap-4 py-4">
             <div className="text-center">
-              <div className="text-6xl mb-4">{getFlagEmoji(selectedLanguage?.countryCode || null)}</div>
+              <div className="flex justify-center mb-4">
+                <FlagIcon countryCode={selectedLanguage?.countryCode || null} size="w-20 h-15" />
+              </div>
               <h3 className="text-xl font-semibold">{selectedLanguage?.name}</h3>
               {selectedLanguage?.nativeName && (
                 <p className="text-gray-500 mt-1">{selectedLanguage.nativeName}</p>
