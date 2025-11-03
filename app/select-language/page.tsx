@@ -75,9 +75,11 @@ export default function LanguageSelection() {
         const cancelData = await cancelResponse.json();
         const startData = await startResponse.json();
         
-        console.log('[Button Translation] Cancel response:', cancelData);
-        console.log('[Button Translation] Start response:', startData);
+        console.log('[Button Translation] Cancel response JSON:', JSON.stringify(cancelData, null, 2));
+        console.log('[Button Translation] Start response JSON:', JSON.stringify(startData, null, 2));
         console.log('[Button Translation] Language code:', language.code);
+        console.log('[Button Translation] Cancel translations[0]:', cancelData?.translations?.[0]);
+        console.log('[Button Translation] All keys in translations[0]:', Object.keys(cancelData?.translations?.[0] || {}));
         console.log('[Button Translation] Cancel text:', cancelData?.translations?.[0]?.[language.code]);
         console.log('[Button Translation] Start text:', startData?.translations?.[0]?.[language.code]);
         
