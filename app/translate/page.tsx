@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { supabase } from "@/lib/supabase/client";
+import { io, Socket } from "socket.io-client";
 
 type Message = {
   id: string;
@@ -12,12 +12,23 @@ type Message = {
   translatedText: string;
   speaker: "user" | "guest";
   timestamp: Date;
+  confidence?: number;
 };
 
-type Status = "ready" | "listening" | "processing" | "speaking";
+type Status = "ready" | "listening" | "processing" | "speaking" | "reconnecting";
+
+type PendingRecognition = {
+  t: number;
+  lang: string;
+  conf: number;
+  text: string;
+  timeoutId?: NodeJS.Timeout;
+};
 
 // Default enterprise ID for development
 const DEFAULT_ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
+const PAIR_WINDOW_MS = 1500;
+const ORPHAN_TIMEOUT_MS = 2500;
 
 function TranslatePageContent() {
   const router = useRouter();
@@ -32,19 +43,32 @@ function TranslatePageContent() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>("");
   const [dbUserId, setDbUserId] = useState<number | null>(null);
-  const [lastSpeaker, setLastSpeaker] = useState<"user" | "guest" | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
-  const [micPermission, setMicPermission] = useState<"granted" | "denied" | "prompt">("prompt");
+  const [recognizingText, setRecognizingText] = useState<string>("");
   
-  const userRecognitionRef = useRef<any>(null);
-  const guestRecognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-  const isProcessingRef = useRef<boolean>(false);
-  const lastProcessedTextRef = useRef<string>("");
+  // Audio processing refs
   const audioContextRef = useRef<AudioContext | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  
+  // Socket.IO refs
+  const socket1Ref = useRef<Socket | null>(null); // User/Employee language
+  const socket2Ref = useRef<Socket | null>(null); // Guest/Customer language
+  
+  // Pending recognitions for winner selection
+  const pendingRef = useRef<{ ws1: PendingRecognition[]; ws2: PendingRecognition[] }>({
+    ws1: [],
+    ws2: []
+  });
+  
+  // Playback queue and mic hold
+  const playbackQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const micHoldCountRef = useRef<number>(0);
+  const stoppingRef = useRef<boolean>(false);
+  const voicesRef = useRef<Record<string, { male: string[]; female: string[] }>>({});
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -59,325 +83,31 @@ function TranslatePageContent() {
     setUserLang(storedUserLang);
     setGuestLang(storedGuestLang);
 
-    // Fetch user's database ID first
+    // Fetch user's database ID and initialize conversation
     fetchUserDatabaseId().then((userId) => {
       if (userId) {
         setDbUserId(userId);
-        // Initialize conversation in database
         initializeConversation(storedUserLang, storedGuestLang, userId);
       }
     });
 
-    // Initialize Web Speech API for both languages
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition;
-      
-      // User/Employee language recognition
-      userRecognitionRef.current = new SpeechRecognition();
-      userRecognitionRef.current.continuous = true;
-      userRecognitionRef.current.interimResults = false;
-      userRecognitionRef.current.lang = storedUserLang;
-      userRecognitionRef.current.maxAlternatives = 1;
-
-      userRecognitionRef.current.onresult = async (event: any) => {
-        const lastIndex = event.results.length - 1;
-        const transcript = event.results[lastIndex][0].transcript.trim();
-        const confidence = event.results[lastIndex][0].confidence;
-        
-        console.log(`[Employee ${storedUserLang}] "${transcript}" (conf: ${confidence})`);
-        
-        // Avoid duplicate processing
-        if (transcript === lastProcessedTextRef.current) {
-          console.log("[Employee] Skipping duplicate");
-          return;
-        }
-        
-        if (transcript.length > 2 && confidence > 0.4 && !isProcessingRef.current) {
-          lastProcessedTextRef.current = transcript;
-          await handleSpeechDetected(transcript, "user", storedUserLang, storedGuestLang);
-        }
-      };
-
-      userRecognitionRef.current.onerror = (event: any) => {
-        if (event.error !== "no-speech" && event.error !== "aborted") {
-          console.error(`[Employee] Error: ${event.error}`);
-          if (event.error === "not-allowed") {
-            setMicPermission("denied");
-            setError("Microphone access denied. Please allow microphone access in your browser settings.");
-          }
-        }
-      };
-
-      userRecognitionRef.current.onend = () => {
-        if (isListening && !isProcessingRef.current) {
-          setTimeout(() => {
-            try {
-              userRecognitionRef.current?.start();
-            } catch (e) {
-              // Already started
-            }
-          }, 100);
-        }
-      };
-
-      // Guest/Customer language recognition
-      guestRecognitionRef.current = new SpeechRecognition();
-      guestRecognitionRef.current.continuous = true;
-      guestRecognitionRef.current.interimResults = false;
-      guestRecognitionRef.current.lang = storedGuestLang;
-      guestRecognitionRef.current.maxAlternatives = 1;
-
-      guestRecognitionRef.current.onresult = async (event: any) => {
-        const lastIndex = event.results.length - 1;
-        const transcript = event.results[lastIndex][0].transcript.trim();
-        const confidence = event.results[lastIndex][0].confidence;
-        
-        console.log(`[Customer ${storedGuestLang}] "${transcript}" (conf: ${confidence})`);
-        
-        // Avoid duplicate processing
-        if (transcript === lastProcessedTextRef.current) {
-          console.log("[Customer] Skipping duplicate");
-          return;
-        }
-        
-        if (transcript.length > 2 && confidence > 0.4 && !isProcessingRef.current) {
-          lastProcessedTextRef.current = transcript;
-          await handleSpeechDetected(transcript, "guest", storedGuestLang, storedUserLang);
-        }
-      };
-
-      guestRecognitionRef.current.onerror = (event: any) => {
-        if (event.error !== "no-speech" && event.error !== "aborted") {
-          console.error(`[Customer] Error: ${event.error}`);
-          if (event.error === "not-allowed") {
-            setMicPermission("denied");
-            setError("Microphone access denied. Please allow microphone access in your browser settings.");
-          }
-        }
-      };
-
-      guestRecognitionRef.current.onend = () => {
-        if (isListening && !isProcessingRef.current) {
-          setTimeout(() => {
-            try {
-              guestRecognitionRef.current?.start();
-            } catch (e) {
-              // Already started
-            }
-          }, 100);
-        }
-      };
-    } else {
-      setError("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
-    }
-
-    synthRef.current = window.speechSynthesis;
+    // Fetch voices for TTS
+    fetchVoices();
 
     return () => {
-      if (userRecognitionRef.current) {
-        try {
-          userRecognitionRef.current.stop();
-        } catch (e) {}
-      }
-      if (guestRecognitionRef.current) {
-        try {
-          guestRecognitionRef.current.stop();
-        } catch (e) {}
-      }
-      stopAudioMonitoring();
+      cleanup();
     };
   }, [router]);
 
-  const startAudioMonitoring = async () => {
+  const fetchVoices = async () => {
     try {
-      // Request microphone access with specific constraints
-      console.log("[Audio Monitor] Requesting microphone access...");
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      micStreamRef.current = stream;
-      setMicPermission("granted");
-      console.log("[Audio Monitor] Microphone access granted");
-
-      // Log audio track info
-      const audioTracks = stream.getAudioTracks();
-      console.log("[Audio Monitor] Audio tracks:", audioTracks.map(t => ({
-        label: t.label,
-        enabled: t.enabled,
-        muted: t.muted,
-        readyState: t.readyState
-      })));
-
-      // Create audio context and analyser
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 2048;
-      analyserRef.current.smoothingTimeConstant = 0.8;
-
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
-      
-      console.log("[Audio Monitor] Audio context created, sample rate:", audioContextRef.current.sampleRate);
-
-      // Use time-domain data for more reliable level detection
-      const dataArray = new Uint8Array(analyserRef.current.fftSize);
-      
-      const updateLevel = () => {
-        if (!analyserRef.current || !isListening) return;
-        
-        // Get time-domain data (waveform)
-        analyserRef.current.getByteTimeDomainData(dataArray);
-        
-        // Calculate RMS (Root Mean Square) for accurate volume
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          const normalized = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
-          sum += normalized * normalized;
-        }
-        const rms = Math.sqrt(sum / dataArray.length);
-        const normalizedLevel = Math.min(100, rms * 200); // Scale to 0-100
-        
-        setAudioLevel(normalizedLevel);
-        
-        if (normalizedLevel > 5) {
-          console.log(`[Audio Monitor] Level: ${normalizedLevel.toFixed(1)}%`);
-        }
-        
-        animationFrameRef.current = requestAnimationFrame(updateLevel);
-      };
-      
-      updateLevel();
-      
-      console.log("[Audio Monitor] Started monitoring");
+      const response = await fetch("/api/voices");
+      if (response.ok) {
+        const data = await response.json();
+        voicesRef.current = data.voices || {};
+      }
     } catch (err) {
-      console.error("[Audio Monitor] Error:", err);
-      setMicPermission("denied");
-      setError("Failed to access microphone. Please check your browser permissions.");
-    }
-  };
-
-  const stopAudioMonitoring = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach(track => track.stop());
-      micStreamRef.current = null;
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    
-    analyserRef.current = null;
-    setAudioLevel(0);
-    
-    console.log("[Audio Monitor] Stopped");
-  };
-
-  const handleSpeechDetected = async (
-    transcript: string,
-    speaker: "user" | "guest",
-    sourceLang: string,
-    targetLang: string
-  ) => {
-    // Prevent concurrent processing
-    if (isProcessingRef.current) {
-      console.log("[Processing] Already processing, skipping");
-      return;
-    }
-    
-    isProcessingRef.current = true;
-    setStatus("processing");
-    setLastSpeaker(speaker);
-
-    // Temporarily stop both recognitions while processing
-    try {
-      userRecognitionRef.current?.stop();
-      guestRecognitionRef.current?.stop();
-    } catch (e) {}
-
-    try {
-      console.log(`[Translation] ${speaker}: "${transcript}" (${sourceLang} → ${targetLang})`);
-      
-      // Translate the text using the API
-      const translateResponse = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          texts: [{ text: transcript }],
-          from: sourceLang,
-          to: [targetLang],
-        }),
-      });
-
-      if (!translateResponse.ok) {
-        throw new Error("Translation failed");
-      }
-
-      const translateData = await translateResponse.json();
-      const translatedText = translateData.translations?.[0]?.[0]?.text || "";
-
-      console.log(`[Translation] Result: "${translatedText}"`);
-
-      // Add message to UI
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: transcript,
-        translatedText,
-        speaker: speaker,
-        timestamp: new Date(),
-      };
-      
-      setMessages((prev) => [...prev, newMessage]);
-
-      // Save message to database
-      if (conversationId && dbUserId) {
-        saveMessageToDatabase(
-          conversationId,
-          dbUserId,
-          transcript,
-          translatedText,
-          sourceLang,
-          targetLang,
-          speaker
-        );
-      }
-
-      // Speak the translation
-      setStatus("speaking");
-      await speakText(translatedText, targetLang);
-      
-      // Clear the last processed text after a delay
-      setTimeout(() => {
-        lastProcessedTextRef.current = "";
-      }, 3000);
-      
-    } catch (err) {
-      console.error("[Translation] Error:", err);
-      setError("Translation failed. Please try again.");
-    } finally {
-      isProcessingRef.current = false;
-      setStatus("listening");
-      
-      // Restart both recognitions
-      if (isListening) {
-        setTimeout(() => {
-          try {
-            userRecognitionRef.current?.start();
-          } catch (e) {}
-          try {
-            guestRecognitionRef.current?.start();
-          } catch (e) {}
-        }, 500);
-      }
+      console.error("[Voices] Error fetching voices:", err);
     }
   };
 
@@ -483,65 +213,516 @@ function TranslatePageContent() {
     }
   };
 
-  const speakText = (text: string, lang: string): Promise<void> => {
-    return new Promise((resolve) => {
-      if (!synthRef.current) {
-        resolve();
-        return;
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      
-      synthRef.current.speak(utterance);
-    });
+  const baseLang = (code: string): string => {
+    return (code || '').split('-')[0].toLowerCase();
   };
 
-  const startAutoListening = async () => {
-    if (!isListening) {
-      setIsListening(true);
-      setStatus("listening");
-      setError("");
-      lastProcessedTextRef.current = "";
-      
-      // Start audio monitoring
-      await startAudioMonitoring();
-      
-      console.log(`[Start] Listening for ${userLang} (Employee) and ${guestLang} (Customer)`);
-      
-      try {
-        userRecognitionRef.current?.start();
-      } catch (e) {
-        console.error("[Start] Employee recognition error:", e);
+  const translateText = async (text: string, from: string, to: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texts: [{ text }],
+          from: baseLang(from),
+          to: [baseLang(to)]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.status}`);
       }
-      
-      try {
-        guestRecognitionRef.current?.start();
-      } catch (e) {
-        console.error("[Start] Customer recognition error:", e);
+
+      const data = await response.json();
+      if (data?.translations && Array.isArray(data.translations) && data.translations[0][0]?.text) {
+        return data.translations[0][0].text;
       }
+      return text;
+    } catch (err) {
+      console.error('[Translation] Error:', err);
+      return text + ' (translation failed)';
     }
   };
 
-  const stopAutoListening = () => {
+  const speakText = async (text: string, langCode: string): Promise<void> => {
+    // Disable microphone during TTS playback
+    if (streamRef.current) {
+      micHoldCountRef.current++;
+      streamRef.current.getTracks().forEach(track => track.enabled = false);
+    }
+
+    playbackQueueRef.current = playbackQueueRef.current.then(async () => {
+      let audioUrl: string | null = null;
+      try {
+        // Get voice for language
+        const voices = voicesRef.current[langCode];
+        const voice = voices?.male?.[0] || voices?.female?.[0];
+        
+        if (!voice) {
+          console.warn(`[TTS] No voice found for ${langCode}`);
+          return;
+        }
+
+        const response = await fetch('/api/synthesize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            voice,
+            text,
+            audioFormat: 'Audio16Khz128KBitMp3',
+            model: 'default'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`TTS failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+
+        setStatus('speaking');
+
+        const releaseMic = () => {
+          if (streamRef.current) {
+            micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
+            if (micHoldCountRef.current === 0) {
+              streamRef.current.getTracks().forEach(track => track.enabled = true);
+            }
+          }
+        };
+
+        const finalize = () => {
+          setStatus('listening');
+          if (audioUrl) URL.revokeObjectURL(audioUrl);
+          releaseMic();
+        };
+
+        audio.onended = finalize;
+        audio.onerror = finalize;
+
+        await audio.play().catch(err => {
+          console.warn('[TTS] Autoplay blocked:', err);
+          finalize();
+        });
+      } catch (err) {
+        console.error('[TTS] Error:', err);
+        setStatus('listening');
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        if (streamRef.current) {
+          micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
+          if (micHoldCountRef.current === 0) {
+            streamRef.current.getTracks().forEach(track => track.enabled = true);
+          }
+        }
+      }
+    });
+
+    return playbackQueueRef.current;
+  };
+
+  const processWinner = async (winner: PendingRecognition) => {
+    const lang1Base = baseLang(userLang);
+    const lang2Base = baseLang(guestLang);
+    const winBase = baseLang(winner.lang);
+
+    console.log(`[Winner] Processing: "${winner.text}" (${winner.lang}, conf: ${winner.conf.toFixed(2)})`);
+
+    if (winBase === lang1Base) {
+      // User/Employee spoke
+      const translated = await translateText(winner.text, userLang, guestLang);
+      
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: winner.text,
+        translatedText: translated,
+        speaker: "user",
+        timestamp: new Date(),
+        confidence: winner.conf
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+
+      // Save to database
+      if (conversationId && dbUserId) {
+        saveMessageToDatabase(
+          conversationId,
+          dbUserId,
+          winner.text,
+          translated,
+          userLang,
+          guestLang,
+          "user"
+        );
+      }
+
+      // Speak translation in guest language
+      await speakText(translated, guestLang);
+    } else {
+      // Guest/Customer spoke
+      const translated = await translateText(winner.text, guestLang, userLang);
+      
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: winner.text,
+        translatedText: translated,
+        speaker: "guest",
+        timestamp: new Date(),
+        confidence: winner.conf
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+
+      // Save to database
+      if (conversationId && dbUserId) {
+        saveMessageToDatabase(
+          conversationId,
+          dbUserId,
+          winner.text,
+          translated,
+          guestLang,
+          userLang,
+          "guest"
+        );
+      }
+    }
+
+    setRecognizingText("");
+  };
+
+  const handleRecognized = async (which: 'ws1' | 'ws2', lang: string, data: any) => {
+    if (!data || !data.text) return;
+
+    if (data.status === 'recognizing') {
+      setRecognizingText(data.text);
+      return;
+    }
+
+    if (data.status !== 'recognized') return;
+
+    const conf = typeof data.confidence === 'number' ? data.confidence : 0;
+    
+    // Filter out low confidence results
+    if (conf < 0.1) {
+      console.log(`[${which}] Low confidence (${conf.toFixed(2)}), skipping: "${data.text}"`);
+      return;
+    }
+
+    console.log(`[${which}] Recognized: "${data.text}" (conf: ${conf.toFixed(2)})`);
+
+    const now = Date.now();
+    const mine: PendingRecognition = { t: now, lang, conf, text: data.text };
+    const mineBuf = pendingRef.current[which];
+    const otherKey = which === 'ws1' ? 'ws2' : 'ws1';
+    const otherBuf = pendingRef.current[otherKey];
+
+    // Look for a mate in the other buffer within the time window
+    let mateIdx = -1;
+    for (let i = 0; i < otherBuf.length; i++) {
+      if (Math.abs(mine.t - otherBuf[i].t) <= PAIR_WINDOW_MS) {
+        mateIdx = i;
+        break;
+      }
+    }
+
+    if (mateIdx >= 0) {
+      // Found a mate - pick the winner based on confidence
+      const mate = otherBuf.splice(mateIdx, 1)[0];
+      if (mate && mate.timeoutId) clearTimeout(mate.timeoutId);
+      const winner = (mine.conf >= (mate.conf ?? 0)) ? mine : mate;
+      await processWinner(winner);
+    } else {
+      // No mate found - set orphan timeout
+      mine.timeoutId = setTimeout(async () => {
+        const idx = mineBuf.indexOf(mine);
+        if (idx !== -1) {
+          mineBuf.splice(idx, 1);
+          await processWinner(mine);
+        }
+      }, ORPHAN_TIMEOUT_MS);
+      mineBuf.push(mine);
+    }
+  };
+
+  const openSocket = (which: 'ws1' | 'ws2', lang: string, apiKey: string): Socket => {
+    console.log(`[Socket ${which}] Opening for language: ${lang}`);
+    
+    const sock = io('wss://sdk.verbum.ai/listen', {
+      path: '/v1/socket.io',
+      transports: ['websocket'],
+      auth: { token: apiKey },
+      query: { language: [lang], encoding: 'PCM', profanityFilter: 'raw' },
+      upgrade: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 5000
+    });
+
+    sock.on('connect', () => {
+      console.log(`[Socket ${which}] Connected`);
+      if (status === 'reconnecting') setStatus('listening');
+    });
+
+    sock.on('speechRecognized', (data) => {
+      handleRecognized(which, lang, data);
+    });
+
+    sock.on('disconnect', (reason) => {
+      console.log(`[Socket ${which}] Disconnected:`, reason);
+      if (!stoppingRef.current) {
+        setStatus('reconnecting');
+      }
+    });
+
+    sock.io.on('reconnect_attempt', (attempt) => {
+      console.log(`[Socket ${which}] Reconnecting attempt ${attempt}...`);
+      if (!stoppingRef.current) {
+        setStatus('reconnecting');
+      }
+    });
+
+    sock.io.on('reconnect', () => {
+      console.log(`[Socket ${which}] Reconnected`);
+      if (!stoppingRef.current) {
+        setStatus('listening');
+      }
+    });
+
+    sock.on('error', (err) => {
+      console.error(`[Socket ${which}] Error:`, err);
+    });
+
+    return sock;
+  };
+
+  const startListening = async () => {
+    try {
+      stoppingRef.current = false;
+      setError("");
+      setStatus("listening");
+      setIsListening(true);
+
+      // Get API key from server
+      const keyResponse = await fetch('/api/token');
+      if (!keyResponse.ok) {
+        throw new Error('Failed to get API key');
+      }
+      const { apiKey } = await keyResponse.json();
+
+      console.log('[Start] Opening sockets...');
+      
+      // Open Socket.IO connections
+      socket1Ref.current = openSocket('ws1', userLang, apiKey);
+      socket2Ref.current = openSocket('ws2', guestLang, apiKey);
+
+      console.log('[Start] Requesting microphone access...');
+
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        },
+        video: false
+      });
+
+      streamRef.current = stream;
+
+      console.log('[Start] Creating audio context...');
+
+      // Create audio context
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = ctx;
+
+      console.log(`[Start] Audio context created, sample rate: ${ctx.sampleRate}`);
+
+      // Create analyser for audio level monitoring
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyserRef.current = analyser;
+
+      // Create audio worklet for downsampling to 8kHz PCM
+      const workletCode = `
+        class DownsampleWorklet extends AudioWorkletProcessor {
+          constructor() {
+            super();
+            this.buf = [];
+            this.inRate = sampleRate;
+            this.outRate = 8000;
+          }
+          
+          process(inputs) {
+            if (inputs[0].length > 0) {
+              const ch = inputs[0][0];
+              const ratio = this.inRate / this.outRate;
+              let off = 0;
+              
+              while (Math.floor(off) < ch.length) {
+                this.buf.push(ch[Math.floor(off)]);
+                off += ratio;
+              }
+              
+              while (this.buf.length >= 160) {
+                const slice = this.buf.splice(0, 160);
+                const ab = new ArrayBuffer(slice.length * 2);
+                const v = new DataView(ab);
+                
+                for (let i = 0; i < slice.length; i++) {
+                  let s = Math.max(-1, Math.min(1, slice[i]));
+                  v.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                }
+                
+                this.port.postMessage(ab);
+              }
+            }
+            return true;
+          }
+        }
+        registerProcessor('downsample-worklet', DownsampleWorklet);
+      `;
+
+      const blob = new Blob([workletCode], { type: 'application/javascript' });
+      const workletUrl = URL.createObjectURL(blob);
+
+      await ctx.audioWorklet.addModule(workletUrl);
+      URL.revokeObjectURL(workletUrl);
+
+      console.log('[Start] Audio worklet loaded');
+
+      // Create nodes
+      const source = ctx.createMediaStreamSource(stream);
+      const worklet = new AudioWorkletNode(ctx, 'downsample-worklet');
+
+      sourceNodeRef.current = source;
+      workletNodeRef.current = worklet;
+
+      // Send audio data to both sockets
+      worklet.port.onmessage = (ev) => {
+        if (socket1Ref.current?.connected) {
+          socket1Ref.current.emit('audioStream', ev.data);
+        }
+        if (socket2Ref.current?.connected) {
+          socket2Ref.current.emit('audioStream', ev.data);
+        }
+      };
+
+      // Connect audio pipeline
+      source.connect(worklet);
+      source.connect(analyser);
+      worklet.connect(ctx.destination);
+
+      console.log('[Start] Audio pipeline connected');
+
+      // Start audio level monitoring
+      startAudioLevelMonitoring();
+
+    } catch (err) {
+      console.error('[Start] Error:', err);
+      setError(`Failed to start: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setIsListening(false);
+      setStatus('ready');
+      cleanup();
+    }
+  };
+
+  const startAudioLevelMonitoring = () => {
+    if (!analyserRef.current) return;
+
+    const dataArray = new Uint8Array(analyserRef.current.fftSize);
+
+    const updateLevel = () => {
+      if (!analyserRef.current || !isListening) return;
+
+      analyserRef.current.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const normalized = (dataArray[i] - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+      const level = Math.min(100, rms * 200);
+
+      setAudioLevel(level);
+
+      animationFrameRef.current = requestAnimationFrame(updateLevel);
+    };
+
+    updateLevel();
+  };
+
+  const stopListening = () => {
+    stoppingRef.current = true;
     setIsListening(false);
-    setStatus("ready");
-    
-    try {
-      userRecognitionRef.current?.stop();
-    } catch (e) {}
-    
-    try {
-      guestRecognitionRef.current?.stop();
-    } catch (e) {}
-    
-    stopAudioMonitoring();
+    setStatus('ready');
+    cleanup();
+  };
+
+  const cleanup = () => {
+    console.log('[Cleanup] Starting...');
+
+    // Stop audio level monitoring
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    // Disconnect audio nodes
+    if (workletNodeRef.current) {
+      workletNodeRef.current.disconnect();
+      workletNodeRef.current = null;
+    }
+
+    if (sourceNodeRef.current) {
+      sourceNodeRef.current.disconnect();
+      sourceNodeRef.current = null;
+    }
+
+    // Close audio context
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    // Stop microphone stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    // Disconnect sockets
+    if (socket1Ref.current?.connected) {
+      socket1Ref.current.disconnect();
+      socket1Ref.current = null;
+    }
+
+    if (socket2Ref.current?.connected) {
+      socket2Ref.current.disconnect();
+      socket2Ref.current = null;
+    }
+
+    // Clear pending recognitions
+    ['ws1', 'ws2'].forEach((k) => {
+      const key = k as 'ws1' | 'ws2';
+      pendingRef.current[key].forEach(item => {
+        if (item.timeoutId) clearTimeout(item.timeoutId);
+      });
+      pendingRef.current[key] = [];
+    });
+
+    setRecognizingText("");
+    setAudioLevel(0);
+
+    console.log('[Cleanup] Complete');
   };
 
   const endConversation = async () => {
-    stopAutoListening();
+    stopListening();
 
     if (conversationId) {
       try {
@@ -569,6 +750,8 @@ function TranslatePageContent() {
         return "bg-yellow-500";
       case "speaking":
         return "bg-blue-500";
+      case "reconnecting":
+        return "bg-orange-500 animate-pulse";
       default:
         return "bg-gray-400";
     }
@@ -577,13 +760,13 @@ function TranslatePageContent() {
   const getStatusText = () => {
     switch (status) {
       case "listening":
-        return lastSpeaker 
-          ? `Listening... (Last: ${lastSpeaker === "user" ? "Employee" : "Customer"})`
-          : "Listening for both languages...";
+        return "Listening for both languages...";
       case "processing":
         return "Processing translation...";
       case "speaking":
         return "Playing translation...";
+      case "reconnecting":
+        return "Reconnecting...";
       default:
         return "Ready to start";
     }
@@ -611,7 +794,7 @@ function TranslatePageContent() {
                 Real-Time Translation
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Automatic language detection - just speak naturally!
+                Automatic language detection using Verbum AI
               </p>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-2">
@@ -654,7 +837,7 @@ function TranslatePageContent() {
               <div className="flex gap-3">
                 {!isListening ? (
                   <button
-                    onClick={startAutoListening}
+                    onClick={startListening}
                     className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-lg"
                   >
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -664,7 +847,7 @@ function TranslatePageContent() {
                   </button>
                 ) : (
                   <button
-                    onClick={stopAutoListening}
+                    onClick={stopListening}
                     className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 text-lg"
                   >
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -690,10 +873,7 @@ function TranslatePageContent() {
                     <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                   </svg>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Microphone Input Level: {Math.round(audioLevel)}%
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded ${micPermission === "granted" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                    {micPermission === "granted" ? "✓ Mic Active" : "✗ Mic Blocked"}
+                    Microphone Level: {Math.round(audioLevel)}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
@@ -702,21 +882,25 @@ function TranslatePageContent() {
                     style={{ width: `${audioLevel}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  {audioLevel < 5 
-                    ? "⚠️ No audio detected - please check your microphone" 
-                    : audioLevel < 20 
-                    ? "🔉 Low audio - speak louder or move closer to mic"
-                    : "✓ Good audio level"}
-                </p>
+                {audioLevel < 5 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    ⚠️ No audio detected - please check your microphone
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Recognizing indicator */}
+            {recognizingText && (
+              <div className="bg-gray-800 text-white rounded-lg p-3 text-sm">
+                <span className="opacity-75">Listening… </span>{recognizingText}
               </div>
             )}
             
             {isListening && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  🎤 <strong>Auto-detection active:</strong> The system is listening for both <strong>{userLang}</strong> (Employee) and <strong>{guestLang}</strong> (Customer). 
-                  Just speak naturally - the system will automatically detect which language is being spoken and translate accordingly.
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  🎤 <strong>Streaming to Verbum AI:</strong> The system is sending audio to two speech recognition services simultaneously - one for <strong>{userLang}</strong> (Employee) and one for <strong>{guestLang}</strong> (Customer). The service with the highest confidence score will be used.
                 </p>
               </div>
             )}
@@ -742,9 +926,16 @@ function TranslatePageContent() {
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
                         → {message.translatedText}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                        {message.confidence !== undefined && (
+                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                            {(message.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))
               )}
@@ -756,7 +947,7 @@ function TranslatePageContent() {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Customer Messages ({guestLang})
             </h2>
-            <div className="space-y-auto max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto">
               {messages.filter(m => m.speaker === "guest").length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
               ) : (
@@ -768,9 +959,16 @@ function TranslatePageContent() {
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
                         → {message.translatedText}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                        {message.confidence !== undefined && (
+                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded">
+                            {(message.confidence * 100).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))
               )}
