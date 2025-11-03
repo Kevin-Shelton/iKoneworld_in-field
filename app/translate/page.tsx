@@ -611,8 +611,8 @@ function TranslatePageContent() {
       };
 
       // Connect audio pipeline
+      source.connect(analyser); // For level monitoring
       source.connect(worklet);
-      source.connect(analyser);
       worklet.connect(ctx.destination);
 
       console.log('[Start] Audio pipeline connected');
@@ -897,13 +897,7 @@ function TranslatePageContent() {
               </div>
             )}
             
-            {isListening && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  🎤 <strong>Streaming to Verbum AI:</strong> The system is sending audio to two speech recognition services simultaneously - one for <strong>{userLang}</strong> (Employee) and one for <strong>{guestLang}</strong> (Customer). The service with the highest confidence score will be used.
-                </p>
-              </div>
-            )}
+
           </div>
         </div>
 
