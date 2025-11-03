@@ -251,7 +251,6 @@ function ProfilePageContent() {
                       <SelectValue placeholder="Select your default language" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
-                      <SelectItem value="">No default (select each time)</SelectItem>
                       {languages.map((lang) => (
                         <SelectItem key={lang.code} value={lang.code}>
                           {lang.name} ({lang.nativeName})

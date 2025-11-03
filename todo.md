@@ -201,3 +201,9 @@
 - [x] Add profile link to dashboard navigation
 - [ ] Run migration to add default_language column to database
 - [ ] Test profile update and default language functionality
+
+## Bug: Profile Page Errors
+- [x] Fix Select component empty value error (remove empty string SelectItem)
+- [x] Update profile API GET to handle missing default_language column gracefully
+- [x] Update profile API PUT to handle missing default_language column gracefully
+- [ ] Test profile page after fixes

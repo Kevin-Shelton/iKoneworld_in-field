@@ -17,11 +17,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .select('id, openId, name, email, role, default_language, createdAt, lastSignedIn')
-      .eq('openId', userId)
-      .single();
+    // Try to fetch with default_language, but handle if column doesn't exist
+    let data, error;
+    try {
+      const result = await supabaseAdmin
+        .from('users')
+        .select('id, openId, name, email, role, default_language, createdAt, lastSignedIn')
+        .eq('openId', userId)
+        .single();
+      data = result.data;
+      error = result.error;
+    } catch (e: any) {
+      // If default_language column doesn't exist, fetch without it
+      if (e.message?.includes('default_language') || e.code === '42703') {
+        const result = await supabaseAdmin
+          .from('users')
+          .select('id, openId, name, email, role, createdAt, lastSignedIn')
+          .eq('openId', userId)
+          .single();
+        data = result.data;
+        error = result.error;
+        // Add default_language as null if column doesn't exist
+        if (data) {
+          (data as any).default_language = null;
+        }
+      } else {
+        throw e;
+      }
+    }
 
     if (error) {
       console.error('Error fetching profile:', error);
@@ -68,12 +91,34 @@ export async function PUT(request: NextRequest) {
       updateData.default_language = defaultLanguage;
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .update(updateData)
-      .eq('openId', userId)
-      .select()
-      .single();
+    let data, error;
+    try {
+      const result = await supabaseAdmin
+        .from('users')
+        .update(updateData)
+        .eq('openId', userId)
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    } catch (e: any) {
+      // If default_language column doesn't exist, update without it
+      if ((e.message?.includes('default_language') || e.code === '42703') && defaultLanguage !== undefined) {
+        // Remove default_language from update if column doesn't exist
+        const { default_language, ...updateWithoutLang } = updateData;
+        const result = await supabaseAdmin
+          .from('users')
+          .update(updateWithoutLang)
+          .eq('openId', userId)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+        console.warn('default_language column does not exist in database. Please run migration.');
+      } else {
+        throw e;
+      }
+    }
 
     if (error) {
       console.error('Error updating profile:', error);
