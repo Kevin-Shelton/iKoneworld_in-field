@@ -84,8 +84,8 @@ export default function LanguageSelection() {
         console.log('[Button Translation] Start text:', startData?.translations?.[0]?.[language.code]);
         
         setTranslatedButtons({
-          cancel: cancelData?.translations?.[0]?.[language.code] || "Cancel",
-          start: startData?.translations?.[0]?.[language.code] || "Start Conversation"
+          cancel: cancelData?.translations?.[0]?.text || "Cancel",
+          start: startData?.translations?.[0]?.text || "Start Conversation"
         });
       }
     } catch (error) {
@@ -285,7 +285,10 @@ export default function LanguageSelection() {
       }
 
       const data = await translateResponse.json();
-      const textToSpeak = data?.translations?.[0]?.[language.code] || noticeText;
+      console.log('[Translation Notice] API response:', JSON.stringify(data, null, 2));
+      const textToSpeak = data?.translations?.[0]?.text || noticeText;
+      console.log('[Translation Notice] Text to speak:', textToSpeak);
+      console.log('[Translation Notice] Language code for TTS:', language.code);
       
       const voicesResponse = await fetch(`/api/languages/voices?language=${language.code}`);
 
@@ -294,6 +297,7 @@ export default function LanguageSelection() {
       }
 
       const voices = await voicesResponse.json();
+      console.log('[Translation Notice] Available voices:', voices);
       
       if (!voices || voices.length === 0) {
         toast.error("No voices available for this language");
@@ -302,6 +306,7 @@ export default function LanguageSelection() {
       }
 
       const voice = voices[0].voice;
+      console.log('[Translation Notice] Selected voice:', voice);
 
       const response = await fetch("/api/synthesize", {
         method: "POST",
