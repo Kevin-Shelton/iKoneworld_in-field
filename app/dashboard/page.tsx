@@ -107,9 +107,9 @@ function DashboardContent() {
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Start New Conversation Card */}
-          <Card className="col-span-full glass animate-float">
+          <Card className="col-span-full">
             <CardHeader>
-              <CardTitle className="gradient-text">Start New Conversation</CardTitle>
+              <CardTitle>Start New Conversation</CardTitle>
               <CardDescription>
                 Begin a real-time translation session with a customer
               </CardDescription>

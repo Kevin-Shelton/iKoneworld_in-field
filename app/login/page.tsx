@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,31 +40,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-primary p-4">
-      {/* Logo Section */}
-      <div className="absolute top-8 left-8 animate-float">
-        <Image
-          src="/logo-ikoneworld.png"
-          alt="iK OneWorld"
-          width={180}
-          height={60}
-          className="h-12 w-auto"
-          priority
-        />
-      </div>
-
-      {/* Login Card */}
-      <Card className="w-full max-w-md glass animate-float" style={{ animationDelay: '0.2s' }}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center gradient-text">Employee Login</CardTitle>
-          <CardDescription className="text-center text-gray-600">
+          <CardTitle className="text-2xl font-bold text-center">Employee Login</CardTitle>
+          <CardDescription className="text-center">
             Sign in to access your translation dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 font-medium">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -74,11 +60,10 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="glass-strong"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -87,33 +72,20 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="glass-strong"
               />
             </div>
-            <Button type="submit" className="w-full glow-hover" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <a href="#" className="text-blue-600 hover:underline font-medium">
+            <a href="/signup" className="text-blue-600 hover:underline">
               Contact your administrator
             </a>
           </div>
         </CardContent>
       </Card>
-
-      {/* Footer Branding */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-gray-600 animate-float" style={{ animationDelay: '0.4s' }}>
-        <span className="text-sm">Brought to you by:</span>
-        <Image
-          src="/logo-invictus.png"
-          alt="Invictus"
-          width={120}
-          height={40}
-          className="h-8 w-auto"
-        />
-      </div>
     </div>
   );
 }

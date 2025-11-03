@@ -159,13 +159,13 @@ function ProfilePageContent() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       <Navigation />
       {/* Header */}
-      <header className="glass-strong shadow-sm border-b border-white/20">
+      <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold gradient-text">Profile Settings</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
             <p className="text-sm text-gray-600">Manage your account and preferences</p>
           </div>
-          <Button variant="outline" onClick={() => router.push('/dashboard')} className="glow-hover">
+          <Button variant="outline" onClick={() => router.push('/dashboard')}>
             Back to Dashboard
           </Button>
         </div>
@@ -175,9 +175,9 @@ function ProfilePageContent() {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="grid gap-6">
           {/* Account Information */}
-          <Card className="glass animate-float">
+          <Card>
             <CardHeader>
-              <CardTitle className="gradient-text">Account Information</CardTitle>
+              <CardTitle>Account Information</CardTitle>
               <CardDescription>
                 View your account details and role
               </CardDescription>
@@ -186,7 +186,7 @@ function ProfilePageContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Email</Label>
-                  <p className="mt-1 text-sm text-gray-900 font-medium">{profile?.email || 'Not set'}</p>
+                  <p className="mt-1 text-sm text-gray-900">{profile?.email || 'Not set'}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Role</Label>
@@ -202,13 +202,13 @@ function ProfilePageContent() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Member Since</Label>
-                  <p className="mt-1 text-sm text-gray-900 font-medium">
+                  <p className="mt-1 text-sm text-gray-900">
                     {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Last Login</Label>
-                  <p className="mt-1 text-sm text-gray-900 font-medium">
+                  <p className="mt-1 text-sm text-gray-900">
                     {profile?.lastSignedIn ? new Date(profile.lastSignedIn).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
@@ -217,9 +217,9 @@ function ProfilePageContent() {
           </Card>
 
           {/* Organizational Structure */}
-          <Card className="glass animate-float" style={{ animationDelay: '0.1s' }}>
+          <Card>
             <CardHeader>
-              <CardTitle className="gradient-text">Organizational Assignment</CardTitle>
+              <CardTitle>Organizational Assignment</CardTitle>
               <CardDescription>
                 Your organizational structure and assignments
               </CardDescription>
@@ -235,9 +235,9 @@ function ProfilePageContent() {
           </Card>
 
           {/* Profile Settings */}
-          <Card className="glass animate-float" style={{ animationDelay: '0.2s' }}>
+          <Card>
             <CardHeader>
-              <CardTitle className="gradient-text">Profile Settings</CardTitle>
+              <CardTitle>Profile Settings</CardTitle>
               <CardDescription>
                 Update your personal information and preferences
               </CardDescription>
@@ -245,7 +245,7 @@ function ProfilePageContent() {
             <CardContent>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-700 font-medium">Display Name</Label>
+                  <Label htmlFor="name">Display Name</Label>
                   <Input
                     id="name"
                     type="text"
@@ -253,15 +253,14 @@ function ProfilePageContent() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={saving}
-                    className="glass-strong"
                   />
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-500">
                     This name will be displayed in the application
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="defaultLanguage" className="text-gray-700 font-medium">Default Language</Label>
+                  <Label htmlFor="defaultLanguage">Default Language</Label>
                   <div className="relative">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -275,7 +274,7 @@ function ProfilePageContent() {
                           setShowLanguageList(true);
                         }}
                         onFocus={() => setShowLanguageList(true)}
-                        className="pl-10 glass-strong"
+                        className="pl-10"
                         disabled={saving}
                       />
                     </div>
@@ -298,14 +297,14 @@ function ProfilePageContent() {
                     )}
 
                     {showLanguageList && (
-                      <div className="absolute z-10 w-full mt-1 glass-strong border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
                         {filteredLanguages.length > 0 ? (
                           filteredLanguages.map((lang) => (
                             <button
                               key={lang.code}
                               type="button"
                               className={cn(
-                                "w-full text-left px-3 py-2 hover:bg-gray-100/50 flex items-center justify-between transition-colors",
+                                "w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between",
                                 defaultLanguage === lang.code && "bg-blue-50"
                               )}
                               onClick={() => {
@@ -315,7 +314,7 @@ function ProfilePageContent() {
                               }}
                               disabled={saving}
                             >
-                              <span className="text-sm text-gray-900">
+                              <span className="text-sm">
                                 {lang.name} ({lang.nativeName})
                               </span>
                               {defaultLanguage === lang.code && (
@@ -324,20 +323,20 @@ function ProfilePageContent() {
                             </button>
                           ))
                         ) : (
-                          <div className="px-3 py-2 text-sm text-gray-500">
+                          <div className="px-3 py-2 text-sm text-gray-400">
                             No languages found
                           </div>
                         )}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-500">
                     Your preferred language for conversations. This will be pre-selected when starting new conversations.
                   </p>
                 </div>
 
                 <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={saving} className="glow-hover">
+                  <Button type="submit" disabled={saving}>
                     {saving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
