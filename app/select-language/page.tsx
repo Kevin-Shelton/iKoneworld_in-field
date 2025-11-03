@@ -319,9 +319,10 @@ export default function LanguageSelection() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto max-w-6xl py-12 px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="container mx-auto max-w-6xl px-4 py-6">
+          <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             {headerText.title}
           </h1>
@@ -336,8 +337,24 @@ export default function LanguageSelection() {
               </span>
             </div>
           )}
+          
+          {/* Search Bar */}
+          <div className="relative mt-6 max-w-2xl mx-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Search languages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 py-6 text-lg bg-white dark:bg-gray-800"
+            />
+          </div>
+          </div>
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="container mx-auto max-w-6xl py-12 px-4">
         {/* Favorite Languages */}
         {favoriteLanguages.length > 0 && (
           <section className="mb-12">
@@ -389,17 +406,7 @@ export default function LanguageSelection() {
             All Languages
           </h2>
           
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              type="text"
-              placeholder="Search languages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 py-6 text-lg"
-            />
-          </div>
+
 
           {/* Languages List - Grouped */}
           {loadingAll ? (
