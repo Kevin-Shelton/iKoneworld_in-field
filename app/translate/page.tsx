@@ -255,8 +255,27 @@ function TranslatePageContent() {
     playbackQueueRef.current = playbackQueueRef.current.then(async () => {
       let audioUrl: string | null = null;
       try {
-        // Get voice for language
-        const voices = voicesRef.current[langCode];
+        // Get voice for language with fallback to base language
+        let voices = voicesRef.current[langCode];
+        
+        // If dialect not found, try base language (e.g., es-AR → es-MX)
+        if (!voices) {
+          const baseCode = langCode.split('-')[0]; // e.g., "es" from "es-AR"
+          const fallbackCodes = {
+            'es': 'es-MX',
+            'en': 'en-US',
+            'fr': 'fr-FR',
+            'pt': 'pt-BR',
+            'zh': 'zh-CN',
+            'ar': 'ar-SA'
+          };
+          const fallbackCode = fallbackCodes[baseCode as keyof typeof fallbackCodes];
+          if (fallbackCode) {
+            voices = voicesRef.current[fallbackCode];
+            console.log(`[TTS] Using fallback ${fallbackCode} for ${langCode}`);
+          }
+        }
+        
         const voice = voices?.male?.[0] || voices?.female?.[0];
         
         if (!voice) {
