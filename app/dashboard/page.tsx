@@ -106,6 +106,9 @@ function DashboardContent() {
                 Admin Panel
               </Button>
             )}
+            <Button variant="outline" onClick={() => router.push('/profile')}>
+              Profile
+            </Button>
             <Button variant="outline" onClick={handleSignOut}>
               Sign Out
             </Button>

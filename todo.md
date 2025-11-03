@@ -188,3 +188,16 @@
 - [x] Update dashboard to sync user on load
 - [x] Handle user creation when they don't exist in users table
 - [ ] Test complete flow with new user
+
+## Profile Management Feature
+- [x] Add default_language field to users table schema
+- [x] Create migration script for adding default_language column
+- [x] Create /api/profile endpoint for getting user profile
+- [x] Create /api/profile endpoint for updating user profile
+- [x] Build profile management page (/profile)
+- [x] Display organizational hierarchy information (placeholder for future)
+- [x] Add language selector with all available languages
+- [x] Update select-language page to check for default language
+- [x] Add profile link to dashboard navigation
+- [ ] Run migration to add default_language column to database
+- [ ] Test profile update and default language functionality

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Search, Loader2, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Language } from "../../drizzle/schema";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LanguageSelection() {
   const router = useRouter();
@@ -23,20 +24,44 @@ export default function LanguageSelection() {
   const [allLanguages, setAllLanguages] = useState<Language[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [loadingAll, setLoadingAll] = useState(true);
+  const { user } = useAuth();
 
-  // Check if user language is already selected
+  // Check for default language in user profile
   useEffect(() => {
-    const storedUserLang = localStorage.getItem("userLanguage");
-    if (storedUserLang) {
-      try {
-        const parsed = JSON.parse(storedUserLang);
-        setUserLanguage(parsed);
-        setSelectionStep("guest");
-      } catch (e) {
-        // Invalid JSON, ignore
+    const loadDefaultLanguage = async () => {
+      if (user?.id) {
+        try {
+          const response = await fetch(`/api/profile?userId=${user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.profile?.default_language) {
+              // Find the language object from all languages
+              const defaultLang = allLanguages.find(
+                (lang) => lang.code === data.profile.default_language
+              );
+              if (defaultLang) {
+                setUserLanguage(defaultLang);
+                localStorage.setItem("userLanguage", defaultLang.code);
+                setSelectionStep("guest");
+                toast.success(`Using your default language: ${defaultLang.name}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error loading default language:', error);
+        }
       }
+    };
+
+    // Check if user language is already selected in localStorage
+    const storedUserLang = localStorage.getItem("userLanguage");
+    if (storedUserLang && !userLanguage) {
+      setSelectionStep("guest");
+    } else if (allLanguages.length > 0 && !storedUserLang) {
+      // Only load default language if no stored language and all languages are loaded
+      loadDefaultLanguage();
     }
-  }, []);
+  }, [user, allLanguages]);
 
   // Fetch favorite languages
   useEffect(() => {
