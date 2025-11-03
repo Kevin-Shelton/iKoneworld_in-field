@@ -190,39 +190,69 @@ function TranslatePageContent() {
 
   const startAudioMonitoring = async () => {
     try {
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request microphone access with specific constraints
+      console.log("[Audio Monitor] Requesting microphone access...");
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
       micStreamRef.current = stream;
       setMicPermission("granted");
+      console.log("[Audio Monitor] Microphone access granted");
+
+      // Log audio track info
+      const audioTracks = stream.getAudioTracks();
+      console.log("[Audio Monitor] Audio tracks:", audioTracks.map(t => ({
+        label: t.label,
+        enabled: t.enabled,
+        muted: t.muted,
+        readyState: t.readyState
+      })));
 
       // Create audio context and analyser
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
+      analyserRef.current.fftSize = 2048;
+      analyserRef.current.smoothingTimeConstant = 0.8;
 
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
+      
+      console.log("[Audio Monitor] Audio context created, sample rate:", audioContextRef.current.sampleRate);
 
-      // Start monitoring audio levels
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      // Use time-domain data for more reliable level detection
+      const dataArray = new Uint8Array(analyserRef.current.fftSize);
       
       const updateLevel = () => {
         if (!analyserRef.current || !isListening) return;
         
-        analyserRef.current.getByteFrequencyData(dataArray);
+        // Get time-domain data (waveform)
+        analyserRef.current.getByteTimeDomainData(dataArray);
         
-        // Calculate average volume
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-        const normalizedLevel = Math.min(100, (average / 128) * 100);
+        // Calculate RMS (Root Mean Square) for accurate volume
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const normalized = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
+          sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        const normalizedLevel = Math.min(100, rms * 200); // Scale to 0-100
         
         setAudioLevel(normalizedLevel);
+        
+        if (normalizedLevel > 5) {
+          console.log(`[Audio Monitor] Level: ${normalizedLevel.toFixed(1)}%`);
+        }
         
         animationFrameRef.current = requestAnimationFrame(updateLevel);
       };
       
       updateLevel();
       
-      console.log("[Audio Monitor] Started");
+      console.log("[Audio Monitor] Started monitoring");
     } catch (err) {
       console.error("[Audio Monitor] Error:", err);
       setMicPermission("denied");
