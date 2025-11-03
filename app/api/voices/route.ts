@@ -19,6 +19,78 @@ const VOICES: Record<string, { male: string[]; female: string[] }> = {
     male: ["es-ES-AlvaroNeural", "es-ES-ArnauNeural"],
     female: ["es-ES-ElviraNeural", "es-ES-AbrilNeural"]
   },
+  "es-AR": {
+    male: ["es-AR-TomasNeural"],
+    female: ["es-AR-ElenaNeural"]
+  },
+  "es-CO": {
+    male: ["es-CO-GonzaloNeural"],
+    female: ["es-CO-SalomeNeural"]
+  },
+  "es-CL": {
+    male: ["es-CL-LorenzoNeural"],
+    female: ["es-CL-CatalinaNeural"]
+  },
+  "es-CR": {
+    male: ["es-CR-JuanNeural"],
+    female: ["es-CR-MariaNeural"]
+  },
+  "es-CU": {
+    male: ["es-CU-ManuelNeural"],
+    female: ["es-CU-BelkysNeural"]
+  },
+  "es-DO": {
+    male: ["es-DO-EmilioNeural"],
+    female: ["es-DO-RamonaNeural"]
+  },
+  "es-EC": {
+    male: ["es-EC-LuisNeural"],
+    female: ["es-EC-AndreaNeural"]
+  },
+  "es-GT": {
+    male: ["es-GT-AndresNeural"],
+    female: ["es-GT-MartaNeural"]
+  },
+  "es-HN": {
+    male: ["es-HN-CarlosNeural"],
+    female: ["es-HN-KarlaNeural"]
+  },
+  "es-NI": {
+    male: ["es-NI-FedericoNeural"],
+    female: ["es-NI-YolandaNeural"]
+  },
+  "es-PA": {
+    male: ["es-PA-RobertoNeural"],
+    female: ["es-PA-MargaritaNeural"]
+  },
+  "es-PE": {
+    male: ["es-PE-AlexNeural"],
+    female: ["es-PE-CamilaNeural"]
+  },
+  "es-PR": {
+    male: ["es-PR-VictorNeural"],
+    female: ["es-PR-KarinaNeural"]
+  },
+  "es-PY": {
+    male: ["es-PY-MarioNeural"],
+    female: ["es-PY-TaniaNeural"]
+  },
+  "es-SV": {
+    male: ["es-SV-RodrigoNeural"],
+    female: ["es-SV-LorenaNeural"]
+  },
+  "es-US": {
+    male: ["es-US-AlonsoNeural"],
+    female: ["es-US-PalomaNeural"]
+  },
+  "es-UY": {
+    male: ["es-UY-MateoNeural"],
+    female: ["es-UY-ValentinaNeural"]
+  },
+  "es-VE": {
+    male: ["es-VE-SebastianNeural"],
+    female: ["es-VE-PaolaNeural"]
+  },
   "fr-FR": {
     male: ["fr-FR-HenriNeural", "fr-FR-AlainNeural"],
     female: ["fr-FR-DeniseNeural", "fr-FR-BrigitteNeural"]

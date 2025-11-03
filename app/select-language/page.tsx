@@ -84,8 +84,8 @@ export default function LanguageSelection() {
         console.log('[Button Translation] Start text:', startData?.translations?.[0]?.[language.code]);
         
         setTranslatedButtons({
-          cancel: cancelData?.translations?.[0]?.text || "Cancel",
-          start: startData?.translations?.[0]?.text || "Start Conversation"
+          cancel: cancelData?.translations?.[0]?.[0]?.text || "Cancel",
+          start: startData?.translations?.[0]?.[0]?.text || "Start Conversation"
         });
       }
     } catch (error) {
@@ -286,7 +286,7 @@ export default function LanguageSelection() {
 
       const data = await translateResponse.json();
       console.log('[Translation Notice] API response:', JSON.stringify(data, null, 2));
-      const textToSpeak = data?.translations?.[0]?.text || noticeText;
+      const textToSpeak = data?.translations?.[0]?.[0]?.text || noticeText;
       console.log('[Translation Notice] Text to speak:', textToSpeak);
       console.log('[Translation Notice] Language code for TTS:', language.code);
       
