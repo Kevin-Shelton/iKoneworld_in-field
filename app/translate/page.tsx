@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 import { io, Socket } from "socket.io-client";
 
 type Message = {
@@ -744,8 +746,9 @@ function TranslatePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto max-w-6xl py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
+      <Navigation />
+      <div className="container mx-auto max-w-6xl py-8 px-4 flex-1">
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-start mb-4">
@@ -907,6 +910,7 @@ function TranslatePageContent() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

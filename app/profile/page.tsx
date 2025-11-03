@@ -17,6 +17,8 @@ import {
 import { toast } from 'sonner';
 import { Search, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
 
 type Language = {
   code: string;
@@ -154,7 +156,8 @@ function ProfilePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <Navigation />
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -342,6 +345,7 @@ function ProfilePageContent() {
           </Card>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

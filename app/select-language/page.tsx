@@ -10,6 +10,8 @@ import { Search, Loader2, Volume2, Star } from "lucide-react";
 import { toast } from "sonner";
 import type { Language } from "../../drizzle/schema";
 import { useAuth } from "@/contexts/AuthContext";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 
 // Group languages by base language code
 interface LanguageGroup {
@@ -53,8 +55,9 @@ export default function LanguageSelection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: "Cancel",
-          targetLanguage: language.code,
+          texts: [{ text: "Cancel" }],
+          from: "en-US",
+          to: [language.code],
         }),
       });
 
@@ -62,8 +65,9 @@ export default function LanguageSelection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: "Start Conversation",
-          targetLanguage: language.code,
+          texts: [{ text: "Start Conversation" }],
+          from: "en-US",
+          to: [language.code],
         }),
       });
 
@@ -72,8 +76,8 @@ export default function LanguageSelection() {
         const startData = await startResponse.json();
         
         setTranslatedButtons({
-          cancel: cancelData.translatedText || "Cancel",
-          start: startData.translatedText || "Start Conversation"
+          cancel: cancelData?.translations?.[0]?.[language.code] || "Cancel",
+          start: startData?.translations?.[0]?.[language.code] || "Start Conversation"
         });
       }
     } catch (error) {
@@ -262,8 +266,9 @@ export default function LanguageSelection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: noticeText,
-          targetLanguage: language.code,
+          texts: [{ text: noticeText }],
+          from: "en-US",
+          to: [language.code],
         }),
       });
 
@@ -271,8 +276,8 @@ export default function LanguageSelection() {
         throw new Error("Failed to translate notice");
       }
 
-      const { translatedText } = await translateResponse.json();
-      const textToSpeak = translatedText || noticeText;
+      const data = await translateResponse.json();
+      const textToSpeak = data?.translations?.[0]?.[language.code] || noticeText;
       
       const voicesResponse = await fetch(`/api/languages/voices?language=${language.code}`);
 
@@ -381,9 +386,12 @@ export default function LanguageSelection() {
   const headerText = getHeaderText();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
+      {/* Navigation */}
+      <Navigation />
+      
       {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="sticky top-16 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto max-w-6xl px-4 py-6">
           <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -575,6 +583,9 @@ export default function LanguageSelection() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
