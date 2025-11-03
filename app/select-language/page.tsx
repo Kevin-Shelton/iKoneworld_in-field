@@ -83,7 +83,8 @@ export default function LanguageSelection() {
     fetch("/api/languages")
       .then((res) => res.json())
       .then((data) => {
-        setAllLanguages(data);
+        // API returns { languages: [...] }, extract the array
+        setAllLanguages(data.languages || []);
         setLoadingAll(false);
       })
       .catch((error) => {

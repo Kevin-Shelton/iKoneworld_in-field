@@ -238,3 +238,25 @@
 - [x] Country-specific variants for major languages
 - [ ] Run migration in Supabase SQL Editor
 - [ ] Test language dropdown shows full names
+
+## Missing Languages in Migration
+- [ ] Add Azerbaijani (az) to migration
+- [ ] Check for other missing languages in database
+- [ ] Create supplemental migration for any missing languages
+- [ ] Run supplemental migration
+
+## Duplicate Language Names Issue
+- [ ] Add country names to all English variants (GH, KE, NG, PH, SG, TZ)
+- [ ] Add country names to all Spanish variants (BO, CR, DO, EC, GT, HN, NI, PA, PR, PY, SV, UY)
+- [ ] Add country names to all Arabic variants (BH, DZ, IL, IQ, JO, KW, LB, OM, PS, QA, TN)
+- [ ] Verify no duplicate display names remain
+
+## Profile API Errors
+- [ ] Run migration to add default_language column to users table
+- [ ] Verify profile fetch works
+- [ ] Verify profile update works
+
+## Select-Language Page Error
+- [x] Fix .map error on select-language page
+- [x] Update to handle { languages: [] } response format correctly
+- [ ] Test Start Translation Session flow
