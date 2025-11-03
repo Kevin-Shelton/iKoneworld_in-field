@@ -432,7 +432,7 @@ export default function LanguageSelection() {
       <div className="sticky top-16 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto max-w-6xl px-4 py-6">
           <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-bold gradient-text mb-4">
             {headerText.title}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
@@ -467,7 +467,7 @@ export default function LanguageSelection() {
         {/* Favorite Languages */}
         {favoriteLanguages.length > 0 && (
           <section className="mb-12">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <h2 className="text-2xl font-semibold gradient-text mb-6 flex items-center gap-2">
               <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
               Your Favorites
             </h2>

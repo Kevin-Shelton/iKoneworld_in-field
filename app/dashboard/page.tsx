@@ -107,9 +107,9 @@ function DashboardContent() {
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Start New Conversation Card */}
-          <Card className="col-span-full">
+          <Card className="col-span-full glass animate-float">
             <CardHeader>
-              <CardTitle>Start New Conversation</CardTitle>
+              <CardTitle className="gradient-text">Start New Conversation</CardTitle>
               <CardDescription>
                 Begin a real-time translation session with a customer
               </CardDescription>
@@ -122,7 +122,7 @@ function DashboardContent() {
           </Card>
 
           {/* Stats Cards */}
-          <Card>
+          <Card className="glass animate-float" style={{ animationDelay: '0.1s' }}>
             <CardHeader>
               <CardTitle className="text-lg">Today's Conversations</CardTitle>
             </CardHeader>
@@ -140,7 +140,7 @@ function DashboardContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass animate-float" style={{ animationDelay: '0.2s' }}>
             <CardHeader>
               <CardTitle className="text-lg">This Week</CardTitle>
             </CardHeader>
@@ -154,7 +154,7 @@ function DashboardContent() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass animate-float" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle className="text-lg">Total Customers</CardTitle>
             </CardHeader>
@@ -165,7 +165,7 @@ function DashboardContent() {
           </Card>
 
           {/* Recent Conversations */}
-          <Card className="col-span-full">
+          <Card className="col-span-full glass animate-float" style={{ animationDelay: '0.4s' }}>
             <CardHeader>
               <CardTitle>Recent Conversations</CardTitle>
               <CardDescription>Your latest translation sessions</CardDescription>
