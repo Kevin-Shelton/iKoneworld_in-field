@@ -32,12 +32,13 @@ function TranslatePageContent() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>("");
   const [dbUserId, setDbUserId] = useState<number | null>(null);
-  const [currentLanguage, setCurrentLanguage] = useState<string>("");
-  const [expectedSpeaker, setExpectedSpeaker] = useState<"user" | "guest">("user");
+  const [lastSpeaker, setLastSpeaker] = useState<"user" | "guest" | null>(null);
   
-  const recognitionRef = useRef<any>(null);
+  const userRecognitionRef = useRef<any>(null);
+  const guestRecognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const isProcessingRef = useRef<boolean>(false);
+  const lastProcessedTextRef = useRef<string>("");
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -51,7 +52,6 @@ function TranslatePageContent() {
 
     setUserLang(storedUserLang);
     setGuestLang(storedGuestLang);
-    setCurrentLanguage(storedUserLang); // Start with user language
 
     // Fetch user's database ID first
     fetchUserDatabaseId().then((userId) => {
@@ -62,83 +62,93 @@ function TranslatePageContent() {
       }
     });
 
-    // Initialize Web Speech API
+    // Initialize Web Speech API for both languages
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition;
       
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.maxAlternatives = 1;
+      // User/Employee language recognition
+      userRecognitionRef.current = new SpeechRecognition();
+      userRecognitionRef.current.continuous = true;
+      userRecognitionRef.current.interimResults = false;
+      userRecognitionRef.current.lang = storedUserLang;
+      userRecognitionRef.current.maxAlternatives = 1;
 
-      recognitionRef.current.onstart = () => {
-        console.log(`[Recognition] Started listening in: ${recognitionRef.current.lang}`);
-      };
-
-      recognitionRef.current.onresult = async (event: any) => {
-        if (isProcessingRef.current) return;
+      userRecognitionRef.current.onresult = async (event: any) => {
+        const lastIndex = event.results.length - 1;
+        const transcript = event.results[lastIndex][0].transcript.trim();
+        const confidence = event.results[lastIndex][0].confidence;
         
-        const lastResultIndex = event.results.length - 1;
-        const result = event.results[lastResultIndex][0];
-        const transcript = result.transcript.trim();
-        const confidence = result.confidence;
+        console.log(`[Employee ${storedUserLang}] "${transcript}" (conf: ${confidence})`);
         
-        // Determine which language was actually spoken based on current recognition language
-        const detectedLang = recognitionRef.current.lang;
-        const isUserLanguage = detectedLang === storedUserLang;
-        const speaker: "user" | "guest" = isUserLanguage ? "user" : "guest";
-        
-        console.log(`[Recognition] Detected in ${detectedLang}: "${transcript}" (confidence: ${confidence}, speaker: ${speaker})`);
-        
-        // Only process if we have actual content and reasonable confidence
-        if (transcript.length > 0 && confidence > 0.3) {
-          const sourceLang = isUserLanguage ? storedUserLang : storedGuestLang;
-          const targetLang = isUserLanguage ? storedGuestLang : storedUserLang;
-          
-          await handleSpeechDetected(transcript, speaker, sourceLang, targetLang);
-          
-          // Switch to the other language for next turn
-          const nextLang = isUserLanguage ? storedGuestLang : storedUserLang;
-          setCurrentLanguage(nextLang);
-          setExpectedSpeaker(isUserLanguage ? "guest" : "user");
-        }
-      };
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("[Recognition] Error:", event.error);
-        
-        if (event.error === "no-speech") {
-          // No speech detected, just continue listening
+        // Avoid duplicate processing
+        if (transcript === lastProcessedTextRef.current) {
+          console.log("[Employee] Skipping duplicate");
           return;
         }
         
-        if (event.error === "aborted") {
-          // Recognition was aborted, restart if still listening
-          if (isListening && !isProcessingRef.current) {
-            setTimeout(() => {
-              try {
-                recognitionRef.current?.start();
-              } catch (e) {
-                console.log("[Recognition] Already started");
-              }
-            }, 100);
-          }
-          return;
+        if (transcript.length > 2 && confidence > 0.4 && !isProcessingRef.current) {
+          lastProcessedTextRef.current = transcript;
+          await handleSpeechDetected(transcript, "user", storedUserLang, storedGuestLang);
         }
-        
-        // For other errors, show to user
-        setError(`Recognition error: ${event.error}`);
       };
 
-      recognitionRef.current.onend = () => {
-        console.log("[Recognition] Ended");
-        // Automatically restart if still in listening mode
+      userRecognitionRef.current.onerror = (event: any) => {
+        if (event.error !== "no-speech" && event.error !== "aborted") {
+          console.error(`[Employee] Error: ${event.error}`);
+        }
+      };
+
+      userRecognitionRef.current.onend = () => {
         if (isListening && !isProcessingRef.current) {
           setTimeout(() => {
             try {
-              recognitionRef.current?.start();
+              userRecognitionRef.current?.start();
             } catch (e) {
-              console.log("[Recognition] Already started");
+              // Already started
+            }
+          }, 100);
+        }
+      };
+
+      // Guest/Customer language recognition
+      guestRecognitionRef.current = new SpeechRecognition();
+      guestRecognitionRef.current.continuous = true;
+      guestRecognitionRef.current.interimResults = false;
+      guestRecognitionRef.current.lang = storedGuestLang;
+      guestRecognitionRef.current.maxAlternatives = 1;
+
+      guestRecognitionRef.current.onresult = async (event: any) => {
+        const lastIndex = event.results.length - 1;
+        const transcript = event.results[lastIndex][0].transcript.trim();
+        const confidence = event.results[lastIndex][0].confidence;
+        
+        console.log(`[Customer ${storedGuestLang}] "${transcript}" (conf: ${confidence})`);
+        
+        // Avoid duplicate processing
+        if (transcript === lastProcessedTextRef.current) {
+          console.log("[Customer] Skipping duplicate");
+          return;
+        }
+        
+        if (transcript.length > 2 && confidence > 0.4 && !isProcessingRef.current) {
+          lastProcessedTextRef.current = transcript;
+          await handleSpeechDetected(transcript, "guest", storedGuestLang, storedUserLang);
+        }
+      };
+
+      guestRecognitionRef.current.onerror = (event: any) => {
+        if (event.error !== "no-speech" && event.error !== "aborted") {
+          console.error(`[Customer] Error: ${event.error}`);
+        }
+      };
+
+      guestRecognitionRef.current.onend = () => {
+        if (isListening && !isProcessingRef.current) {
+          setTimeout(() => {
+            try {
+              guestRecognitionRef.current?.start();
+            } catch (e) {
+              // Already started
             }
           }, 100);
         }
@@ -150,23 +160,18 @@ function TranslatePageContent() {
     synthRef.current = window.speechSynthesis;
 
     return () => {
-      if (recognitionRef.current) {
+      if (userRecognitionRef.current) {
         try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          console.log("[Cleanup] Recognition already stopped");
-        }
+          userRecognitionRef.current.stop();
+        } catch (e) {}
+      }
+      if (guestRecognitionRef.current) {
+        try {
+          guestRecognitionRef.current.stop();
+        } catch (e) {}
       }
     };
-  }, [router, isListening]);
-
-  // Update recognition language when currentLanguage changes
-  useEffect(() => {
-    if (recognitionRef.current && currentLanguage) {
-      recognitionRef.current.lang = currentLanguage;
-      console.log(`[Recognition] Language switched to: ${currentLanguage}`);
-    }
-  }, [currentLanguage]);
+  }, [router]);
 
   const handleSpeechDetected = async (
     transcript: string,
@@ -175,20 +180,23 @@ function TranslatePageContent() {
     targetLang: string
   ) => {
     // Prevent concurrent processing
-    if (isProcessingRef.current) return;
-    isProcessingRef.current = true;
-
-    // Stop recognition while processing
-    try {
-      recognitionRef.current?.stop();
-    } catch (e) {
-      console.log("[Processing] Recognition already stopped");
+    if (isProcessingRef.current) {
+      console.log("[Processing] Already processing, skipping");
+      return;
     }
-
+    
+    isProcessingRef.current = true;
     setStatus("processing");
+    setLastSpeaker(speaker);
+
+    // Temporarily stop both recognitions while processing
+    try {
+      userRecognitionRef.current?.stop();
+      guestRecognitionRef.current?.stop();
+    } catch (e) {}
 
     try {
-      console.log(`[Translation] Translating from ${sourceLang} to ${targetLang}: "${transcript}"`);
+      console.log(`[Translation] ${speaker}: "${transcript}" (${sourceLang} → ${targetLang})`);
       
       // Translate the text using the API
       const translateResponse = await fetch("/api/translate", {
@@ -206,8 +214,9 @@ function TranslatePageContent() {
       }
 
       const translateData = await translateResponse.json();
-      console.log('[Translation] Response:', translateData);
       const translatedText = translateData.translations?.[0]?.[0]?.text || "";
+
+      console.log(`[Translation] Result: "${translatedText}"`);
 
       // Add message to UI
       const newMessage: Message = {
@@ -218,7 +227,6 @@ function TranslatePageContent() {
         timestamp: new Date(),
       };
       
-      console.log(`[Message] Adding to ${speaker} panel:`, newMessage);
       setMessages((prev) => [...prev, newMessage]);
 
       // Save message to database
@@ -234,25 +242,31 @@ function TranslatePageContent() {
         );
       }
 
-      // Speak the translation using Web Speech API
+      // Speak the translation
       setStatus("speaking");
       await speakText(translatedText, targetLang);
-      setStatus("listening");
+      
+      // Clear the last processed text after a delay
+      setTimeout(() => {
+        lastProcessedTextRef.current = "";
+      }, 3000);
+      
     } catch (err) {
-      console.error("Translation error:", err);
+      console.error("[Translation] Error:", err);
       setError("Translation failed. Please try again.");
-      setStatus("listening");
     } finally {
       isProcessingRef.current = false;
+      setStatus("listening");
       
-      // Restart recognition if still listening
+      // Restart both recognitions
       if (isListening) {
         setTimeout(() => {
           try {
-            recognitionRef.current?.start();
-          } catch (e) {
-            console.log("[Processing] Recognition already started");
-          }
+            userRecognitionRef.current?.start();
+          } catch (e) {}
+          try {
+            guestRecognitionRef.current?.start();
+          } catch (e) {}
         }, 500);
       }
     }
@@ -377,21 +391,24 @@ function TranslatePageContent() {
   };
 
   const startAutoListening = () => {
-    if (!isListening && recognitionRef.current) {
+    if (!isListening) {
       setIsListening(true);
       setStatus("listening");
       setError("");
+      lastProcessedTextRef.current = "";
       
-      // Start with user language
-      recognitionRef.current.lang = userLang;
-      setCurrentLanguage(userLang);
-      setExpectedSpeaker("user");
+      console.log(`[Start] Listening for ${userLang} (Employee) and ${guestLang} (Customer)`);
       
       try {
-        recognitionRef.current.start();
-        console.log(`[Start] Listening for ${userLang} first`);
+        userRecognitionRef.current?.start();
       } catch (e) {
-        console.error("[Start] Error starting recognition:", e);
+        console.error("[Start] Employee recognition error:", e);
+      }
+      
+      try {
+        guestRecognitionRef.current?.start();
+      } catch (e) {
+        console.error("[Start] Customer recognition error:", e);
       }
     }
   };
@@ -401,10 +418,12 @@ function TranslatePageContent() {
     setStatus("ready");
     
     try {
-      recognitionRef.current?.stop();
-    } catch (e) {
-      console.log("[Stop] Recognition already stopped");
-    }
+      userRecognitionRef.current?.stop();
+    } catch (e) {}
+    
+    try {
+      guestRecognitionRef.current?.stop();
+    } catch (e) {}
   };
 
   const endConversation = async () => {
@@ -442,11 +461,11 @@ function TranslatePageContent() {
   };
 
   const getStatusText = () => {
-    const langName = currentLanguage === userLang ? "Employee" : "Customer";
-    
     switch (status) {
       case "listening":
-        return `Listening for ${langName} (${currentLanguage})...`;
+        return lastSpeaker 
+          ? `Listening... (Last: ${lastSpeaker === "user" ? "Employee" : "Customer"})`
+          : "Listening for both languages...";
       case "processing":
         return "Processing translation...";
       case "speaking":
@@ -471,7 +490,7 @@ function TranslatePageContent() {
                 Real-Time Translation
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Automatic turn-based conversation - speak naturally and wait for translation!
+                Automatic language detection - just speak naturally!
               </p>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-2">
@@ -520,7 +539,7 @@ function TranslatePageContent() {
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                     </svg>
-                    Start Conversation
+                    Start Listening
                   </button>
                 ) : (
                   <button
@@ -530,7 +549,7 @@ function TranslatePageContent() {
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
                     </svg>
-                    Pause
+                    Stop Listening
                   </button>
                 )}
                 <button
@@ -543,11 +562,10 @@ function TranslatePageContent() {
             </div>
             
             {isListening && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  🎤 <strong>Turn-based conversation:</strong> The system alternates between listening for 
-                  <strong> {userLang}</strong> (Employee) and <strong>{guestLang}</strong> (Customer). 
-                  Speak when it's your turn, then wait for the translation before the other person speaks.
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  🎤 <strong>Auto-detection active:</strong> The system is listening for both <strong>{userLang}</strong> (Employee) and <strong>{guestLang}</strong> (Customer). 
+                  Just speak naturally - the system will automatically detect which language is being spoken and translate accordingly.
                 </p>
               </div>
             )}
@@ -556,7 +574,7 @@ function TranslatePageContent() {
 
         {/* Messages */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Employee Messages (User) */}
+          {/* Employee Messages */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Employee Messages ({userLang})
@@ -582,7 +600,7 @@ function TranslatePageContent() {
             </div>
           </div>
 
-          {/* Customer Messages (Guest) */}
+          {/* Customer Messages */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Customer Messages ({guestLang})
