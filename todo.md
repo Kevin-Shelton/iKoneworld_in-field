@@ -269,6 +269,7 @@
 ## Translation API Authentication Error
 - [x] Investigate translation API endpoint returning 401 Unauthorized
 - [x] Confirmed VERBUM_API_KEY environment variable is needed
-- [x] Added debug logging to check if API key is present
-- [ ] Verify VERBUM_API_KEY is set correctly in Vercel environment variables
+- [x] Found issue: Verbum AI uses x-api-key header, not Authorization Bearer
+- [x] Fixed all three API endpoints (translate, synthesize, recognize) to use x-api-key header
+- [x] Added TypeScript non-null assertions for environment variables
 - [ ] Test translation API with proper authentication after redeploy

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.VERBUM_API_KEY}`,
+        "x-api-key": process.env.VERBUM_API_KEY!,
       },
       body: JSON.stringify({
         voice,
