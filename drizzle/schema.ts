@@ -134,3 +134,16 @@ export const conversationMessages = pgTable("conversation_messages", {
 
 export type ConversationMessage = typeof conversationMessages.$inferSelect;
 export type InsertConversationMessage = typeof conversationMessages.$inferInsert;
+
+/**
+ * User favorite languages table - stores user-specific favorite languages
+ */
+export const userFavoriteLanguages = pgTable("user_favorite_languages", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(), // Foreign key to users table
+  languageCode: varchar("languageCode", { length: 16 }).notNull(), // Language code (e.g., "en-US")
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserFavoriteLanguage = typeof userFavoriteLanguages.$inferSelect;
+export type InsertUserFavoriteLanguage = typeof userFavoriteLanguages.$inferInsert;
