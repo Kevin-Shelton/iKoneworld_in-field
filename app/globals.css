@@ -92,7 +92,7 @@
   --secondary: oklch(0.3 0.03 270);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.3 0.03 270);
-  --muted-foreground: oklch(0.65 0.01 265);
+  --muted-foreground: oklch(0.75 0.01 265);
   --accent: oklch(0.55 0.15 290);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -121,4 +121,78 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  /* Glassmorphism effects */
+  .glass {
+    @apply bg-white/10 dark:bg-white/5 backdrop-blur-lg;
+  }
+  
+  .glass-strong {
+    @apply bg-white/20 dark:bg-white/10 backdrop-blur-xl;
+  }
+  
+  /* Gradient backgrounds */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary via-accent to-primary;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
+  }
+  
+  /* Glow effects */
+  .glow-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .glow-hover:hover {
+    @apply shadow-lg shadow-primary/50;
+  }
+  
+  /* Smooth transitions */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 8s ease-in-out infinite;
 }

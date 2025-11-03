@@ -145,7 +145,7 @@ function DashboardContent() {
                 const convDate = new Date(c.startedAt);
                 return convDate.toDateString() === today.toDateString();
               }).length}</p>
-              <p className="text-sm text-gray-500 mt-1">{conversations.filter(c => {
+              <p className="text-sm text-muted-foreground mt-1">{conversations.filter(c => {
                 const today = new Date();
                 const convDate = new Date(c.startedAt);
                 return convDate.toDateString() === today.toDateString();
@@ -163,7 +163,7 @@ function DashboardContent() {
                 weekAgo.setDate(weekAgo.getDate() - 7);
                 return new Date(c.startedAt) >= weekAgo;
               }).length}</p>
-              <p className="text-sm text-gray-500 mt-1">Total conversations</p>
+              <p className="text-sm text-muted-foreground mt-1">Total conversations</p>
             </CardContent>
           </Card>
 
@@ -173,7 +173,7 @@ function DashboardContent() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-purple-600">{new Set(conversations.map(c => c.customer_id)).size}</p>
-              <p className="text-sm text-gray-500 mt-1">Unique customers served</p>
+              <p className="text-sm text-muted-foreground mt-1">Unique customers served</p>
             </CardContent>
           </Card>
 
@@ -187,23 +187,23 @@ function DashboardContent() {
               {loading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-500">Loading...</p>
+                  <p className="text-sm text-muted-foreground">Loading...</p>
                 </div>
               ) : conversations.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <p>No conversations yet</p>
                   <p className="text-sm mt-2">Start your first translation session to see it here</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {conversations.slice(0, 5).map((conv) => (
-                    <div key={conv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={conv.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">Conversation #{conv.id}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-medium text-foreground">Conversation #{conv.id}</p>
+                        <p className="text-sm text-muted-foreground">
                           {conv.user_language} → {conv.guest_language}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {new Date(conv.startedAt).toLocaleString()}
                         </p>
                       </div>
