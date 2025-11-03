@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
+import Navigation from '@/components/Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
@@ -89,35 +90,20 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">iK OneWorld</h1>
-            <p className="text-sm text-gray-600">Employee Dashboard</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-              <p className="text-xs text-gray-500">{(user as any)?.role === 'admin' ? 'Admin' : 'Employee'}</p>
-            </div>
-            {(user as any)?.role === 'admin' && (
-              <Button variant="outline" onClick={() => router.push('/admin/users')}>
-                Admin Panel
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => router.push('/profile')}>
-              Profile
-            </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Navigation */}
+      <Navigation />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Admin Panel Button */}
+        {(user as any)?.role === 'admin' && (
+          <div className="mb-6">
+            <Button variant="outline" onClick={() => router.push('/admin/users')}>
+              Admin Panel
+            </Button>
+          </div>
+        )}
+        
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Start New Conversation Card */}
           <Card className="col-span-full">
