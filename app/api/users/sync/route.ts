@@ -25,11 +25,28 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingUser) {
-      // User already exists, return their database ID
+      // User already exists, update their email and lastSignedIn
+      const updateData: any = {
+        lastSignedIn: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      if (email) {
+        updateData.email = email;
+      }
+      if (name) {
+        updateData.name = name;
+      }
+      
+      await supabaseAdmin
+        .from('users')
+        .update(updateData)
+        .eq('openId', userId);
+      
       return NextResponse.json({
         success: true,
         userId: existingUser.id,
-        message: 'User already exists',
+        message: 'User synced successfully',
       });
     }
 

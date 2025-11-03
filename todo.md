@@ -207,3 +207,10 @@
 - [x] Update profile API GET to handle missing default_language column gracefully
 - [x] Update profile API PUT to handle missing default_language column gracefully
 - [ ] Test profile page after fixes
+
+## Bug: Profile Data Not Displaying
+- [x] Fix user sync to capture and save email from Supabase Auth
+- [x] Update user sync to update existing users with email and lastSignedIn
+- [x] Fix languages API to return data in expected format { languages: [] }
+- [x] createdAt timestamp already set correctly in user sync
+- [ ] Test profile page displays all data correctly after re-login
