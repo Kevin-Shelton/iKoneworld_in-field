@@ -162,10 +162,9 @@ The following tables are central to the application's data model:
 | `users`                  | Stores user profile information, including their unique ID from Supabase Auth, email, name, and default language preference.                |
 | `languages`              | A comprehensive list of all supported languages, including their codes, names, and text direction.                                      |
 | `stt_languages`          | A list of languages specifically supported by the Verbum AI Speech-to-Text (STT) service.                                                 |
-| `ttt_languages`          | A list of languages supported by the Verbum AI translation service.                                                                       |
-| `tts_voices`             | A list of available Text-to-Speech (TTS) voices, including their language and gender.                                                     |
 | `conversations`          | Records each translation session, linking a user to the selected languages (`language1`, `language2`) and tracking the session's status. |
 | `conversation_messages`  | Stores every message within a conversation, including the original text, translated text, speaker (`user` or `guest`), and confidence score. |
+| `user_favorite_languages` | Stores each user's favorite languages for quick access in the language selection screen.                                                |
 
 ### Data Flow During a Conversation
 
@@ -192,6 +191,12 @@ As of November 3, 2025, the application is fully functional and operational. The
 
 **Language Selection**: The application provides a searchable language selector with full language names and native names. Users can select any supported language pair for their translation sessions. The selected languages are stored in `localStorage` and used throughout the session.
 
+**User-Specific Favorites**: Users can mark their frequently-used languages as favorites. These are saved to the database and displayed at the top of the language selection screen for quick access.
+
+**Language Grouping**: Languages are intelligently grouped by their base language (e.g., all Spanish variants together), making it easier to find specific dialects.
+
+**SVG Flag Icons**: The application uses high-quality SVG flag icons from a CDN, ensuring consistent and reliable display across all browsers and operating systems.
+
 **Real-Time Speech Recognition**: The application successfully captures audio from the microphone, downsamples it to 8kHz PCM, and streams it to two Verbum AI WebSocket connections simultaneously. The "winner selection algorithm" accurately determines which language was spoken based on confidence scores and timing windows.
 
 **Automatic Language Detection**: The system automatically detects whether the employee or customer is speaking without requiring manual input. This is achieved by comparing the recognition results from both language-specific Verbum AI services.
@@ -199,8 +204,6 @@ As of November 3, 2025, the application is fully functional and operational. The
 **Translation and Text-to-Speech**: Once speech is recognized, the application translates the text using Verbum AI's translation API and then plays the translated text aloud using the Text-to-Speech API. The microphone is temporarily disabled during playback to prevent feedback loops.
 
 **Message Display and Storage**: All messages are displayed in real-time in separate panels for the employee and customer. Each message includes the original text, the translation, a timestamp, and the confidence score. All messages are persisted to the database, linked to the conversation session.
-
-**Audio Level Monitoring**: A real-time audio level indicator provides visual feedback on microphone input, helping users diagnose audio issues.
 
 **Reconnection Handling**: If the WebSocket connection to Verbum AI is interrupted, the application automatically attempts to reconnect and displays a "reconnecting" status to the user.
 
@@ -217,6 +220,7 @@ The following API endpoints are fully operational:
 | `/api/conversations`     | POST   | Creates a new conversation, saves messages, or ends a conversation.                              |
 | `/api/customers`         | POST   | Creates a new customer record (used for tracking).                                               |
 | `/api/users/sync`        | POST   | Syncs a Supabase Auth user to the internal `users` table.                                        |
+| `/api/languages/user-favorites` | GET, POST, DELETE | Manages user-specific favorite languages.                                                        |
 
 ### Language Code Mapping
 
@@ -408,6 +412,6 @@ To maintain the application's reliability, the following practices are recommend
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** November 3, 2025  
+**Document Version:** 1.1
+**Last Updated:** November 3, 2025
 **Repository:** [https://github.com/Kevin-Shelton/iKoneworld_in-field](https://github.com/Kevin-Shelton/iKoneworld_in-field)
