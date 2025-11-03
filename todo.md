@@ -260,3 +260,8 @@
 - [x] Fix .map error on select-language page
 - [x] Update to handle { languages: [] } response format correctly
 - [ ] Test Start Translation Session flow
+
+## Conversation Creation Bug
+- [x] Fix createConversation to use language1 and language2 columns instead of user_language and guest_language
+- [x] Language codes are being retrieved from localStorage correctly
+- [ ] Test conversation creation with actual language codes
