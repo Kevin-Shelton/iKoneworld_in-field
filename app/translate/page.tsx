@@ -43,7 +43,7 @@ function TranslatePageContent() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>("");
   const [dbUserId, setDbUserId] = useState<number | null>(null);
-  const [audioLevel, setAudioLevel] = useState<number>(0);
+
   const [recognizingText, setRecognizingText] = useState<string>("");
   
   // Audio processing refs
@@ -51,8 +51,7 @@ function TranslatePageContent() {
   const streamRef = useRef<MediaStream | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+
   
   // Socket.IO refs
   const socket1Ref = useRef<Socket | null>(null); // User/Employee language
@@ -540,10 +539,7 @@ function TranslatePageContent() {
 
       console.log(`[Start] Audio context created, sample rate: ${ctx.sampleRate}`);
 
-      // Create analyser for audio level monitoring
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyserRef.current = analyser;
+
 
       // Create audio worklet for downsampling to 8kHz PCM
       const workletCode = `
@@ -611,14 +607,12 @@ function TranslatePageContent() {
       };
 
       // Connect audio pipeline
-      source.connect(analyser); // For level monitoring
       source.connect(worklet);
       worklet.connect(ctx.destination);
 
       console.log('[Start] Audio pipeline connected');
 
-      // Start audio level monitoring
-      startAudioLevelMonitoring();
+
 
     } catch (err) {
       console.error('[Start] Error:', err);
@@ -629,32 +623,7 @@ function TranslatePageContent() {
     }
   };
 
-  const startAudioLevelMonitoring = () => {
-    if (!analyserRef.current) return;
 
-    const dataArray = new Uint8Array(analyserRef.current.fftSize);
-
-    const updateLevel = () => {
-      if (!analyserRef.current || !isListening) return;
-
-      analyserRef.current.getByteTimeDomainData(dataArray);
-
-      // Calculate RMS
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const normalized = (dataArray[i] - 128) / 128;
-        sum += normalized * normalized;
-      }
-      const rms = Math.sqrt(sum / dataArray.length);
-      const level = Math.min(100, rms * 200);
-
-      setAudioLevel(level);
-
-      animationFrameRef.current = requestAnimationFrame(updateLevel);
-    };
-
-    updateLevel();
-  };
 
   const stopListening = () => {
     stoppingRef.current = true;
@@ -666,11 +635,7 @@ function TranslatePageContent() {
   const cleanup = () => {
     console.log('[Cleanup] Starting...');
 
-    // Stop audio level monitoring
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
+
 
     // Disconnect audio nodes
     if (workletNodeRef.current) {
@@ -716,7 +681,7 @@ function TranslatePageContent() {
     });
 
     setRecognizingText("");
-    setAudioLevel(0);
+
 
     console.log('[Cleanup] Complete');
   };
@@ -772,12 +737,7 @@ function TranslatePageContent() {
     }
   };
 
-  const getMicLevelColor = () => {
-    if (audioLevel < 10) return "bg-gray-400";
-    if (audioLevel < 30) return "bg-green-400";
-    if (audioLevel < 60) return "bg-yellow-400";
-    return "bg-red-400";
-  };
+
 
   if (!userLang || !guestLang) {
     return null;
@@ -794,7 +754,7 @@ function TranslatePageContent() {
                 Real-Time Translation
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Automatic language detection using Verbum AI
+                Automatic language detection
               </p>
               <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-2">
@@ -865,30 +825,7 @@ function TranslatePageContent() {
               </div>
             </div>
             
-            {/* Microphone Level Indicator */}
-            {isListening && (
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Microphone Level: {Math.round(audioLevel)}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
-                  <div 
-                    className={`h-full transition-all duration-100 ${getMicLevelColor()}`}
-                    style={{ width: `${audioLevel}%` }}
-                  ></div>
-                </div>
-                {audioLevel < 5 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    ⚠️ No audio detected - please check your microphone
-                  </p>
-                )}
-              </div>
-            )}
+
 
             {/* Recognizing indicator */}
             {recognizingText && (
