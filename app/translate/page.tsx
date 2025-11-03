@@ -92,7 +92,9 @@ function TranslatePageContent() {
           }
 
           const translateData = await translateResponse.json();
-          const translatedText = translateData.translations?.[0]?.text || "";
+          console.log('[Translation Response]', translateData);
+          // Verbum AI returns: { translations: [[{ text: "...", to: "es" }]] }
+          const translatedText = translateData.translations?.[0]?.[0]?.text || "";
 
           // Add message to UI
           const newMessage: Message = {
