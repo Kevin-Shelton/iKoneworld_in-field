@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { supabase } from "@/lib/supabase/client";
 
 type Message = {
   id: string;
@@ -30,6 +31,7 @@ function TranslatePageContent() {
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>("");
+  const [dbUserId, setDbUserId] = useState<number | null>(null);
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -47,8 +49,14 @@ function TranslatePageContent() {
     setUserLang(storedUserLang);
     setGuestLang(storedGuestLang);
 
-    // Initialize conversation in database
-    initializeConversation(storedUserLang, storedGuestLang);
+    // Fetch user's database ID first
+    fetchUserDatabaseId().then((userId) => {
+      if (userId) {
+        setDbUserId(userId);
+        // Initialize conversation in database
+        initializeConversation(storedUserLang, storedGuestLang, userId);
+      }
+    });
 
     // Initialize Web Speech API
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -97,9 +105,10 @@ function TranslatePageContent() {
           setMessages((prev) => [...prev, newMessage]);
 
           // Save message to database
-          if (conversationId) {
-            await saveMessageToDatabase(
+          if (conversationId && dbUserId) {
+            saveMessageToDatabase(
               conversationId,
+              dbUserId,
               transcript,
               translatedText,
               storedUserLang,
@@ -144,7 +153,30 @@ function TranslatePageContent() {
     };
   }, [router, status]);
 
-  const initializeConversation = async (userLanguage: string, guestLanguage: string) => {
+  const fetchUserDatabaseId = async (): Promise<number | null> => {
+    try {
+      if (!user?.id) return null;
+      
+      // Fetch user from database using their Supabase Auth ID (openId)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('openId', user.id)
+        .single();
+      
+      if (error || !data) {
+        console.error('Error fetching user database ID:', error);
+        return null;
+      }
+      
+      return data.id;
+    } catch (err) {
+      console.error('Error in fetchUserDatabaseId:', err);
+      return null;
+    }
+  };
+
+  const initializeConversation = async (userLanguage: string, guestLanguage: string, userId: number) => {
     try {
       // Create customer
       const customerResponse = await fetch("/api/customers", {
@@ -171,7 +203,7 @@ function TranslatePageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "create",
-          userId: 1, // TODO: Get from user profile
+          userId: userId,
           enterpriseId: DEFAULT_ENTERPRISE_ID,
           storeId: undefined,
           departmentId: undefined,
@@ -194,6 +226,7 @@ function TranslatePageContent() {
 
   const saveMessageToDatabase = async (
     convId: number,
+    userId: number,
     originalText: string,
     translatedText: string,
     sourceLang: string,
@@ -207,7 +240,7 @@ function TranslatePageContent() {
           action: "saveMessage",
           conversationId: convId,
           enterpriseId: DEFAULT_ENTERPRISE_ID,
-          userId: 1, // TODO: Get from user profile
+          userId: userId,
           speaker: "user",
           originalText,
           translatedText,

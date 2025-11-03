@@ -173,3 +173,11 @@
 - [x] Update home page (/) to redirect unauthenticated users to /login
 - [x] Redirect authenticated users from / to /dashboard
 - [ ] Test complete authentication flow
+
+## Bug: Conversation Creation Failing
+- [x] Investigate conversation creation API error
+- [x] Fix authentication/user data passing to conversation endpoint
+- [x] Added fetchUserDatabaseId function to get user's database ID from Supabase Auth ID
+- [x] Updated initializeConversation to accept and use actual user ID
+- [x] Updated saveMessageToDatabase to use actual user ID
+- [ ] Test conversation creation flow
