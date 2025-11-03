@@ -21,9 +21,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      toast.success('Welcome back!');
-      router.push('/dashboard');
+      const { user: authUser } = await signIn(email, password);
+      
+      // Check if user must reset password
+      if (authUser?.user_metadata?.must_reset_password === true) {
+        toast.info('Please reset your password to continue');
+        router.push('/reset-password');
+      } else {
+        toast.success('Welcome back!');
+        router.push('/dashboard');
+      }
     } catch (error) {
       toast.error('Invalid email or password');
       console.error('Login error:', error);

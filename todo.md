@@ -155,3 +155,16 @@
 - [ ] Update conversation page for employee-customer flow
 - [ ] Build employee dashboard with conversation history
 - [ ] Add protected routes for authenticated employees only
+
+## Admin User Management System
+- [x] Add user_metadata fields to track password reset status
+- [x] Create admin panel page (/admin/users)
+- [x] Build user management UI (list, add, disable, reset password)
+- [x] Implement role-based access control (admin vs employee)
+- [x] Create API endpoint for admin to add new users
+- [x] Create API endpoint for admin to disable/enable users
+- [x] Create API endpoint for admin to reset user passwords
+- [x] Implement forced password change on first login
+- [x] Create password reset page for first-time users
+- [x] Add admin navigation and role checking
+- [ ] Test complete admin and user flows

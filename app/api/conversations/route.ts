@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createConversation, saveMessage, endConversation } from '@/lib/db/conversations';
+import { createConversation, saveMessage, endConversation, getConversationsByUser } from '@/lib/db/conversations';
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,6 +66,30 @@ export async function POST(request: NextRequest) {
     console.error('Error in conversations API:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const conversations = await getConversationsByUser(parseInt(userId));
+    
+    return NextResponse.json({ conversations });
+  } catch (error) {
+    console.error('Conversation API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

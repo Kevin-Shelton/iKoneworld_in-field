@@ -126,6 +126,24 @@ export async function getConversationMessages(conversationId: number) {
 }
 
 /**
+ * Get all conversations for a specific user
+ */
+export async function getConversationsByUser(userId: number) {
+  const { data, error } = await supabaseAdmin
+    .from('conversations')
+    .select('*')
+    .eq('userId', userId)
+    .order('startedAt', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching user conversations:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Upload audio file to Supabase storage
  */
 export async function uploadAudio(

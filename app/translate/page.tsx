@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 type Message = {
   id: string;
@@ -13,14 +15,21 @@ type Message = {
 
 type Status = "ready" | "listening" | "processing" | "speaking";
 
-export default function TranslatePage() {
+// Default enterprise ID for development
+const DEFAULT_ENTERPRISE_ID = "00000000-0000-0000-0000-000000000001";
+
+function TranslatePageContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const [userLang, setUserLang] = useState<string>("");
   const [guestLang, setGuestLang] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<Status>("ready");
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string>("");
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [customerCode, setCustomerCode] = useState<string>("");
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -37,6 +46,9 @@ export default function TranslatePage() {
 
     setUserLang(storedUserLang);
     setGuestLang(storedGuestLang);
+
+    // Initialize conversation in database
+    initializeConversation(storedUserLang, storedGuestLang);
 
     // Initialize Web Speech API
     if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
@@ -74,7 +86,7 @@ export default function TranslatePage() {
           const translateData = await translateResponse.json();
           const translatedText = translateData.translations?.[0]?.text || "";
 
-          // Add message
+          // Add message to UI
           const newMessage: Message = {
             id: Date.now().toString(),
             text: transcript,
@@ -83,6 +95,17 @@ export default function TranslatePage() {
             timestamp: new Date(),
           };
           setMessages((prev) => [...prev, newMessage]);
+
+          // Save message to database
+          if (conversationId) {
+            await saveMessageToDatabase(
+              conversationId,
+              transcript,
+              translatedText,
+              storedUserLang,
+              storedGuestLang
+            );
+          }
 
           // Speak the translation using Web Speech API
           setStatus("speaking");
@@ -121,6 +144,83 @@ export default function TranslatePage() {
     };
   }, [router, status]);
 
+  const initializeConversation = async (userLanguage: string, guestLanguage: string) => {
+    try {
+      // Create customer
+      const customerResponse = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          enterpriseId: DEFAULT_ENTERPRISE_ID,
+          preferredLanguage: guestLanguage,
+        }),
+      });
+
+      if (!customerResponse.ok) {
+        throw new Error("Failed to create customer");
+      }
+
+      const customerData = await customerResponse.json();
+      setCustomerId(customerData.customer.id);
+      setCustomerCode(customerData.customer.customer_code);
+
+      // Create conversation
+      const conversationResponse = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          userId: 1, // TODO: Get from user profile
+          enterpriseId: DEFAULT_ENTERPRISE_ID,
+          storeId: undefined,
+          departmentId: undefined,
+          userLanguage,
+          guestLanguage,
+        }),
+      });
+
+      if (!conversationResponse.ok) {
+        throw new Error("Failed to create conversation");
+      }
+
+      const conversationData = await conversationResponse.json();
+      setConversationId(conversationData.conversation.id);
+    } catch (err) {
+      console.error("Error initializing conversation:", err);
+      // Don't block the UI, just log the error
+    }
+  };
+
+  const saveMessageToDatabase = async (
+    convId: number,
+    originalText: string,
+    translatedText: string,
+    sourceLang: string,
+    targetLang: string
+  ) => {
+    try {
+      await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "saveMessage",
+          conversationId: convId,
+          enterpriseId: DEFAULT_ENTERPRISE_ID,
+          userId: 1, // TODO: Get from user profile
+          speaker: "user",
+          originalText,
+          translatedText,
+          sourceLanguage: sourceLang,
+          targetLanguage: targetLang,
+        }),
+      });
+    } catch (err) {
+      console.error("Error saving message:", err);
+      // Don't block the UI
+    }
+  };
+
   const speakText = (text: string, lang: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!synthRef.current) {
@@ -153,11 +253,28 @@ export default function TranslatePage() {
     }
   };
 
-  const endConversation = () => {
+  const endConversation = async () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    router.push("/");
+
+    // End conversation in database
+    if (conversationId) {
+      try {
+        await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "end",
+            conversationId,
+          }),
+        });
+      } catch (err) {
+        console.error("Error ending conversation:", err);
+      }
+    }
+
+    router.push("/dashboard");
   };
 
   const getStatusColor = () => {
@@ -195,18 +312,30 @@ export default function TranslatePage() {
       <div className="container mx-auto max-w-6xl py-8 px-4">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Real-Time Translation
-          </h1>
-          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-              Your Language: {userLang}
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-green-500"></span>
-              Guest Language: {guestLang}
-            </span>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                Real-Time Translation
+              </h1>
+              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  Your Language: {userLang}
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                  Guest Language: {guestLang}
+                </span>
+              </div>
+            </div>
+            {customerCode && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Customer ID</p>
+                <p className="text-sm font-mono font-semibold text-gray-900 dark:text-white">
+                  {customerCode}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -262,26 +391,19 @@ export default function TranslatePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* User Messages */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Your Messages ({userLang})
             </h2>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.filter((m) => m.speaker === "user").length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  No messages yet. Start speaking!
-                </p>
+              {messages.filter(m => m.speaker === "user").length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
               ) : (
                 messages
-                  .filter((m) => m.speaker === "user")
+                  .filter(m => m.speaker === "user")
                   .map((message) => (
-                    <div
-                      key={message.id}
-                      className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4"
-                    >
-                      <p className="text-gray-900 dark:text-white font-medium">
-                        {message.text}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <div key={message.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                      <p className="text-gray-900 dark:text-white">{message.text}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
                     </div>
@@ -292,38 +414,36 @@ export default function TranslatePage() {
 
           {/* Guest Messages (Translations) */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Translations ({guestLang})
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Guest Messages ({guestLang})
             </h2>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  Translations will appear here...
-                </p>
+              {messages.filter(m => m.speaker === "user").length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No translations yet</p>
               ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4"
-                  >
-                    <p className="text-gray-900 dark:text-white font-medium">
-                      {message.translatedText}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                ))
+                messages
+                  .filter(m => m.speaker === "user")
+                  .map((message) => (
+                    <div key={message.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                      <p className="text-gray-900 dark:text-white">{message.translatedText}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  ))
               )}
             </div>
           </div>
         </div>
-
-        {/* Info */}
-        <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-          <p>💡 Using browser's built-in speech recognition (Chrome/Edge recommended)</p>
-        </div>
       </div>
     </div>
+  );
+}
+
+export default function TranslatePage() {
+  return (
+    <ProtectedRoute>
+      <TranslatePageContent />
+    </ProtectedRoute>
   );
 }
