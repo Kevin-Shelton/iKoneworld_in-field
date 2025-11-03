@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       .select('*');
 
     // Merge auth users with our user details
-    const enrichedUsers = users.map(authUser => {
-      const details = userDetails?.find(u => u.openId === authUser.id);
+    const enrichedUsers = users.map((authUser: any) => {
+      const details = userDetails?.find((u: any) => u.openId === authUser.id);
       return {
         id: authUser.id,
         email: authUser.email,
