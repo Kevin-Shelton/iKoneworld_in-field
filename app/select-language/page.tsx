@@ -40,12 +40,16 @@ export default function LanguageSelection() {
       fetch(`/api/languages/user-favorites?userId=${user.id}`)
         .then((res) => res.json())
         .then((data) => {
-          setFavoriteLanguages(data);
-          setFavoriteCodes(new Set(data.map((lang: Language) => lang.code)));
+          // Ensure data is an array
+          const languages = Array.isArray(data) ? data : [];
+          setFavoriteLanguages(languages);
+          setFavoriteCodes(new Set(languages.map((lang: Language) => lang.code)));
           setLoadingFavorites(false);
         })
         .catch((error) => {
           console.error("Error fetching favorite languages:", error);
+          setFavoriteLanguages([]);
+          setFavoriteCodes(new Set());
           setLoadingFavorites(false);
         });
     } else {

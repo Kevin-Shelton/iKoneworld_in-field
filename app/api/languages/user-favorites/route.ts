@@ -6,20 +6,14 @@ export async function GET(request: NextRequest) {
     const userId = request.nextUrl.searchParams.get("userId");
     
     if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json([]);
     }
     
     const languages = await getUserFavoriteLanguages(parseInt(userId));
-    return NextResponse.json(languages);
+    return NextResponse.json(languages || []);
   } catch (error) {
     console.error("Error fetching user favorite languages:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user favorite languages" },
-      { status: 500 }
-    );
+    return NextResponse.json([]);
   }
 }
 
