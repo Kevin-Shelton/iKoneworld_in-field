@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured
-    if (!process.env.VERBUM_API_KEY) {
+    const apiKey = process.env.VERBUM_API_KEY;
+    console.log('[Translation API] API Key present:', !!apiKey, 'Length:', apiKey?.length || 0);
+    
+    if (!apiKey) {
       return NextResponse.json(
         { error: "Translation service not configured" },
         { status: 500 }
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.VERBUM_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         texts,

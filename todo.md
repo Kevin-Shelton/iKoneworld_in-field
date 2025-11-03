@@ -265,3 +265,10 @@
 - [x] Fix createConversation to use language1 and language2 columns instead of user_language and guest_language
 - [x] Language codes are being retrieved from localStorage correctly
 - [ ] Test conversation creation with actual language codes
+
+## Translation API Authentication Error
+- [x] Investigate translation API endpoint returning 401 Unauthorized
+- [x] Confirmed VERBUM_API_KEY environment variable is needed
+- [x] Added debug logging to check if API key is present
+- [ ] Verify VERBUM_API_KEY is set correctly in Vercel environment variables
+- [ ] Test translation API with proper authentication after redeploy
