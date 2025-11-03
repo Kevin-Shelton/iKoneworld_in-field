@@ -352,7 +352,7 @@ export default function LanguageSelection() {
           <section className="mb-12">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-              Your Favorites
+              ⭐ Your Favorites [v2]
             </h2>
             {loadingFavorites ? (
               <div className="flex justify-center py-12">
