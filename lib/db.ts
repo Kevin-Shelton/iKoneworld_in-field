@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   users,
   languages,
@@ -100,8 +100,10 @@ export async function addUserFavoriteLanguage(userId: number, languageCode: stri
   const existing = await db
     .select()
     .from(userFavoriteLanguages)
-    .where(eq(userFavoriteLanguages.userId, userId))
-    .where(eq(userFavoriteLanguages.languageCode, languageCode));
+    .where(and(
+      eq(userFavoriteLanguages.userId, userId),
+      eq(userFavoriteLanguages.languageCode, languageCode)
+    ));
   
   if (existing.length === 0) {
     await db.insert(userFavoriteLanguages).values({ userId, languageCode });
@@ -114,8 +116,10 @@ export async function removeUserFavoriteLanguage(userId: number, languageCode: s
   
   await db
     .delete(userFavoriteLanguages)
-    .where(eq(userFavoriteLanguages.userId, userId))
-    .where(eq(userFavoriteLanguages.languageCode, languageCode));
+    .where(and(
+      eq(userFavoriteLanguages.userId, userId),
+      eq(userFavoriteLanguages.languageCode, languageCode)
+    ));
 }
 
 export async function isLanguageFavorite(userId: number, languageCode: string): Promise<boolean> {
@@ -125,8 +129,10 @@ export async function isLanguageFavorite(userId: number, languageCode: string): 
   const result = await db
     .select()
     .from(userFavoriteLanguages)
-    .where(eq(userFavoriteLanguages.userId, userId))
-    .where(eq(userFavoriteLanguages.languageCode, languageCode));
+    .where(and(
+      eq(userFavoriteLanguages.userId, userId),
+      eq(userFavoriteLanguages.languageCode, languageCode)
+    ));
   
   return result.length > 0;
 }
