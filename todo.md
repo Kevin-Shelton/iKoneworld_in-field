@@ -280,3 +280,10 @@
 - [x] Update translate API to use mapped language codes
 - [x] Added debug logging to show original and mapped codes
 - [ ] Test translation with mapped codes
+
+## Dialect-Specific Translation Requirement
+- [ ] Investigate why Verbum AI rejects BCP 47 codes despite documentation saying they support them
+- [ ] Contact Verbum AI support to clarify dialect support (es-CR, es-MX, etc.)
+- [ ] Research alternative translation APIs that support Spanish dialects (Google Translate, DeepL, Azure Translator)
+- [ ] Evaluate switching translation provider if Verbum AI doesn't support dialects
+- [ ] Test if Verbum AI has different endpoints or parameters for dialect-specific translation
