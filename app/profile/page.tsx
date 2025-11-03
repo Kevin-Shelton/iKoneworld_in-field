@@ -100,9 +100,9 @@ function ProfilePageContent() {
     const search = languageSearch.toLowerCase();
     return languages.filter(
       (lang) =>
-        lang.name.toLowerCase().includes(search) ||
-        lang.nativeName.toLowerCase().includes(search) ||
-        lang.code.toLowerCase().includes(search)
+        (lang.name && lang.name.toLowerCase().includes(search)) ||
+        (lang.nativeName && lang.nativeName.toLowerCase().includes(search)) ||
+        (lang.code && lang.code.toLowerCase().includes(search))
     );
   }, [languages, languageSearch]);
 

@@ -223,3 +223,8 @@
 - [x] Filter languages by name, native name, or code
 - [x] Add visual indicator (checkmark) for selected language
 - [ ] Test search functionality in deployed app
+
+## Bug: Null Safety in Language Filter
+- [x] Add null checks to language filter in profile page
+- [x] Handle null/undefined values in name, nativeName, and code fields
+- [ ] Test with empty or incomplete language data
