@@ -325,6 +325,9 @@ export default function LanguageSelection() {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      // Set playback speed to 1.5x
+      audio.playbackRate = 1.5;
+      
       // Store audio element for stopping later
       setAudioElement(audio);
       setIsAudioPlaying(true);
