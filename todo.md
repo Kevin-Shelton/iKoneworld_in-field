@@ -228,3 +228,13 @@
 - [x] Add null checks to language filter in profile page
 - [x] Handle null/undefined values in name, nativeName, and code fields
 - [ ] Test with empty or incomplete language data
+
+## Bug: Language Names Not Displaying
+- [x] Check languages table schema in database
+- [x] Verify language data has name and nativeName fields populated
+- [x] Create migration script to populate full language names
+- [x] Map language codes to full names (e.g., en-US → English (United States))
+- [x] Includes 70+ languages with native names
+- [x] Country-specific variants for major languages
+- [ ] Run migration in Supabase SQL Editor
+- [ ] Test language dropdown shows full names
