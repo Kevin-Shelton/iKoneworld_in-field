@@ -62,7 +62,13 @@ export default function LanguageSelection() {
     fetch("/api/languages")
       .then((res) => res.json())
       .then((data) => {
-        setAllLanguages(data.languages || []);
+        const languages = data.languages || [];
+        console.log('[Language Selection] Loaded languages:', languages.length);
+        if (languages.length > 0) {
+          console.log('[Language Selection] Sample language:', languages[0]);
+          console.log('[Language Selection] Sample countryCode:', languages[0].countryCode, 'Type:', typeof languages[0].countryCode);
+        }
+        setAllLanguages(languages);
         setLoadingAll(false);
       })
       .catch((error) => {
@@ -275,14 +281,18 @@ export default function LanguageSelection() {
 
   // Get flag emoji from country code
   const getFlagEmoji = (countryCode: string | null): string => {
-    if (!countryCode) return "🌐";
+    if (!countryCode) {
+      console.log('[Flag] No country code provided');
+      return "🌐";
+    }
     
     // Clean and validate country code
     const cleanCode = countryCode.trim().toUpperCase();
+    console.log(`[Flag] Converting "${countryCode}" -> "${cleanCode}" (length: ${cleanCode.length})`);
     
     // Must be exactly 2 characters
     if (cleanCode.length !== 2) {
-      console.warn(`Invalid country code: "${countryCode}" (length: ${cleanCode.length})`);
+      console.warn(`[Flag] Invalid country code: "${countryCode}" (length: ${cleanCode.length})`);
       return "🌐";
     }
     
@@ -291,9 +301,11 @@ export default function LanguageSelection() {
       const codePoints = cleanCode
         .split("")
         .map((char) => 127397 + char.charCodeAt(0));
-      return String.fromCodePoint(...codePoints);
+      const flag = String.fromCodePoint(...codePoints);
+      console.log(`[Flag] "${cleanCode}" -> codePoints: [${codePoints}] -> flag: "${flag}"`);
+      return flag;
     } catch (error) {
-      console.error(`Error converting country code "${countryCode}" to flag:`, error);
+      console.error(`[Flag] Error converting country code "${countryCode}" to flag:`, error);
       return "🌐";
     }
   };
