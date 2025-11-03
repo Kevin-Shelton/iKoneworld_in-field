@@ -33,12 +33,18 @@ function TranslatePageContent() {
   const [customerCode, setCustomerCode] = useState<string>("");
   const [dbUserId, setDbUserId] = useState<number | null>(null);
   const [lastSpeaker, setLastSpeaker] = useState<"user" | "guest" | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [micPermission, setMicPermission] = useState<"granted" | "denied" | "prompt">("prompt");
   
   const userRecognitionRef = useRef<any>(null);
   const guestRecognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const isProcessingRef = useRef<boolean>(false);
   const lastProcessedTextRef = useRef<string>("");
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -95,6 +101,10 @@ function TranslatePageContent() {
       userRecognitionRef.current.onerror = (event: any) => {
         if (event.error !== "no-speech" && event.error !== "aborted") {
           console.error(`[Employee] Error: ${event.error}`);
+          if (event.error === "not-allowed") {
+            setMicPermission("denied");
+            setError("Microphone access denied. Please allow microphone access in your browser settings.");
+          }
         }
       };
 
@@ -139,6 +149,10 @@ function TranslatePageContent() {
       guestRecognitionRef.current.onerror = (event: any) => {
         if (event.error !== "no-speech" && event.error !== "aborted") {
           console.error(`[Customer] Error: ${event.error}`);
+          if (event.error === "not-allowed") {
+            setMicPermission("denied");
+            setError("Microphone access denied. Please allow microphone access in your browser settings.");
+          }
         }
       };
 
@@ -170,8 +184,73 @@ function TranslatePageContent() {
           guestRecognitionRef.current.stop();
         } catch (e) {}
       }
+      stopAudioMonitoring();
     };
   }, [router]);
+
+  const startAudioMonitoring = async () => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      setMicPermission("granted");
+
+      // Create audio context and analyser
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 256;
+
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      source.connect(analyserRef.current);
+
+      // Start monitoring audio levels
+      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+      
+      const updateLevel = () => {
+        if (!analyserRef.current || !isListening) return;
+        
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const normalizedLevel = Math.min(100, (average / 128) * 100);
+        
+        setAudioLevel(normalizedLevel);
+        
+        animationFrameRef.current = requestAnimationFrame(updateLevel);
+      };
+      
+      updateLevel();
+      
+      console.log("[Audio Monitor] Started");
+    } catch (err) {
+      console.error("[Audio Monitor] Error:", err);
+      setMicPermission("denied");
+      setError("Failed to access microphone. Please check your browser permissions.");
+    }
+  };
+
+  const stopAudioMonitoring = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => track.stop());
+      micStreamRef.current = null;
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    analyserRef.current = null;
+    setAudioLevel(0);
+    
+    console.log("[Audio Monitor] Stopped");
+  };
 
   const handleSpeechDetected = async (
     transcript: string,
@@ -390,12 +469,15 @@ function TranslatePageContent() {
     });
   };
 
-  const startAutoListening = () => {
+  const startAutoListening = async () => {
     if (!isListening) {
       setIsListening(true);
       setStatus("listening");
       setError("");
       lastProcessedTextRef.current = "";
+      
+      // Start audio monitoring
+      await startAudioMonitoring();
       
       console.log(`[Start] Listening for ${userLang} (Employee) and ${guestLang} (Customer)`);
       
@@ -424,6 +506,8 @@ function TranslatePageContent() {
     try {
       guestRecognitionRef.current?.stop();
     } catch (e) {}
+    
+    stopAudioMonitoring();
   };
 
   const endConversation = async () => {
@@ -473,6 +557,13 @@ function TranslatePageContent() {
       default:
         return "Ready to start";
     }
+  };
+
+  const getMicLevelColor = () => {
+    if (audioLevel < 10) return "bg-gray-400";
+    if (audioLevel < 30) return "bg-green-400";
+    if (audioLevel < 60) return "bg-yellow-400";
+    return "bg-red-400";
   };
 
   if (!userLang || !guestLang) {
@@ -561,6 +652,36 @@ function TranslatePageContent() {
               </div>
             </div>
             
+            {/* Microphone Level Indicator */}
+            {isListening && (
+              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Microphone Input Level: {Math.round(audioLevel)}%
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded ${micPermission === "granted" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                    {micPermission === "granted" ? "✓ Mic Active" : "✗ Mic Blocked"}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-100 ${getMicLevelColor()}`}
+                    style={{ width: `${audioLevel}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {audioLevel < 5 
+                    ? "⚠️ No audio detected - please check your microphone" 
+                    : audioLevel < 20 
+                    ? "🔉 Low audio - speak louder or move closer to mic"
+                    : "✓ Good audio level"}
+                </p>
+              </div>
+            )}
+            
             {isListening && (
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                 <p className="text-sm text-green-800 dark:text-green-200">
@@ -605,7 +726,7 @@ function TranslatePageContent() {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Customer Messages ({guestLang})
             </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-auto max-h-96 overflow-y-auto">
               {messages.filter(m => m.speaker === "guest").length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
               ) : (
