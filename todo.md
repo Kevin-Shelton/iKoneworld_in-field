@@ -214,3 +214,12 @@
 - [x] Fix languages API to return data in expected format { languages: [] }
 - [x] createdAt timestamp already set correctly in user sync
 - [ ] Test profile page displays all data correctly after re-login
+
+## Language Selector Improvements
+- [x] Replace Select with custom searchable dropdown
+- [x] Add search/filter input to language selector with Search icon
+- [x] Display full language and country names: "Language (NativeName)"
+- [x] Show selected language with ability to clear selection
+- [x] Filter languages by name, native name, or code
+- [x] Add visual indicator (checkmark) for selected language
+- [ ] Test search functionality in deployed app

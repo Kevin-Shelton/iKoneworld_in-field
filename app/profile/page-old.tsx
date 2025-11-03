@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -14,9 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Search, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 type Language = {
   code: string;
@@ -42,8 +47,6 @@ function ProfilePageContent() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [languageSearch, setLanguageSearch] = useState('');
-  const [showLanguageList, setShowLanguageList] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -86,31 +89,11 @@ function ProfilePageContent() {
       }
 
       const data = await response.json();
-      const langs = data.languages || [];
-      setLanguages(Array.isArray(langs) ? langs : []);
+      setLanguages(data.languages || []);
     } catch (error) {
       console.error('Error fetching languages:', error);
-      setLanguages([]);
     }
   };
-
-  const filteredLanguages = useMemo(() => {
-    if (!languageSearch.trim()) return languages;
-    
-    const search = languageSearch.toLowerCase();
-    return languages.filter(
-      (lang) =>
-        lang.name.toLowerCase().includes(search) ||
-        lang.nativeName.toLowerCase().includes(search) ||
-        lang.code.toLowerCase().includes(search)
-    );
-  }, [languages, languageSearch]);
-
-  const selectedLanguageName = useMemo(() => {
-    if (!defaultLanguage) return '';
-    const lang = languages.find((l) => l.code === defaultLanguage);
-    return lang ? `${lang.name} (${lang.nativeName})` : defaultLanguage;
-  }, [defaultLanguage, languages]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +196,7 @@ function ProfilePageContent() {
             </CardContent>
           </Card>
 
-          {/* Organizational Structure */}
+          {/* Organizational Structure - Placeholder for future implementation */}
           <Card>
             <CardHeader>
               <CardTitle>Organizational Assignment</CardTitle>
@@ -228,6 +211,7 @@ function ProfilePageContent() {
                   This includes your enterprise, region, state, city, district, store, and department assignments.
                 </p>
               </div>
+              {/* Future: Display user_assignments data here */}
             </CardContent>
           </Card>
 
@@ -258,75 +242,22 @@ function ProfilePageContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="defaultLanguage">Default Language</Label>
-                  <div className="relative">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="languageSearch"
-                        type="text"
-                        placeholder="Search languages..."
-                        value={languageSearch}
-                        onChange={(e) => {
-                          setLanguageSearch(e.target.value);
-                          setShowLanguageList(true);
-                        }}
-                        onFocus={() => setShowLanguageList(true)}
-                        className="pl-10"
-                        disabled={saving}
-                      />
-                    </div>
-                    
-                    {defaultLanguage && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
-                        <span className="text-sm text-blue-900">
-                          Selected: {selectedLanguageName}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDefaultLanguage('')}
-                          disabled={saving}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    )}
-
-                    {showLanguageList && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                        {filteredLanguages.length > 0 ? (
-                          filteredLanguages.map((lang) => (
-                            <button
-                              key={lang.code}
-                              type="button"
-                              className={cn(
-                                "w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between",
-                                defaultLanguage === lang.code && "bg-blue-50"
-                              )}
-                              onClick={() => {
-                                setDefaultLanguage(lang.code);
-                                setLanguageSearch('');
-                                setShowLanguageList(false);
-                              }}
-                              disabled={saving}
-                            >
-                              <span className="text-sm">
-                                {lang.name} ({lang.nativeName})
-                              </span>
-                              {defaultLanguage === lang.code && (
-                                <Check className="h-4 w-4 text-blue-600" />
-                              )}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            No languages found
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <Select
+                    value={defaultLanguage}
+                    onValueChange={(value: string) => setDefaultLanguage(value)}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your default language" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {Array.isArray(languages) && languages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.name} ({lang.nativeName})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-gray-500">
                     Your preferred language for conversations. This will be pre-selected when starting new conversations.
                   </p>
