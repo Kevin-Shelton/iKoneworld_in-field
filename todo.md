@@ -143,3 +143,15 @@
 - [ ] Build admin UI for enterprise management
 - [ ] Build admin UI for store/user management
 - [ ] Test end-to-end flow with database persistence
+
+## Employee Authentication & Customer Tracking
+- [x] Set up Supabase Auth configuration
+- [x] Create employee login page
+- [ ] Create employee signup/registration page
+- [ ] Build employee profile management page
+- [ ] Implement smart customer ID generation (CUST-YYYYMMDD-XXXXX)
+- [ ] Create customers table for anonymous tracking
+- [ ] Update conversations table to link employee + customer
+- [ ] Update conversation page for employee-customer flow
+- [ ] Build employee dashboard with conversation history
+- [ ] Add protected routes for authenticated employees only
