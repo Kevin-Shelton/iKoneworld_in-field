@@ -13,10 +13,10 @@ import { toast } from 'sonner';
 type Conversation = {
   id: number;
   userId: number;
-  enterprise_id: string;
-  customer_id: string;
-  user_language: string;
-  guest_language: string;
+  enterprise_id?: string;
+  customer_id?: string;
+  language1: string;
+  language2: string;
   status: string;
   startedAt: string;
   endedAt: string | null;
@@ -188,7 +188,7 @@ function DashboardContent() {
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">Conversation #{conv.id}</p>
                         <p className="text-sm text-gray-600">
-                          {conv.user_language} → {conv.guest_language}
+                          {conv.language1} → {conv.language2}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(conv.startedAt).toLocaleString()}
