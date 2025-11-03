@@ -276,11 +276,26 @@ export default function LanguageSelection() {
   // Get flag emoji from country code
   const getFlagEmoji = (countryCode: string | null): string => {
     if (!countryCode) return "🌐";
-    const codePoints = countryCode
-      .toUpperCase()
-      .split("")
-      .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
+    
+    // Clean and validate country code
+    const cleanCode = countryCode.trim().toUpperCase();
+    
+    // Must be exactly 2 characters
+    if (cleanCode.length !== 2) {
+      console.warn(`Invalid country code: "${countryCode}" (length: ${cleanCode.length})`);
+      return "🌐";
+    }
+    
+    // Convert to regional indicator symbols
+    try {
+      const codePoints = cleanCode
+        .split("")
+        .map((char) => 127397 + char.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    } catch (error) {
+      console.error(`Error converting country code "${countryCode}" to flag:`, error);
+      return "🌐";
+    }
   };
 
   const getHeaderText = () => {
