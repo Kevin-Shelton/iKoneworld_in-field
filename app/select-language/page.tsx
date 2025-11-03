@@ -75,6 +75,12 @@ export default function LanguageSelection() {
         const cancelData = await cancelResponse.json();
         const startData = await startResponse.json();
         
+        console.log('[Button Translation] Cancel response:', cancelData);
+        console.log('[Button Translation] Start response:', startData);
+        console.log('[Button Translation] Language code:', language.code);
+        console.log('[Button Translation] Cancel text:', cancelData?.translations?.[0]?.[language.code]);
+        console.log('[Button Translation] Start text:', startData?.translations?.[0]?.[language.code]);
+        
         setTranslatedButtons({
           cancel: cancelData?.translations?.[0]?.[language.code] || "Cancel",
           start: startData?.translations?.[0]?.[language.code] || "Start Conversation"
