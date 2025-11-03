@@ -34,7 +34,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-black border-b border-gray-800 shadow-lg">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo Section */}
@@ -63,8 +63,8 @@ export default function Navigation() {
                   href={link.href}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-smooth ${
                     isActive
-                      ? "bg-white/10 text-white font-medium"
-                      : "text-gray-300 hover:text-white hover:bg-white/5"
+                      ? "bg-gray-100 text-black font-medium"
+                      : "text-gray-600 hover:text-black hover:bg-gray-50"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -77,8 +77,8 @@ export default function Navigation() {
           {/* User Menu */}
           <div className="flex items-center gap-3">
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-white">{user?.email}</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-sm font-medium text-black">{user?.email}</p>
+              <p className="text-xs text-gray-600">
                 {(user as any)?.role === 'admin' ? 'Admin' : 'Employee'}
               </p>
             </div>
@@ -86,7 +86,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={() => router.push('/profile')}
-              className="transition-smooth hover:bg-white/10 text-white px-3"
+              className="transition-smooth hover:bg-gray-100 text-black px-3"
               title="Profile"
             >
               <User className="w-5 h-5" />
@@ -95,7 +95,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="transition-smooth hover:bg-white/10 text-white px-3"
+              className="transition-smooth hover:bg-gray-100 text-black px-3"
               title="Sign Out"
             >
               <LogOut className="w-5 h-5" />
