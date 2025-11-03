@@ -181,3 +181,10 @@
 - [x] Updated initializeConversation to accept and use actual user ID
 - [x] Updated saveMessageToDatabase to use actual user ID
 - [ ] Test conversation creation flow
+
+## Bug: User Not Found in Database Table
+- [x] Create API endpoint to sync authenticated user to database (/api/users/sync)
+- [x] Update translate page to sync user before fetching database ID
+- [x] Update dashboard to sync user on load
+- [x] Handle user creation when they don't exist in users table
+- [ ] Test complete flow with new user

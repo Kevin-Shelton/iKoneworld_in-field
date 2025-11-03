@@ -30,9 +30,28 @@ function DashboardContent() {
 
   useEffect(() => {
     if (user) {
-      fetchConversations();
+      // Sync user to database first
+      syncUser().then(() => {
+        fetchConversations();
+      });
     }
   }, [user]);
+
+  const syncUser = async () => {
+    try {
+      await fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          email: user?.email,
+          name: (user as any)?.user_metadata?.name || user?.email?.split('@')[0],
+        }),
+      });
+    } catch (err) {
+      console.error('Error syncing user:', err);
+    }
+  };
 
   const fetchConversations = async () => {
     try {

@@ -157,19 +157,24 @@ function TranslatePageContent() {
     try {
       if (!user?.id) return null;
       
-      // Fetch user from database using their Supabase Auth ID (openId)
-      const { data, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('openId', user.id)
-        .single();
+      // First, sync user to database (creates if doesn't exist)
+      const syncResponse = await fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || user.email?.split('@')[0],
+        }),
+      });
       
-      if (error || !data) {
-        console.error('Error fetching user database ID:', error);
+      if (!syncResponse.ok) {
+        console.error('Error syncing user to database');
         return null;
       }
       
-      return data.id;
+      const syncData = await syncResponse.json();
+      return syncData.userId;
     } catch (err) {
       console.error('Error in fetchUserDatabaseId:', err);
       return null;
