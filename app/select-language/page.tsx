@@ -35,6 +35,9 @@ export default function LanguageSelection() {
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [loadingAll, setLoadingAll] = useState(true);
   const [translatedButtons, setTranslatedButtons] = useState<{cancel: string; start: string}>({cancel: "Cancel", start: "Start Conversation"});
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const { user } = useAuth();
 
   // Auto-play translation notice and translate buttons when dialog opens
@@ -322,14 +325,33 @@ export default function LanguageSelection() {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      // Store audio element for stopping later
+      setAudioElement(audio);
+      setIsAudioPlaying(true);
+      setAudioProgress(0);
+      
+      // Update progress as audio plays
+      audio.ontimeupdate = () => {
+        if (audio.duration) {
+          const progress = (audio.currentTime / audio.duration) * 100;
+          setAudioProgress(progress);
+        }
+      };
+      
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setIsPlayingSample(false);
+        setIsAudioPlaying(false);
+        setAudioProgress(100);
+        setAudioElement(null);
       };
 
       audio.onerror = () => {
         URL.revokeObjectURL(audioUrl);
         setIsPlayingSample(false);
+        setIsAudioPlaying(false);
+        setAudioProgress(0);
+        setAudioElement(null);
         toast.error("Failed to play audio sample");
       };
 
@@ -578,18 +600,54 @@ export default function LanguageSelection() {
                 <p className="text-gray-500 mt-1">{selectedLanguage.nativeName}</p>
               )}
               {selectionStep === "guest" && isPlayingSample && (
-                <div className="mt-4 flex items-center justify-center gap-2 text-primary">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-sm">Playing translation notice...</span>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-center gap-2 text-primary">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">Playing translation notice...</span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div 
+                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${audioProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-center text-gray-500">
+                    {Math.round(audioProgress)}% complete
+                  </p>
                 </div>
               )}
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)} className="flex-1">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Stop audio if playing
+                  if (audioElement) {
+                    audioElement.pause();
+                    audioElement.currentTime = 0;
+                    setAudioElement(null);
+                    setIsAudioPlaying(false);
+                    setIsPlayingSample(false);
+                    setAudioProgress(0);
+                  }
+                  setIsConfirmModalOpen(false);
+                  // Reset to language selection if on guest step
+                  if (selectionStep === "guest") {
+                    setSelectionStep("user");
+                    setSelectedLanguage(null);
+                  }
+                }} 
+                className="flex-1"
+              >
                 {selectionStep === "guest" ? translatedButtons.cancel : "Cancel"}
               </Button>
-              <Button onClick={confirmLanguageSelection} className="flex-1">
+              <Button 
+                onClick={confirmLanguageSelection} 
+                className="flex-1"
+                disabled={selectionStep === "guest" && isAudioPlaying}
+              >
                 {selectionStep === "user" ? "Next: Guest Language" : translatedButtons.start}
               </Button>
             </div>
