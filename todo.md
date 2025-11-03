@@ -287,3 +287,25 @@
 - [ ] Research alternative translation APIs that support Spanish dialects (Google Translate, DeepL, Azure Translator)
 - [ ] Evaluate switching translation provider if Verbum AI doesn't support dialects
 - [ ] Test if Verbum AI has different endpoints or parameters for dialect-specific translation
+
+## Translation Display Bug
+- [ ] Investigate why Guest Messages panel shows only timestamp instead of translated text
+- [ ] Check translation API response format
+- [ ] Fix frontend code to display translated text correctly
+- [ ] Test with es-MX (Mexican Spanish) which is confirmed working
+
+## Verbum AI Dialect Support - CRITICAL FINDING
+- [x] Verbum AI only supports generic Spanish (es), NOT regional variants
+- [x] Supported languages list shows: es, fr-CA, pt, pt-PT (only 4 regional variants total)
+- [x] NO support for: es-MX, es-CR, es-AR, es-CO, or any other Spanish dialects
+- [ ] Decision needed: Accept generic Spanish or switch to LLM-based translation for dialect support
+
+## Database Alignment with Verbum AI Official Support
+- [ ] Fetch official STT language list from Verbum AI API reference
+- [ ] Fetch official TTS voices list from Verbum AI API reference
+- [ ] Fetch official Translation language list from Verbum AI API reference
+- [ ] Compare current database (124 STT languages, 579 TTS voices, 139 TTT languages) with official lists
+- [ ] Identify languages to add (missing from database)
+- [ ] Identify languages to remove (not supported by Verbum AI)
+- [ ] Create migration script to update database
+- [ ] Test language selection with aligned data
