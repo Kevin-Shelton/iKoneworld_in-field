@@ -32,7 +32,55 @@ export default function LanguageSelection() {
   const [favoriteCodes, setFavoriteCodes] = useState<Set<string>>(new Set());
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [loadingAll, setLoadingAll] = useState(true);
+  const [translatedButtons, setTranslatedButtons] = useState<{cancel: string; start: string}>({cancel: "Cancel", start: "Start Conversation"});
   const { user } = useAuth();
+
+  // Auto-play translation notice and translate buttons when dialog opens
+  useEffect(() => {
+    if (isConfirmModalOpen && selectedLanguage && selectionStep === "guest") {
+      playTranslationNotice(selectedLanguage);
+      translateButtons(selectedLanguage);
+    } else if (!isConfirmModalOpen) {
+      // Reset button text when dialog closes
+      setTranslatedButtons({cancel: "Cancel", start: "Start Conversation"});
+    }
+  }, [isConfirmModalOpen, selectedLanguage, selectionStep]);
+
+  // Translate button text to target language
+  const translateButtons = async (language: Language) => {
+    try {
+      const cancelResponse = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "Cancel",
+          targetLanguage: language.code,
+        }),
+      });
+
+      const startResponse = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "Start Conversation",
+          targetLanguage: language.code,
+        }),
+      });
+
+      if (cancelResponse.ok && startResponse.ok) {
+        const cancelData = await cancelResponse.json();
+        const startData = await startResponse.json();
+        
+        setTranslatedButtons({
+          cancel: cancelData.translatedText || "Cancel",
+          start: startData.translatedText || "Start Conversation"
+        });
+      }
+    } catch (error) {
+      console.error("Error translating buttons:", error);
+      // Keep English as fallback
+    }
+  };
 
   // Fetch user's favorite languages
   useEffect(() => {
@@ -203,15 +251,30 @@ export default function LanguageSelection() {
     setIsConfirmModalOpen(true);
   };
 
-  // Play sample TTS for confirmation
-  const playSample = async () => {
-    if (!selectedLanguage) return;
-
+  // Play translation notice automatically
+  const playTranslationNotice = async (language: Language) => {
     setIsPlayingSample(true);
     try {
-      const sampleText = "Hello, welcome to iK OneWorld";
+      const noticeText = `Language Translation Notice. This application lets you speak in your preferred language. What you say will be translated into English, and what the representative says will be translated into ${language.name} in real time. Please note: Your conversation may be recorded for quality and training purposes. By continuing, you agree to this recording. Tap Start Conversation to begin.`;
       
-      const voicesResponse = await fetch(`/api/languages/voices?language=${selectedLanguage.code}`);
+      // First translate the notice to the target language
+      const translateResponse = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: noticeText,
+          targetLanguage: language.code,
+        }),
+      });
+
+      if (!translateResponse.ok) {
+        throw new Error("Failed to translate notice");
+      }
+
+      const { translatedText } = await translateResponse.json();
+      const textToSpeak = translatedText || noticeText;
+      
+      const voicesResponse = await fetch(`/api/languages/voices?language=${language.code}`);
 
       if (!voicesResponse.ok) {
         throw new Error("Failed to fetch voices");
@@ -230,7 +293,7 @@ export default function LanguageSelection() {
       const response = await fetch("/api/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voice, text: sampleText }),
+        body: JSON.stringify({ voice, text: textToSpeak }),
       });
 
       if (!response.ok) {
@@ -479,7 +542,8 @@ export default function LanguageSelection() {
           <DialogHeader>
             <DialogTitle>Confirm Language Selection</DialogTitle>
             <DialogDescription>
-              You have selected {selectedLanguage?.name} as your {selectionStep === "user" ? "speaking" : "translation"} language. Would you like to hear a sample?
+              You have selected {selectedLanguage?.name} as your {selectionStep === "user" ? "speaking" : "translation"} language.
+              {selectionStep === "guest" && isPlayingSample && " Please listen to the translation notice..."}
             </DialogDescription>
           </DialogHeader>
           
@@ -492,33 +556,20 @@ export default function LanguageSelection() {
               {selectedLanguage?.nativeName && (
                 <p className="text-gray-500 mt-1">{selectedLanguage.nativeName}</p>
               )}
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={playSample}
-              disabled={isPlayingSample}
-              className="w-full"
-            >
-              {isPlayingSample ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Playing...
-                </>
-              ) : (
-                <>
-                  <Volume2 className="mr-2 h-4 w-4" />
-                  Play Sample
-                </>
+              {selectionStep === "guest" && isPlayingSample && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-primary">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">Playing translation notice...</span>
+                </div>
               )}
-            </Button>
+            </div>
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)} className="flex-1">
-                Cancel
+                {selectionStep === "guest" ? translatedButtons.cancel : "Cancel"}
               </Button>
               <Button onClick={confirmLanguageSelection} className="flex-1">
-                {selectionStep === "user" ? "Next: Guest Language" : "Start Conversation"}
+                {selectionStep === "user" ? "Next: Guest Language" : translatedButtons.start}
               </Button>
             </div>
           </div>
