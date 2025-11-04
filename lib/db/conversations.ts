@@ -133,7 +133,7 @@ export async function getConversationMessages(conversationId: number) {
   // The client will use Supabase client to generate authenticated URLs
   // This enables persistent audio access based on RLS policies
   if (data) {
-    const messagesWithFilePaths = data.map((message) => {
+    const messagesWithFilePaths = data.map((message: any) => {
       if (message.audio_url) {
         try {
           // Extract the file path from the public URL
