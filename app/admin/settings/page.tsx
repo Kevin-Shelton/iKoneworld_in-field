@@ -78,11 +78,11 @@ function AdminSettingsContent() {
   const syncUserAndFetchSettings = async () => {
     try {
       // Sync user to get database ID
-      const syncResponse = await fetch('/api/auth/sync', {
+      const syncResponse = await fetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          authId: user?.id,
+          userId: user?.id,
           email: user?.email,
         }),
       });

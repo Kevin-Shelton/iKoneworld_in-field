@@ -63,17 +63,10 @@ function AdminUsersContent() {
   const [resetPassword, setResetPassword] = useState('');
 
   useEffect(() => {
-    // Check if current user is admin
-    if (user && user.role !== 'admin') {
-      toast.error('Access denied: Admin privileges required');
-      router.push('/dashboard');
-      return;
-    }
-
     if (user) {
       fetchUsers();
     }
-  }, [user, router]);
+  }, [user]);
 
   const fetchUsers = async () => {
     try {

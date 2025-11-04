@@ -9,7 +9,7 @@ async function isAdmin(userId: string): Promise<boolean> {
     .eq('openId', userId)
     .single();
   
-  return !error && data?.role === 'admin';
+  return !error && (data?.role === 'admin' || data?.role === 'enterprise_admin');
 }
 
 export async function GET(request: NextRequest) {
