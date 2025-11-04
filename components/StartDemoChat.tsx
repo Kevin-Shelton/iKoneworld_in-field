@@ -62,7 +62,7 @@ export function StartDemoChat({ userId }: StartDemoChatProps) {
 
   const handleOpenDemo = () => {
     if (conversationId) {
-      router.push(\`/demo/\${conversationId}\`);
+      router.push(`/demo/${conversationId}`);
     }
   };
 

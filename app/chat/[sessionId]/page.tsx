@@ -49,7 +49,7 @@ export default function CustomerChatPage() {
 
     async function fetchConversation() {
       try {
-        const response = await fetch(\`/api/demo/join/\${conversationId}\`);
+        const response = await fetch(`/api/demo/join/${conversationId}`);
         if (response.ok) {
           const data = await response.json();
           setMessages(data.messages || []);
@@ -159,14 +159,14 @@ export default function CustomerChatPage() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={\`flex \${msg.speaker === "guest" ? "justify-end" : "justify-start"}\`}
+              className={`flex ${msg.speaker === "guest" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={\`max-w-[70%] rounded-lg p-3 \${
+                className={`max-w-[70%] rounded-lg p-3 ${
                   msg.speaker === "guest"
                     ? "bg-blue-500 text-white"
                     : "bg-white text-gray-900 shadow"
-                }\`}
+                }`}
               >
                 <p className="font-medium">
                   {msg.speaker === "guest" ? msg.originalText : msg.translatedText}

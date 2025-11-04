@@ -41,7 +41,7 @@ function DemoChatContent() {
   useEffect(() => {
     async function fetchConversation() {
       try {
-        const response = await fetch(\`/api/demo/join/\${conversationId}\`);
+        const response = await fetch(`/api/demo/join/${conversationId}`);
         if (response.ok) {
           const data = await response.json();
           setMessages(data.messages || []);
@@ -163,14 +163,14 @@ function DemoChatContent() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={\`flex \${msg.speaker === "user" ? "justify-end" : "justify-start"}\`}
+                className={`flex ${msg.speaker === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={\`max-w-[70%] rounded-lg p-3 \${
+                  className={`max-w-[70%] rounded-lg p-3 ${
                     msg.speaker === "user"
                       ? "bg-blue-500 text-white"
                       : "bg-gray-200 text-gray-900"
-                  }\`}
+                  }`}
                 >
                   <p className="font-medium">
                     {msg.speaker === "user" ? msg.originalText : msg.translatedText}
@@ -219,14 +219,14 @@ function DemoChatContent() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={\`flex \${msg.speaker === "guest" ? "justify-end" : "justify-start"}\`}
+                className={`flex ${msg.speaker === "guest" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={\`max-w-[70%] rounded-lg p-3 \${
+                  className={`max-w-[70%] rounded-lg p-3 ${
                     msg.speaker === "guest"
                       ? "bg-green-500 text-white"
                       : "bg-gray-200 text-gray-900"
-                  }\`}
+                  }`}
                 >
                   <p className="font-medium">
                     {msg.speaker === "guest" ? msg.originalText : msg.translatedText}
