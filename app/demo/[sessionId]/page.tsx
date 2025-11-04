@@ -1,4 +1,5 @@
 "use client";
+// Demo chat with real-time Verbum AI translation
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
