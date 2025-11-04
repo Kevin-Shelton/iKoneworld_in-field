@@ -299,7 +299,7 @@ function DashboardContent() {
               onClick={() => router.push('/select-language')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
-              Start Translation Session
+              In-Field
             </button>
             {dbUserId ? (
               <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />

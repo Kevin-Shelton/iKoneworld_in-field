@@ -73,3 +73,6 @@
 ## Timestamp Display Issue
 - [x] Fix dashboard timestamps to show user's local time instead of UTC
 - [x] Update date and time display to use browser's timezone
+
+## UI Text Updates
+- [x] Change "Start Translation Session" button text to "In-Field"
