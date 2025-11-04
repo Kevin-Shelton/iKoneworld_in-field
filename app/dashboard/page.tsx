@@ -30,6 +30,7 @@ type Conversation = {
     is_demo?: boolean;
     conversation_type?: string;
     employee_name?: string;
+    session_id?: string;
   };
 };
 

@@ -52,3 +52,4 @@
 
 ## Build Errors
 - [x] Fix TypeScript error: Property 'name' does not exist on type 'User' in dashboard/page.tsx line 287
+- [x] Fix TypeScript error: Property 'session_id' does not exist on metadata type in dashboard/page.tsx line 419
