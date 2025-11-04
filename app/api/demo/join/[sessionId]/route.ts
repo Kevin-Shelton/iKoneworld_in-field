@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { conversations, conversationMessages } from "@/drizzle/schema";
 import { eq } from "drizzle-orm";
 
@@ -18,6 +18,14 @@ export async function GET(
       return NextResponse.json(
         { error: "Invalid session ID" },
         { status: 400 }
+      );
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not available" },
+        { status: 500 }
       );
     }
 

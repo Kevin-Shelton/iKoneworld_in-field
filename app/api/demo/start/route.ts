@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { conversations } from "@/drizzle/schema";
 import QRCode from "qrcode";
 
@@ -20,6 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create demo conversation with metadata
+    const db = await getDb();
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not available" },
+        { status: 500 }
+      );
+    }
+
     const [conversation] = await db
       .insert(conversations)
       .values({

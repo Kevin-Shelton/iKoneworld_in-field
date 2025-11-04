@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { conversationMessages } from "@/drizzle/schema";
 
 /**
@@ -64,6 +64,14 @@ export async function POST(request: NextRequest) {
       translateResult.translations?.[0]?.[0]?.text || content;
 
     // Store message with translation
+    const db = await getDb();
+    if (!db) {
+      return NextResponse.json(
+        { error: "Database not available" },
+        { status: 500 }
+      );
+    }
+
     const speaker = senderRole === "employee" ? "user" : "guest";
     const [message] = await db
       .insert(conversationMessages)
