@@ -160,7 +160,6 @@ function DemoChatContent() {
             label="My Language:"
             className="text-white"
           />
-          </div>
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto bg-gray-50" ref={employeeScrollRef}>
@@ -221,7 +220,6 @@ function DemoChatContent() {
             label="Customer Language:"
             className="text-white"
           />
-          </div>
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto bg-gray-50" ref={customerScrollRef}>
@@ -268,6 +266,7 @@ function DemoChatContent() {
             </Button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
