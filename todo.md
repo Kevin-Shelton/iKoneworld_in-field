@@ -63,3 +63,9 @@
 - [x] Fix dashboard to use database users.name instead of Supabase Auth user_metadata.name
 - [x] Fetch user profile from database to get the correct display name
 - [x] Update StartDemoChat to receive name from database instead of auth metadata
+
+## New Demo Chats Using Email Instead of Display Name
+- [x] Debug why dbUserName is null or empty for new demo chats
+- [x] Check if user.name is properly set in database
+- [x] Verify /api/users/sync is returning userName correctly
+- [x] Fixed: Removed name update for existing users in sync endpoint

@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       // User already exists, update their email and lastSignedIn
+      // DO NOT update name here - it should only be updated via profile page
       const updateData: any = {
         lastSignedIn: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -34,9 +35,7 @@ export async function POST(request: NextRequest) {
       if (email) {
         updateData.email = email;
       }
-      if (name) {
-        updateData.name = name;
-      }
+      // Name is intentionally not updated for existing users
       
       const { data: updatedUser } = await supabaseAdmin
         .from('users')
