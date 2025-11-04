@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { conversationMessages } from "@/drizzle/schema";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
  * POST /api/demo/message
@@ -64,26 +63,29 @@ export async function POST(request: NextRequest) {
       translateResult.translations?.[0]?.[0]?.text || content;
 
     // Store message with translation
-    const db = await getDb();
-    if (!db) {
+    const speaker = senderRole === "employee" ? "user" : "guest";
+    const { data: message, error } = await supabaseAdmin
+      .from("conversation_messages")
+      .insert({
+        conversationId,
+        speaker,
+        original_text: content,
+        translated_text: translatedText,
+        source_language: sourceLang,
+        target_language: targetLang,
+        confidence_score: 100, // Verbum API doesn't provide confidence, default to 100
+        timestamp: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Demo Message] Database error:", error);
       return NextResponse.json(
-        { error: "Database not available" },
+        { error: "Failed to save message" },
         { status: 500 }
       );
     }
-
-    const speaker = senderRole === "employee" ? "user" : "guest";
-    const [message] = await db
-      .insert(conversationMessages)
-      .values({
-        conversationId,
-        speaker,
-        originalText: content,
-        translatedText,
-        language: sourceLang,
-        confidence: 100, // Verbum API doesn't provide confidence, default to 100
-      })
-      .returning();
 
     return NextResponse.json({
       messageId: message.id,

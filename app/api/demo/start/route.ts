@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { conversations } from "@/drizzle/schema";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import QRCode from "qrcode";
 
 /**
@@ -20,24 +19,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Create demo conversation with metadata
-    const db = await getDb();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
-    const [conversation] = await db
-      .insert(conversations)
-      .values({
+    const { data: conversation, error } = await supabaseAdmin
+      .from("conversations")
+      .insert({
         userId,
         language1,
         language2,
         status: "active",
         metadata: { is_demo: true },
+        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
-      .returning();
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Demo Start] Database error:", error);
+      return NextResponse.json(
+        { error: "Failed to create conversation" },
+        { status: 500 }
+      );
+    }
 
     // Generate customer URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;

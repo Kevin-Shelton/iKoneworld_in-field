@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { conversations, conversationMessages } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
  * GET /api/demo/join/[sessionId]
@@ -22,22 +20,15 @@ export async function GET(
       );
     }
 
-    const db = await getDb();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 500 }
-      );
-    }
-
     // Fetch conversation
-    const [conversation] = await db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.id, conversationId))
-      .limit(1);
+    const { data: conversation, error: convError } = await supabaseAdmin
+      .from("conversations")
+      .select("*")
+      .eq("id", conversationId)
+      .single();
 
-    if (!conversation) {
+    if (convError || !conversation) {
+      console.error("[Demo Join] Conversation error:", convError);
       return NextResponse.json(
         { error: "Conversation not found" },
         { status: 404 }
@@ -45,15 +36,23 @@ export async function GET(
     }
 
     // Fetch messages
-    const messages = await db
-      .select()
-      .from(conversationMessages)
-      .where(eq(conversationMessages.conversationId, conversationId))
-      .orderBy(conversationMessages.timestamp);
+    const { data: messages, error: msgError } = await supabaseAdmin
+      .from("conversation_messages")
+      .select("*")
+      .eq("conversationId", conversationId)
+      .order("timestamp", { ascending: true });
+
+    if (msgError) {
+      console.error("[Demo Join] Messages error:", msgError);
+      return NextResponse.json(
+        { error: "Failed to fetch messages" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       conversation,
-      messages,
+      messages: messages || [],
     });
   } catch (error) {
     console.error("[Demo Join] Error:", error);
