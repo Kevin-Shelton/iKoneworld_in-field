@@ -69,3 +69,7 @@
 - [x] Check if user.name is properly set in database
 - [x] Verify /api/users/sync is returning userName correctly
 - [x] Fixed: Removed name update for existing users in sync endpoint
+
+## Timestamp Display Issue
+- [x] Fix dashboard timestamps to show user's local time instead of UTC
+- [x] Update date and time display to use browser's timezone

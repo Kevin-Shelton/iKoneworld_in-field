@@ -412,10 +412,10 @@ function DashboardContent() {
                             {conv.metadata?.employee_name || 'Unknown Employee'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(conv.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(conv.startedAt + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(conv.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(conv.startedAt + 'Z').toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
                             <span className="font-medium">{conv.language1}</span> → <span className="font-medium">{conv.language2}</span>
