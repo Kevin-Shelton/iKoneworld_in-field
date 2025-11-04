@@ -6,13 +6,15 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Home, Languages, User, LogOut, Settings } from "lucide-react";
+import { Home, Languages, User, LogOut, Settings, Shield } from "lucide-react";
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [scrolled, setScrolled] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +25,35 @@ export default function Navigation() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Fetch user role from database
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user?.id) {
+        try {
+          const response = await fetch('/api/auth/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              authId: user.id,
+              email: user.email,
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const role = data.user.role;
+            setUserRole(role);
+            setIsAdmin(role === 'enterprise_admin');
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+        }
+      }
+    };
+
+    fetchUserRole();
+  }, [user]);
+
   const handleSignOut = async () => {
     await signOut();
     router.push("/login");
@@ -31,6 +62,11 @@ export default function Navigation() {
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/select-language", label: "Translate", icon: Languages },
+  ];
+
+  const adminLinks = [
+    { href: "/admin/settings", label: "Admin Settings", icon: Settings },
+    { href: "/admin/users", label: "User Management", icon: Shield },
   ];
 
   return (
@@ -72,6 +108,24 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            {isAdmin && adminLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-smooth ${
+                    isActive
+                      ? "bg-blue-100 text-blue-700 font-medium"
+                      : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm">{link.label}</span>
+                </Link>
+              );
+            })}
           </div>
 
           {/* User Menu */}
@@ -79,7 +133,7 @@ export default function Navigation() {
             <div className="hidden md:block text-right">
               <p className="text-sm font-medium text-black">{user?.email}</p>
               <p className="text-xs text-gray-600">
-                {(user as any)?.role === 'admin' ? 'Admin' : 'Employee'}
+                {isAdmin ? 'Enterprise Admin' : userRole ? userRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'User'}
               </p>
             </div>
             <Button
