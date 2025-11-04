@@ -36,15 +36,35 @@ function DemoChatContent() {
   const employeeScrollRef = useRef<HTMLDivElement>(null);
   const customerScrollRef = useRef<HTMLDivElement>(null);
 
-  // Complete conversation when component unmounts
+  // Complete conversation when component unmounts or user navigates away
   useEffect(() => {
+    const completeConversation = () => {
+      // Use Beacon API for reliable completion even during page unload
+      const data = JSON.stringify({ conversationId });
+      if (navigator.sendBeacon) {
+        const blob = new Blob([data], { type: "application/json" });
+        navigator.sendBeacon("/api/demo/complete", blob);
+      } else {
+        // Fallback to fetch with keepalive
+        fetch("/api/demo/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: data,
+          keepalive: true,
+        }).catch((error) => console.error("Error completing conversation:", error));
+      }
+    };
+
+    // Handle page unload/navigation
+    const handleBeforeUnload = () => {
+      completeConversation();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
-      // Call API to mark conversation as completed
-      fetch("/api/demo/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId }),
-      }).catch((error) => console.error("Error completing conversation:", error));
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      completeConversation();
     };
   }, [conversationId]);
 
