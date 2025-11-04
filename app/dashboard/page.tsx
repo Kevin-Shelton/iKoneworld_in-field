@@ -284,7 +284,7 @@ function DashboardContent() {
               Start Translation Session
             </button>
             {dbUserId ? (
-              <StartDemoChat userId={dbUserId} employeeName={user?.email || user?.name} />
+              <StartDemoChat userId={dbUserId} employeeName={(user?.user_metadata?.name as string) || user?.email || 'Employee'} />
             ) : (
               <button
                 disabled

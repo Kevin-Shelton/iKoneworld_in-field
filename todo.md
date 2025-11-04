@@ -49,3 +49,6 @@
 - [x] Add filter by Employee dropdown
 - [x] Add filter by Conversation Type dropdown
 - [x] Add date range picker filter
+
+## Build Errors
+- [x] Fix TypeScript error: Property 'name' does not exist on type 'User' in dashboard/page.tsx line 287
