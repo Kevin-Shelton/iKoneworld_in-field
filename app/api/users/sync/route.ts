@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         user: updatedUser || existingUser,
+        userId: (updatedUser || existingUser)?.id,
         message: 'User synced successfully',
       });
     }
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: newUser,
+      userId: newUser?.id,
       message: 'User created successfully',
     });
   } catch (error) {
