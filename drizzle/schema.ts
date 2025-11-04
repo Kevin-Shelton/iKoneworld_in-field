@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, jsonb } from "drizzle-orm/pg-core";
 
 // Define PostgreSQL enums
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
@@ -108,6 +108,7 @@ export const conversations = pgTable("conversations", {
   language1: varchar("language1", { length: 16 }).notNull(), // Primary language (e.g., "en-US")
   language2: varchar("language2", { length: 16 }).notNull(), // Secondary language (e.g., "es-MX")
   status: conversationStatusEnum("status").default("active").notNull(),
+  metadata: jsonb("metadata"), // JSON metadata including {is_demo: true} for demo conversations
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   endedAt: timestamp("endedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
