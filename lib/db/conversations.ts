@@ -174,7 +174,7 @@ export async function getConversationsByUser(userId: number) {
   // The client will use Supabase client to generate authenticated URLs
   // This enables persistent audio access based on RLS policies
   if (data) {
-    const conversationsWithFilePaths = data.map((conversation) => {
+    const conversationsWithFilePaths = data.map((conversation: any) => {
       if (conversation.audio_url) {
         try {
           // Extract the file path from the public URL
