@@ -254,7 +254,6 @@ function DemoChatContent() {
           </div>
         </div>
       </div>
-      </div>
     </div>
   );
 }
