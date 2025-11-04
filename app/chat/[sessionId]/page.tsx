@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea component not available, using div with overflow
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
@@ -154,7 +154,7 @@ export default function CustomerChatPage() {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <div className="flex-1 p-4 overflow-y-auto" ref={scrollRef}>
         <div className="max-w-2xl mx-auto space-y-4">
           {messages.map((msg) => (
             <div
@@ -178,7 +178,7 @@ export default function CustomerChatPage() {
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       <div className="p-4 bg-white border-t">

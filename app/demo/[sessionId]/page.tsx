@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea component not available, using div with overflow
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
@@ -158,7 +158,7 @@ function DemoChatContent() {
           />
         </div>
 
-        <ScrollArea className="flex-1 p-4" ref={employeeScrollRef}>
+        <div className="flex-1 p-4 overflow-y-auto" ref={employeeScrollRef}>
           <div className="space-y-4">
             {messages.map((msg) => (
               <div
@@ -182,7 +182,7 @@ function DemoChatContent() {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t bg-white">
           <div className="flex gap-2">
@@ -214,7 +214,7 @@ function DemoChatContent() {
           />
         </div>
 
-        <ScrollArea className="flex-1 p-4" ref={customerScrollRef}>
+        <div className="flex-1 p-4 overflow-y-auto" ref={customerScrollRef}>
           <div className="space-y-4">
             {messages.map((msg) => (
               <div
@@ -238,7 +238,7 @@ function DemoChatContent() {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t bg-white">
           <div className="flex gap-2">
