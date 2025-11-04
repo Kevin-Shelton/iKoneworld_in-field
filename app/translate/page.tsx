@@ -653,10 +653,25 @@ function TranslatePageContent() {
     cleanup();
   };
 
-  const cleanup = () => {
+  const cleanup = async () => {
     console.log('[Cleanup] Starting...');
 
-
+    // End conversation if one is active
+    if (conversationId) {
+      try {
+        await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "end",
+            conversationId,
+          }),
+        });
+        console.log('[Cleanup] Conversation ended');
+      } catch (err) {
+        console.error("[Cleanup] Error ending conversation:", err);
+      }
+    }
 
     // Disconnect audio nodes
     if (workletNodeRef.current) {
