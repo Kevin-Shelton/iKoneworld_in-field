@@ -29,19 +29,18 @@ function DashboardContent() {
   const { user, signOut } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dbUserId, setDbUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
-      // Sync user to database first
-      syncUser().then(() => {
-        fetchConversations();
-      });
+      // Sync user to database first and get database user ID
+      syncUser();
     }
   }, [user]);
 
   const syncUser = async () => {
     try {
-      await fetch('/api/users/sync', {
+      const response = await fetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -50,15 +49,23 @@ function DashboardContent() {
           name: (user as any)?.user_metadata?.name || user?.email?.split('@')[0],
         }),
       });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const userId = data.userId;
+        setDbUserId(userId);
+        // Now fetch conversations with the database user ID
+        fetchConversations(userId);
+      }
     } catch (err) {
       console.error('Error syncing user:', err);
     }
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (userId: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/conversations?userId=${user?.id}`);
+      const response = await fetch(`/api/conversations?userId=${userId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch conversations');
