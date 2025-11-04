@@ -56,7 +56,7 @@ function AdminUsersContent() {
     email: '',
     password: '',
     name: '',
-    role: 'user',
+    role: 'retail_staff',
   });
 
   // Reset password form state
@@ -409,8 +409,14 @@ function AdminUsersContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Employee</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="enterprise_admin">Enterprise Admin</SelectItem>
+                    <SelectItem value="regional_director">Regional Director</SelectItem>
+                    <SelectItem value="area_manager">Area Manager</SelectItem>
+                    <SelectItem value="district_manager">District Manager</SelectItem>
+                    <SelectItem value="store_manager">Store Manager</SelectItem>
+                    <SelectItem value="field_sales">Field Sales</SelectItem>
+                    <SelectItem value="retail_staff">Retail Staff</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
