@@ -70,6 +70,11 @@ function TranslatePageContent() {
   const micHoldCountRef = useRef<number>(0);
   const stoppingRef = useRef<boolean>(false);
   const voicesRef = useRef<Record<string, { male: string[]; female: string[] }>>({});
+  
+  // Audio recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const currentRecordingStartRef = useRef<number>(0);
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -184,6 +189,41 @@ function TranslatePageContent() {
     }
   };
 
+  const uploadAudioRecording = async (
+    audioBlob: Blob,
+    conversationId: number,
+    enterpriseId: string,
+    speaker: 'user' | 'guest',
+    timestamp: number
+  ): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `${speaker}_${timestamp}.webm`);
+      formData.append('conversationId', conversationId.toString());
+      formData.append('enterpriseId', enterpriseId);
+      formData.append('speaker', speaker);
+      formData.append('timestamp', timestamp.toString());
+
+      const response = await fetch('/api/audio/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[AudioUpload] Failed:', response.status, errorData);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('[AudioUpload] Success:', data.audioUrl);
+      return data.audioUrl;
+    } catch (err) {
+      console.error('[AudioUpload] Error:', err);
+      return null;
+    }
+  };
+
   const saveMessageToDatabase = async (
     convId: number,
     userId: number,
@@ -191,7 +231,8 @@ function TranslatePageContent() {
     translatedText: string,
     sourceLang: string,
     targetLang: string,
-    speaker: "user" | "guest"
+    speaker: "user" | "guest",
+    audioUrl?: string | null
   ) => {
     try {
       console.log('[SaveMessage] Attempting to save:', { convId, userId, speaker, originalText, translatedText, sourceLang, targetLang });
@@ -208,6 +249,7 @@ function TranslatePageContent() {
           translatedText,
           sourceLanguage: sourceLang,
           targetLanguage: targetLang,
+          audioUrl: audioUrl || null,
         }),
       });
       
@@ -373,7 +415,23 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database
+      // Capture and upload audio recording
+      let audioUrl: string | null = null;
+      if (conversationId && audioChunksRef.current.length > 0) {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioUrl = await uploadAudioRecording(
+          audioBlob,
+          conversationId,
+          DEFAULT_ENTERPRISE_ID,
+          'user',
+          Date.now()
+        );
+        // Clear chunks for next recording
+        audioChunksRef.current = [];
+        currentRecordingStartRef.current = Date.now();
+      }
+
+      // Save to database with audio URL
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -382,7 +440,8 @@ function TranslatePageContent() {
           translated,
           userLang,
           guestLang,
-          "user"
+          "user",
+          audioUrl
         );
       }
 
@@ -403,7 +462,23 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database
+      // Capture and upload audio recording
+      let audioUrl: string | null = null;
+      if (conversationId && audioChunksRef.current.length > 0) {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioUrl = await uploadAudioRecording(
+          audioBlob,
+          conversationId,
+          DEFAULT_ENTERPRISE_ID,
+          'guest',
+          Date.now()
+        );
+        // Clear chunks for next recording
+        audioChunksRef.current = [];
+        currentRecordingStartRef.current = Date.now();
+      }
+
+      // Save to database with audio URL
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -412,7 +487,8 @@ function TranslatePageContent() {
           translated,
           guestLang,
           userLang,
-          "guest"
+          "guest",
+          audioUrl
         );
       }
     }
@@ -561,6 +637,26 @@ function TranslatePageContent() {
 
       streamRef.current = stream;
 
+      // Initialize MediaRecorder for audio recording
+      try {
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus',
+        });
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.start(1000); // Collect data every second
+        currentRecordingStartRef.current = Date.now();
+        console.log('[Recording] MediaRecorder started');
+      } catch (err) {
+        console.error('[Recording] Failed to start MediaRecorder:', err);
+      }
+
       console.log('[Start] Creating audio context...');
 
       // Create audio context
@@ -698,6 +794,13 @@ function TranslatePageContent() {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+
+    // Stop MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    audioChunksRef.current = [];
 
     // Stop microphone stream
     if (streamRef.current) {
