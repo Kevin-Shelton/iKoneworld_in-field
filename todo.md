@@ -76,3 +76,9 @@
 
 ## UI Text Updates
 - [x] Change "Start Translation Session" button text to "In-Field"
+
+## Chat Button Updates
+- [x] Change "Start Demo Chat" button text to "Chat"
+- [x] Update conversation type from "demo" to "chat"
+- [x] Update dashboard to display "Chat" instead of "Demo Chat"
+- [x] Update filter to show "Chat" option instead of "Demo Chat"

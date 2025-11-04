@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         status: "active",
         metadata: { 
           is_demo: true, 
-          conversation_type: "demo",
+          conversation_type: "chat",
           employee_name: employeeName || "Unknown",
           session_id: null // Will be set to conversation.id after insert
         },

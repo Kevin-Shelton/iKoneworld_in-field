@@ -77,7 +77,7 @@ export function StartDemoChat({ userId, employeeName }: StartDemoChatProps) {
         size="lg"
       >
         <MessageSquare className="mr-2 h-5 w-5" />
-        {loading ? "Starting..." : "Start Demo Chat"}
+        {loading ? "Starting..." : "Chat"}
       </Button>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>

@@ -182,9 +182,9 @@ function DashboardContent() {
     }
     // Filter by type
     if (filterType !== "all") {
-      const isDemo = conv.metadata?.is_demo || conv.metadata?.conversation_type === "demo";
-      if (filterType === "demo" && !isDemo) return false;
-      if (filterType === "translation" && isDemo) return false;
+      const isChat = conv.metadata?.is_demo || conv.metadata?.conversation_type === "demo" || conv.metadata?.conversation_type === "chat";
+      if (filterType === "chat" && !isChat) return false;
+      if (filterType === "translation" && isChat) return false;
     }
     // Filter by date range
     if (filterDateFrom) {
@@ -356,7 +356,7 @@ function DashboardContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="all">All Types</option>
-                      <option value="demo">Demo Chat</option>
+                      <option value="chat">Chat</option>
                       <option value="translation">Translation</option>
                     </select>
                   </div>
@@ -401,11 +401,11 @@ function DashboardContent() {
                           <td className="px-4 py-3 text-sm text-gray-900">#{conv.id}</td>
                           <td className="px-4 py-3 text-sm">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') 
+                              (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo' || conv.metadata?.conversation_type === 'chat') 
                                 ? 'bg-purple-100 text-purple-800' 
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {(conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') ? 'Demo Chat' : 'Translation'}
+                              {(conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo' || conv.metadata?.conversation_type === 'chat') ? 'Chat' : 'Translation'}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
@@ -431,8 +431,8 @@ function DashboardContent() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm space-x-2">
-                            {/* Show Resume Chat button for active demo conversations */}
-                            {conv.status === 'active' && (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') && (
+                            {/* Show Resume Chat button for active chat conversations */}
+                            {conv.status === 'active' && (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo' || conv.metadata?.conversation_type === 'chat') && (
                               <button
                                 onClick={() => router.push(`/demo/${conv.metadata?.session_id || conv.id}`)}
                                 className="text-green-600 hover:text-green-800 font-medium"
