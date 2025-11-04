@@ -36,3 +36,40 @@
 - ✅ **Text Translation**: Generic translation is acceptable (es → es, en → en)
 - ✅ **Voice (TTS)**: MUST use dialect-specific voices (es-MX, es-CR, en-US, en-GB)
 - ✅ **STT**: Already supports 130 regional dialects
+
+## Conversation Management Improvements
+- [x] Add conversation_type column to conversations table (demo vs translation)
+- [x] Add employee_name column to conversations table
+- [x] Update demo/start API to save conversation type and employee name
+- [x] Create public customer chat page at /chat/[sessionId] without authentication
+- [x] Fix QR code to point to public customer URL
+- [x] Add "Resume Chat" button for active demo conversations on dashboard
+- [x] Add Conversation Type column to dashboard table
+- [x] Add Employee Name column to dashboard table
+- [x] Add filter by Employee dropdown
+- [x] Add filter by Conversation Type dropdown
+- [x] Add date range picker filter
+
+## Build Errors
+- [x] Fix TypeScript error: Property 'name' does not exist on type 'User' in dashboard/page.tsx line 287
+- [x] Fix TypeScript error: Property 'session_id' does not exist on metadata type in dashboard/page.tsx line 419
+
+## Dashboard Filter Issues
+- [x] Fix empty Employee dropdown - no employee names showing
+- [x] Fix empty Type dropdown - no Demo Chat/Translation options showing
+- [x] Fix date filter not returning results for Nov 3rd conversations
+
+## Employee Name Source Issue
+- [x] Fix dashboard to use database users.name instead of Supabase Auth user_metadata.name
+- [x] Fetch user profile from database to get the correct display name
+- [x] Update StartDemoChat to receive name from database instead of auth metadata
+
+## New Demo Chats Using Email Instead of Display Name
+- [x] Debug why dbUserName is null or empty for new demo chats
+- [x] Check if user.name is properly set in database
+- [x] Verify /api/users/sync is returning userName correctly
+- [x] Fixed: Removed name update for existing users in sync endpoint
+
+## Timestamp Display Issue
+- [x] Fix dashboard timestamps to show user's local time instead of UTC
+- [x] Update date and time display to use browser's timezone

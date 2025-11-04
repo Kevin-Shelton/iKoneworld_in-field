@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
+import { StartDemoChat } from '@/components/StartDemoChat';
 
 type Conversation = {
   id: number;
@@ -25,6 +26,12 @@ type Conversation = {
   audio_duration_seconds?: number;
   createdAt: string;
   updatedAt: string;
+  metadata?: {
+    is_demo?: boolean;
+    conversation_type?: string;
+    employee_name?: string;
+    session_id?: string;
+  };
 };
 
 type ConversationMessage = {
@@ -48,10 +55,15 @@ function DashboardContent() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbUserId, setDbUserId] = useState<number | null>(null);
+  const [dbUserName, setDbUserName] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [filterEmployee, setFilterEmployee] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
   const conversationsPerPage = 10;
 
   useEffect(() => {
@@ -76,7 +88,9 @@ function DashboardContent() {
       if (response.ok) {
         const data = await response.json();
         const userId = data.userId;
+        const userName = data.userName || user?.email || 'Employee';
         setDbUserId(userId);
+        setDbUserName(userName);
         // Now fetch conversations with the database user ID
         fetchConversations(userId);
       }
@@ -157,11 +171,61 @@ function DashboardContent() {
     return groups;
   }, {} as Record<string, Conversation[]>);
 
+  // Apply filters
+  const filteredConversations = conversations.filter((conv) => {
+    // Filter by employee
+    if (filterEmployee !== "all") {
+      const employeeName = conv.metadata?.employee_name || 'Unknown Employee';
+      if (employeeName !== filterEmployee) {
+        return false;
+      }
+    }
+    // Filter by type
+    if (filterType !== "all") {
+      const isDemo = conv.metadata?.is_demo || conv.metadata?.conversation_type === "demo";
+      if (filterType === "demo" && !isDemo) return false;
+      if (filterType === "translation" && isDemo) return false;
+    }
+    // Filter by date range
+    if (filterDateFrom) {
+      const convDate = new Date(conv.startedAt);
+      const fromDate = new Date(filterDateFrom + 'T00:00:00');
+      // Compare dates only (ignore time)
+      const convDateOnly = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+      const fromDateOnly = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+      if (convDateOnly < fromDateOnly) return false;
+    }
+    if (filterDateTo) {
+      const convDate = new Date(conv.startedAt);
+      const toDate = new Date(filterDateTo + 'T23:59:59');
+      // Compare dates only (ignore time)
+      const convDateOnly = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+      const toDateOnly = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+      if (convDateOnly > toDateOnly) return false;
+    }
+    return true;
+  });
+
+  // Get unique employees for filter dropdown
+  const uniqueEmployees = Array.from(
+    new Set(
+      conversations
+        .map((c) => c.metadata?.employee_name || 'Unknown Employee')
+        .filter((name): name is string => !!name)
+    )
+  ).sort();
+
+  // Debug logging
+  console.log('Total conversations:', conversations.length);
+  console.log('Unique employees:', uniqueEmployees);
+  console.log('Filtered conversations:', filteredConversations.length);
+  console.log('Sample conversation metadata:', conversations[0]?.metadata);
+
   // Pagination
   const indexOfLastConversation = currentPage * conversationsPerPage;
   const indexOfFirstConversation = indexOfLastConversation - conversationsPerPage;
-  const currentConversations = conversations.slice(indexOfFirstConversation, indexOfLastConversation);
-  const totalPages = Math.ceil(conversations.length / conversationsPerPage);
+  const currentConversations = filteredConversations.slice(indexOfFirstConversation, indexOfLastConversation);
+  const totalPages = Math.ceil(filteredConversations.length / conversationsPerPage);
 
   const formatDuration = (startedAt: string, endedAt: string | null) => {
     if (!endedAt) return 'In progress';
@@ -230,13 +294,23 @@ function DashboardContent() {
             <CardTitle className="text-white text-xl">Start New Conversation</CardTitle>
             <CardDescription className="text-gray-300">Begin a real-time translation session with a customer</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex gap-4">
             <button
               onClick={() => router.push('/select-language')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               Start Translation Session
             </button>
+            {dbUserId ? (
+              <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />
+            ) : (
+              <button
+                disabled
+                className="bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg cursor-not-allowed"
+              >
+                Loading...
+              </button>
+            )}
           </CardContent>
         </Card>
 
@@ -259,11 +333,60 @@ function DashboardContent() {
               </div>
             ) : (
               <>
+                {/* Filters */}
+                <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                    <select
+                      value={filterEmployee}
+                      onChange={(e) => setFilterEmployee(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Employees</option>
+                      {uniqueEmployees.map((emp) => (
+                        <option key={emp} value={emp}>{emp}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="demo">Demo Chat</option>
+                      <option value="translation">Translation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Employee</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Date</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Time</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Languages</th>
@@ -276,11 +399,23 @@ function DashboardContent() {
                       {currentConversations.map((conv) => (
                         <tr key={conv.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 text-sm text-gray-900">#{conv.id}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(conv.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {(conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') ? 'Demo Chat' : 'Translation'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {conv.metadata?.employee_name || 'Unknown Employee'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(conv.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(conv.startedAt + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {new Date(conv.startedAt + 'Z').toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
                             <span className="font-medium">{conv.language1}</span> → <span className="font-medium">{conv.language2}</span>
@@ -295,7 +430,16 @@ function DashboardContent() {
                               {conv.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm space-x-2">
+                            {/* Show Resume Chat button for active demo conversations */}
+                            {conv.status === 'active' && (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo') && (
+                              <button
+                                onClick={() => router.push(`/demo/${conv.metadata?.session_id || conv.id}`)}
+                                className="text-green-600 hover:text-green-800 font-medium"
+                              >
+                                Resume Chat
+                              </button>
+                            )}
                             <button
                               onClick={() => handleViewConversation(conv)}
                               className="text-blue-600 hover:text-blue-800 font-medium"
@@ -313,7 +457,7 @@ function DashboardContent() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
-                      Showing {indexOfFirstConversation + 1} to {Math.min(indexOfLastConversation, conversations.length)} of {conversations.length} conversations
+                      Showing {indexOfFirstConversation + 1} to {Math.min(indexOfLastConversation, filteredConversations.length)} of {filteredConversations.length} conversations
                     </div>
                     <div className="flex gap-2">
                       <button
