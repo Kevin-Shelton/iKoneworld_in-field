@@ -75,6 +75,7 @@ function TranslatePageContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const currentRecordingStartRef = useRef<number>(0);
+  const shouldStreamToSocketsRef = useRef<boolean>(true);
 
   useEffect(() => {
     // Load selected languages from localStorage
@@ -295,11 +296,9 @@ function TranslatePageContent() {
   };
 
   const speakText = async (text: string, langCode: string): Promise<void> => {
-    // Disable microphone during TTS playback
-    if (streamRef.current) {
-      micHoldCountRef.current++;
-      streamRef.current.getTracks().forEach(track => track.enabled = false);
-    }
+    // Stop streaming to speech recognition during TTS playback (but keep recording)
+    shouldStreamToSocketsRef.current = false;
+    micHoldCountRef.current++;
 
     playbackQueueRef.current = playbackQueueRef.current.then(async () => {
       let audioUrl: string | null = null;
@@ -354,11 +353,10 @@ function TranslatePageContent() {
         setStatus('speaking');
 
         const releaseMic = () => {
-          if (streamRef.current) {
-            micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
-            if (micHoldCountRef.current === 0) {
-              streamRef.current.getTracks().forEach(track => track.enabled = true);
-            }
+          micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
+          if (micHoldCountRef.current === 0) {
+            // Re-enable streaming to speech recognition sockets
+            shouldStreamToSocketsRef.current = true;
           }
         };
 
@@ -379,11 +377,9 @@ function TranslatePageContent() {
         console.error('[TTS] Error:', err);
         setStatus('listening');
         if (audioUrl) URL.revokeObjectURL(audioUrl);
-        if (streamRef.current) {
-          micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
-          if (micHoldCountRef.current === 0) {
-            streamRef.current.getTracks().forEach(track => track.enabled = true);
-          }
+        micHoldCountRef.current = Math.max(0, micHoldCountRef.current - 1);
+        if (micHoldCountRef.current === 0) {
+          shouldStreamToSocketsRef.current = true;
         }
       }
     });
@@ -686,14 +682,18 @@ function TranslatePageContent() {
       sourceNodeRef.current = source;
       workletNodeRef.current = worklet;
 
-      // Send audio data to both sockets
+      // Send audio data to both sockets (only when not playing TTS)
       worklet.port.onmessage = (ev) => {
-        if (socket1Ref.current?.connected) {
-          socket1Ref.current.emit('audioStream', ev.data);
+        // Only send to sockets if we should be streaming (not during TTS playback)
+        if (shouldStreamToSocketsRef.current) {
+          if (socket1Ref.current?.connected) {
+            socket1Ref.current.emit('audioStream', ev.data);
+          }
+          if (socket2Ref.current?.connected) {
+            socket2Ref.current.emit('audioStream', ev.data);
+          }
         }
-        if (socket2Ref.current?.connected) {
-          socket2Ref.current.emit('audioStream', ev.data);
-        }
+        // MediaRecorder continues recording regardless
       };
 
       // Connect audio pipeline
