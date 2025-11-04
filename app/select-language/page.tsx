@@ -38,7 +38,20 @@ export default function LanguageSelection() {
   const [audioProgress, setAudioProgress] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.25);
   const { user } = useAuth();
+
+  // Function to stop audio playback
+  const stopAudio = () => {
+    if (audioElement) {
+      audioElement.pause();
+      audioElement.currentTime = 0;
+      setAudioElement(null);
+      setIsAudioPlaying(false);
+      setIsPlayingSample(false);
+      setAudioProgress(0);
+    }
+  };
 
   // Auto-play translation notice and translate buttons when dialog opens
   useEffect(() => {
@@ -46,7 +59,8 @@ export default function LanguageSelection() {
       playTranslationNotice(selectedLanguage);
       translateButtons(selectedLanguage);
     } else if (!isConfirmModalOpen) {
-      // Reset button text when dialog closes
+      // Stop audio and reset button text when dialog closes
+      stopAudio();
       setTranslatedButtons({cancel: "Cancel", start: "Start Conversation"});
     }
   }, [isConfirmModalOpen, selectedLanguage, selectionStep]);
@@ -325,8 +339,8 @@ export default function LanguageSelection() {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // Set playback speed to 1.5x
-      audio.playbackRate = 1.5;
+      // Set playback speed from state
+      audio.playbackRate = playbackSpeed;
       
       // Store audio element for stopping later
       setAudioElement(audio);
@@ -602,14 +616,40 @@ export default function LanguageSelection() {
               {selectedLanguage?.nativeName && (
                 <p className="text-gray-500 mt-1">{selectedLanguage.nativeName}</p>
               )}
-              {selectionStep === "guest" && isPlayingSample && (
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-primary">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="text-sm">Playing translation notice...</span>
+              {selectionStep === "guest" && (
+                <div className="mt-4 space-y-3">
+                  {/* Playback Speed Selector */}
+                  <div className="flex items-center justify-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">Playback Speed:</label>
+                    <select 
+                      value={playbackSpeed}
+                      onChange={(e) => {
+                        const newSpeed = parseFloat(e.target.value);
+                        setPlaybackSpeed(newSpeed);
+                        if (audioElement) {
+                          audioElement.playbackRate = newSpeed;
+                        }
+                      }}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                      disabled={isAudioPlaying}
+                    >
+                      <option value="0.75">0.75x</option>
+                      <option value="1.0">1.0x</option>
+                      <option value="1.25">1.25x</option>
+                      <option value="1.5">1.5x</option>
+                      <option value="1.75">1.75x</option>
+                      <option value="2.0">2.0x</option>
+                    </select>
                   </div>
-                  {/* Progress Bar */}
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  
+                  {isPlayingSample && (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-primary">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span className="text-sm">Playing translation notice...</span>
+                      </div>
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                     <div 
                       className="bg-primary h-2.5 rounded-full transition-all duration-300"
                       style={{ width: `${audioProgress}%` }}
@@ -618,6 +658,8 @@ export default function LanguageSelection() {
                   <p className="text-xs text-center text-gray-500">
                     {Math.round(audioProgress)}% complete
                   </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -627,14 +669,7 @@ export default function LanguageSelection() {
                 variant="outline" 
                 onClick={() => {
                   // Stop audio if playing
-                  if (audioElement) {
-                    audioElement.pause();
-                    audioElement.currentTime = 0;
-                    setAudioElement(null);
-                    setIsAudioPlaying(false);
-                    setIsPlayingSample(false);
-                    setAudioProgress(0);
-                  }
+                  stopAudio();
                   setIsConfirmModalOpen(false);
                   // Reset to language selection if on guest step
                   if (selectionStep === "guest") {
