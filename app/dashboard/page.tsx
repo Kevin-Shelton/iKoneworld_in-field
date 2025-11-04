@@ -238,7 +238,16 @@ function DashboardContent() {
             >
               Start Translation Session
             </button>
-            {dbUserId && <StartDemoChat userId={dbUserId} />}
+            {dbUserId ? (
+              <StartDemoChat userId={dbUserId} />
+            ) : (
+              <button
+                disabled
+                className="bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg cursor-not-allowed"
+              >
+                Loading...
+              </button>
+            )}
           </CardContent>
         </Card>
 
