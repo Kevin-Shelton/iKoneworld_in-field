@@ -135,6 +135,14 @@ function ProfilePageContent() {
 
       const data = await response.json();
       setProfile(data.profile);
+      
+      // Update localStorage to keep it in sync with profile
+      if (defaultLanguage) {
+        localStorage.setItem('userLanguage', defaultLanguage);
+      } else {
+        localStorage.removeItem('userLanguage');
+      }
+      
       toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);

@@ -129,6 +129,29 @@ export async function getConversationMessages(conversationId: number) {
     throw error;
   }
 
+  // Store relative file paths for client-side URL generation
+  // The client will use Supabase client to generate authenticated URLs
+  // This enables persistent audio access based on RLS policies
+  if (data) {
+    const messagesWithFilePaths = data.map((message) => {
+      if (message.audio_url) {
+        try {
+          // Extract the file path from the public URL
+          const url = new URL(message.audio_url);
+          const pathParts = url.pathname.split('/audio-recordings/');
+          if (pathParts.length > 1) {
+            // Store the relative file path
+            message.audio_file_path = pathParts[1];
+          }
+        } catch (err) {
+          console.error('Error processing message audio URL:', err);
+        }
+      }
+      return message;
+    });
+    return messagesWithFilePaths;
+  }
+
   return data;
 }
 
@@ -145,6 +168,29 @@ export async function getConversationsByUser(userId: number) {
   if (error) {
     console.error('Error fetching user conversations:', error);
     throw error;
+  }
+
+  // Store relative file paths for client-side URL generation
+  // The client will use Supabase client to generate authenticated URLs
+  // This enables persistent audio access based on RLS policies
+  if (data) {
+    const conversationsWithFilePaths = data.map((conversation) => {
+      if (conversation.audio_url) {
+        try {
+          // Extract the file path from the public URL
+          const url = new URL(conversation.audio_url);
+          const pathParts = url.pathname.split('/audio-recordings/');
+          if (pathParts.length > 1) {
+            // Store the relative file path
+            conversation.audio_file_path = pathParts[1];
+          }
+        } catch (err) {
+          console.error('Error processing audio URL:', err);
+        }
+      }
+      return conversation;
+    });
+    return conversationsWithFilePaths;
   }
 
   return data;

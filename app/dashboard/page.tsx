@@ -8,6 +8,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 
 type Conversation = {
   id: number;
@@ -20,6 +21,7 @@ type Conversation = {
   startedAt: string;
   endedAt: string | null;
   audio_url?: string;
+  audio_file_path?: string;  // Relative file path for client-side URL generation
   audio_duration_seconds?: number;
   createdAt: string;
   updatedAt: string;
@@ -34,6 +36,7 @@ type ConversationMessage = {
   source_language: string;
   target_language: string;
   audio_url?: string;
+  audio_file_path?: string;  // Relative file path for client-side URL generation
   audio_duration_seconds?: number;
   confidence_score?: number;
   timestamp: string;
@@ -375,20 +378,26 @@ function DashboardContent() {
             
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
               {/* Conversation Audio Player */}
-              {selectedConversation.audio_url && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Full Conversation Recording</h3>
-                  <audio controls className="w-full">
-                    <source src={selectedConversation.audio_url} type="audio/webm" />
-                    Your browser does not support the audio element.
-                  </audio>
-                  {selectedConversation.audio_duration_seconds && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Duration: {Math.floor(selectedConversation.audio_duration_seconds / 60)}:{String(selectedConversation.audio_duration_seconds % 60).padStart(2, '0')}
-                    </p>
-                  )}
-                </div>
-              )}
+              {(selectedConversation.audio_file_path || selectedConversation.audio_url) && (() => {
+                const audioUrl = selectedConversation.audio_file_path 
+                  ? getAudioUrl(selectedConversation.audio_file_path)
+                  : selectedConversation.audio_url;
+                
+                return audioUrl ? (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Full Conversation Recording</h3>
+                    <audio controls className="w-full" key={audioUrl}>
+                      <source src={audioUrl} type="audio/webm" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    {selectedConversation.audio_duration_seconds && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Duration: {Math.floor(selectedConversation.audio_duration_seconds / 60)}:{String(selectedConversation.audio_duration_seconds % 60).padStart(2, '0')}
+                      </p>
+                    )}
+                  </div>
+                ) : null;
+              })()}
 
               {loadingMessages ? (
                 <div className="text-center py-8">
