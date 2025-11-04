@@ -171,8 +171,11 @@ function DashboardContent() {
   // Apply filters
   const filteredConversations = conversations.filter((conv) => {
     // Filter by employee
-    if (filterEmployee !== "all" && conv.metadata?.employee_name !== filterEmployee) {
-      return false;
+    if (filterEmployee !== "all") {
+      const employeeName = conv.metadata?.employee_name || 'Unknown Employee';
+      if (employeeName !== filterEmployee) {
+        return false;
+      }
     }
     // Filter by type
     if (filterType !== "all") {
@@ -183,14 +186,19 @@ function DashboardContent() {
     // Filter by date range
     if (filterDateFrom) {
       const convDate = new Date(conv.startedAt);
-      const fromDate = new Date(filterDateFrom);
-      if (convDate < fromDate) return false;
+      const fromDate = new Date(filterDateFrom + 'T00:00:00');
+      // Compare dates only (ignore time)
+      const convDateOnly = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+      const fromDateOnly = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+      if (convDateOnly < fromDateOnly) return false;
     }
     if (filterDateTo) {
       const convDate = new Date(conv.startedAt);
-      const toDate = new Date(filterDateTo);
-      toDate.setHours(23, 59, 59, 999); // Include entire end date
-      if (convDate > toDate) return false;
+      const toDate = new Date(filterDateTo + 'T23:59:59');
+      // Compare dates only (ignore time)
+      const convDateOnly = new Date(convDate.getFullYear(), convDate.getMonth(), convDate.getDate());
+      const toDateOnly = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+      if (convDateOnly > toDateOnly) return false;
     }
     return true;
   });
@@ -199,10 +207,16 @@ function DashboardContent() {
   const uniqueEmployees = Array.from(
     new Set(
       conversations
-        .map((c) => c.metadata?.employee_name)
+        .map((c) => c.metadata?.employee_name || 'Unknown Employee')
         .filter((name): name is string => !!name)
     )
-  );
+  ).sort();
+
+  // Debug logging
+  console.log('Total conversations:', conversations.length);
+  console.log('Unique employees:', uniqueEmployees);
+  console.log('Filtered conversations:', filteredConversations.length);
+  console.log('Sample conversation metadata:', conversations[0]?.metadata);
 
   // Pagination
   const indexOfLastConversation = currentPage * conversationsPerPage;
@@ -392,7 +406,7 @@ function DashboardContent() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {conv.metadata?.employee_name || 'N/A'}
+                            {conv.metadata?.employee_name || 'Unknown Employee'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             {new Date(conv.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

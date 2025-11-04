@@ -53,3 +53,8 @@
 ## Build Errors
 - [x] Fix TypeScript error: Property 'name' does not exist on type 'User' in dashboard/page.tsx line 287
 - [x] Fix TypeScript error: Property 'session_id' does not exist on metadata type in dashboard/page.tsx line 419
+
+## Dashboard Filter Issues
+- [x] Fix empty Employee dropdown - no employee names showing
+- [x] Fix empty Type dropdown - no Demo Chat/Translation options showing
+- [x] Fix date filter not returning results for Nov 3rd conversations
