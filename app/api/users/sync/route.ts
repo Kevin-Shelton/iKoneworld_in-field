@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         success: true,
         user: updatedUser || existingUser,
         userId: (updatedUser || existingUser)?.id,
+        userName: (updatedUser || existingUser)?.name,
         message: 'User synced successfully',
       });
     }
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
       success: true,
       user: newUser,
       userId: newUser?.id,
+      userName: newUser?.name,
       message: 'User created successfully',
     });
   } catch (error) {

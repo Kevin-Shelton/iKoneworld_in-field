@@ -58,3 +58,8 @@
 - [x] Fix empty Employee dropdown - no employee names showing
 - [x] Fix empty Type dropdown - no Demo Chat/Translation options showing
 - [x] Fix date filter not returning results for Nov 3rd conversations
+
+## Employee Name Source Issue
+- [x] Fix dashboard to use database users.name instead of Supabase Auth user_metadata.name
+- [x] Fetch user profile from database to get the correct display name
+- [x] Update StartDemoChat to receive name from database instead of auth metadata

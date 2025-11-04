@@ -55,6 +55,7 @@ function DashboardContent() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbUserId, setDbUserId] = useState<number | null>(null);
+  const [dbUserName, setDbUserName] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
@@ -87,7 +88,9 @@ function DashboardContent() {
       if (response.ok) {
         const data = await response.json();
         const userId = data.userId;
+        const userName = data.userName || user?.email || 'Employee';
         setDbUserId(userId);
+        setDbUserName(userName);
         // Now fetch conversations with the database user ID
         fetchConversations(userId);
       }
@@ -299,7 +302,7 @@ function DashboardContent() {
               Start Translation Session
             </button>
             {dbUserId ? (
-              <StartDemoChat userId={dbUserId} employeeName={(user?.user_metadata?.name as string) || user?.email || 'Employee'} />
+              <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />
             ) : (
               <button
                 disabled
