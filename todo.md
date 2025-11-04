@@ -36,3 +36,16 @@
 - ✅ **Text Translation**: Generic translation is acceptable (es → es, en → en)
 - ✅ **Voice (TTS)**: MUST use dialect-specific voices (es-MX, es-CR, en-US, en-GB)
 - ✅ **STT**: Already supports 130 regional dialects
+
+## Conversation Management Improvements
+- [x] Add conversation_type column to conversations table (demo vs translation)
+- [x] Add employee_name column to conversations table
+- [x] Update demo/start API to save conversation type and employee name
+- [x] Create public customer chat page at /chat/[sessionId] without authentication
+- [x] Fix QR code to point to public customer URL
+- [x] Add "Resume Chat" button for active demo conversations on dashboard
+- [x] Add Conversation Type column to dashboard table
+- [x] Add Employee Name column to dashboard table
+- [x] Add filter by Employee dropdown
+- [x] Add filter by Conversation Type dropdown
+- [x] Add date range picker filter

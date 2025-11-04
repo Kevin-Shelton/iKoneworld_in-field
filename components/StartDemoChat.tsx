@@ -15,9 +15,10 @@ import { MessageSquare, Copy, ExternalLink } from "lucide-react";
 
 interface StartDemoChatProps {
   userId: number;
+  employeeName?: string;
 }
 
-export function StartDemoChat({ userId }: StartDemoChatProps) {
+export function StartDemoChat({ userId, employeeName }: StartDemoChatProps) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [qrCode, setQrCode] = useState("");
@@ -35,6 +36,7 @@ export function StartDemoChat({ userId }: StartDemoChatProps) {
           userId,
           language1: "en",
           language2: "es",
+          employeeName,
         }),
       });
 

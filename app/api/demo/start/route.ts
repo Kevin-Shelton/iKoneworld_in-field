@@ -9,7 +9,7 @@ import QRCode from "qrcode";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, language1, language2 } = body;
+    const { userId, language1, language2, employeeName } = body;
 
     if (!userId || !language1 || !language2) {
       return NextResponse.json(
@@ -26,7 +26,12 @@ export async function POST(request: NextRequest) {
         language1,
         language2,
         status: "active",
-        metadata: { is_demo: true },
+        metadata: { 
+          is_demo: true, 
+          conversation_type: "demo",
+          employee_name: employeeName || "Unknown",
+          session_id: null // Will be set to conversation.id after insert
+        },
         startedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -41,6 +46,17 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Update metadata with session_id
+    await supabaseAdmin
+      .from("conversations")
+      .update({
+        metadata: {
+          ...conversation.metadata,
+          session_id: conversation.id.toString()
+        }
+      })
+      .eq("id", conversation.id);
 
     // Generate customer URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
