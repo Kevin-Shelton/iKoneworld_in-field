@@ -36,6 +36,18 @@ function DemoChatContent() {
   const employeeScrollRef = useRef<HTMLDivElement>(null);
   const customerScrollRef = useRef<HTMLDivElement>(null);
 
+  // Complete conversation when component unmounts
+  useEffect(() => {
+    return () => {
+      // Call API to mark conversation as completed
+      fetch("/api/demo/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId }),
+      }).catch((error) => console.error("Error completing conversation:", error));
+    };
+  }, [conversationId]);
+
   useEffect(() => {
     async function fetchConversation() {
       try {
