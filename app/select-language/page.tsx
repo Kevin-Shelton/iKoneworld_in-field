@@ -182,9 +182,14 @@ export default function LanguageSelection() {
     };
 
     const storedUserLang = localStorage.getItem("userLanguage");
-    if (storedUserLang && !userLanguage) {
-      setSelectionStep("guest");
-    } else if (allLanguages.length > 0 && !storedUserLang) {
+    if (storedUserLang && !userLanguage && allLanguages.length > 0) {
+      // Load the language object from the stored code
+      const lang = allLanguages.find(l => l.code === storedUserLang);
+      if (lang) {
+        setUserLanguage(lang);
+        setSelectionStep("guest");
+      }
+    } else if (allLanguages.length > 0 && !storedUserLang && !userLanguage) {
       loadDefaultLanguage();
     }
   }, [user, allLanguages, userLanguage]);
