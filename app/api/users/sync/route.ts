@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('*')
       .eq('openId', userId)
       .single();
 
@@ -38,14 +38,16 @@ export async function POST(request: NextRequest) {
         updateData.name = name;
       }
       
-      await supabaseAdmin
+      const { data: updatedUser } = await supabaseAdmin
         .from('users')
         .update(updateData)
-        .eq('openId', userId);
+        .eq('openId', userId)
+        .select('*')
+        .single();
       
       return NextResponse.json({
         success: true,
-        userId: existingUser.id,
+        user: updatedUser || existingUser,
         message: 'User synced successfully',
       });
     }
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date().toISOString(),
         lastSignedIn: new Date().toISOString(),
       })
-      .select('id')
+      .select('*')
       .single();
 
     if (insertError) {
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      userId: newUser.id,
+      user: newUser,
       message: 'User created successfully',
     });
   } catch (error) {

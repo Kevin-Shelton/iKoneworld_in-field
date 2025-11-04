@@ -30,11 +30,11 @@ export default function Navigation() {
     const fetchUserRole = async () => {
       if (user?.id) {
         try {
-          const response = await fetch('/api/auth/sync', {
+          const response = await fetch('/api/users/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              authId: user.id,
+              userId: user.id,
               email: user.email,
             }),
           });
