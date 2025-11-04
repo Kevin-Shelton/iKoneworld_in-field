@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Button } from '@/components/ui/button';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,12 +23,31 @@ type Conversation = {
   updatedAt: string;
 };
 
+type ConversationMessage = {
+  id: number;
+  conversationId: number;
+  speaker: 'user' | 'guest';
+  original_text: string;
+  translated_text: string;
+  source_language: string;
+  target_language: string;
+  audio_url?: string;
+  audio_duration_seconds?: number;
+  confidence_score?: number;
+  timestamp: string;
+};
+
 function DashboardContent() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbUserId, setDbUserId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const conversationsPerPage = 10;
 
   useEffect(() => {
     if (user) {
@@ -81,53 +99,86 @@ function DashboardContent() {
     }
   };
 
-  const handleSignOut = async () => {
+  const fetchConversationMessages = async (conversationId: number) => {
     try {
-      await signOut();
-      toast.success('Signed out successfully');
-      router.push('/');
-    } catch (error) {
-      toast.error('Error signing out');
-      console.error('Sign out error:', error);
+      setLoadingMessages(true);
+      const response = await fetch(`/api/conversations/${conversationId}/messages`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      const data = await response.json();
+      setConversationMessages(data.messages || []);
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+      toast.error('Failed to load conversation messages');
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
-  const handleStartConversation = () => {
-    router.push('/select-language');
+  const handleViewConversation = (conv: Conversation) => {
+    setSelectedConversation(conv);
+    fetchConversationMessages(conv.id);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedConversation(null);
+    setConversationMessages([]);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (err) {
+      console.error('Error signing out:', err);
+      toast.error('Failed to sign out');
+    }
+  };
+
+  // Group conversations by date
+  const groupedConversations = conversations.reduce((groups, conv) => {
+    const date = new Date(conv.startedAt).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(conv);
+    return groups;
+  }, {} as Record<string, Conversation[]>);
+
+  // Pagination
+  const indexOfLastConversation = currentPage * conversationsPerPage;
+  const indexOfFirstConversation = indexOfLastConversation - conversationsPerPage;
+  const currentConversations = conversations.slice(indexOfFirstConversation, indexOfLastConversation);
+  const totalPages = Math.ceil(conversations.length / conversationsPerPage);
+
+  const formatDuration = (startedAt: string, endedAt: string | null) => {
+    if (!endedAt) return 'In progress';
+    const start = new Date(startedAt);
+    const end = new Date(endedAt);
+    const durationMs = end.getTime() - start.getTime();
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
-      {/* Navigation */}
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navigation />
+      
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user?.email}</p>
+        </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Admin Panel Button */}
-        {(user as any)?.role === 'admin' && (
-          <div className="mb-6">
-            <Button variant="outline" onClick={() => router.push('/admin/users')}>
-              Admin Panel
-            </Button>
-          </div>
-        )}
-        
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Start New Conversation Card */}
-          <Card className="col-span-full">
-            <CardHeader>
-              <CardTitle>Start New Conversation</CardTitle>
-              <CardDescription>
-                Begin a real-time translation session with a customer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={handleStartConversation} size="lg" className="w-full md:w-auto">
-                Start Translation Session
-              </Button>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Stats Cards */}
           <Card>
             <CardHeader>
@@ -136,14 +187,10 @@ function DashboardContent() {
             <CardContent>
               <p className="text-3xl font-bold text-blue-600">{conversations.filter(c => {
                 const today = new Date();
-                const convDate = new Date(c.startedAt);
-                return convDate.toDateString() === today.toDateString();
+                today.setHours(0, 0, 0, 0);
+                return new Date(c.startedAt) >= today;
               }).length}</p>
-              <p className="text-sm text-gray-600 mt-1">{conversations.filter(c => {
-                const today = new Date();
-                const convDate = new Date(c.startedAt);
-                return convDate.toDateString() === today.toDateString();
-              }).length === 0 ? 'No conversations yet' : 'Conversations today'}</p>
+              <p className="text-sm text-gray-600 mt-1">Conversations today</p>
             </CardContent>
           </Card>
 
@@ -170,55 +217,208 @@ function DashboardContent() {
               <p className="text-sm text-gray-600 mt-1">Unique customers served</p>
             </CardContent>
           </Card>
-
-          {/* Recent Conversations */}
-          <Card className="col-span-full">
-            <CardHeader>
-              <CardTitle>Recent Conversations</CardTitle>
-              <CardDescription>Your latest translation sessions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Loading...</p>
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="text-center py-8 text-gray-600">
-                  <p>No conversations yet</p>
-                  <p className="text-sm mt-2">Start your first translation session to see it here</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {conversations.slice(0, 5).map((conv) => (
-                    <div key={conv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">Conversation #{conv.id}</p>
-                        <p className="text-sm text-gray-600">
-                          {conv.language1} → {conv.language2}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(conv.startedAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          conv.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {conv.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Start New Conversation Card */}
+        <Card className="mb-8 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+          <CardHeader>
+            <CardTitle className="text-white text-xl">Start New Conversation</CardTitle>
+            <CardDescription className="text-gray-300">Begin a real-time translation session with a customer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <button
+              onClick={() => router.push('/select-language')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            >
+              Start Translation Session
+            </button>
+          </CardContent>
+        </Card>
+
+        {/* Recent Conversations Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Conversations</CardTitle>
+            <CardDescription>Your latest translation sessions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Loading...</p>
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                <p>No conversations yet</p>
+                <p className="text-sm mt-2">Start your first translation session to see it here</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Time</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Languages</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Duration</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {currentConversations.map((conv) => (
+                        <tr key={conv.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-sm text-gray-900">#{conv.id}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {new Date(conv.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {new Date(conv.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <span className="font-medium">{conv.language1}</span> → <span className="font-medium">{conv.language2}</span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {formatDuration(conv.startedAt, conv.endedAt)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              conv.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {conv.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={() => handleViewConversation(conv)}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Showing {indexOfFirstConversation + 1} to {Math.min(indexOfLastConversation, conversations.length)} of {conversations.length} conversations
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 text-sm border rounded-md ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </main>
       
       {/* Footer */}
       <Footer />
+
+      {/* Conversation Detail Modal */}
+      {selectedConversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={handleCloseModal}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Conversation #{selectedConversation.id}</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {new Date(selectedConversation.startedAt).toLocaleString()} • {selectedConversation.language1} ↔ {selectedConversation.language2}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {loadingMessages ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Loading messages...</p>
+                </div>
+              ) : conversationMessages.length === 0 ? (
+                <div className="text-center py-8 text-gray-600">
+                  <p>No messages in this conversation</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {conversationMessages.map((msg) => (
+                    <div key={msg.id} className={`p-4 rounded-lg ${
+                      msg.speaker === 'user' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
+                    }`}>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                            {msg.speaker === 'user' ? 'You' : 'Guest'} ({msg.source_language})
+                          </p>
+                          <p className="text-gray-900 font-medium">{msg.original_text}</p>
+                        </div>
+                        {msg.audio_url && (
+                          <audio controls className="ml-4">
+                            <source src={msg.audio_url} type="audio/webm" />
+                            Your browser does not support the audio element.
+                          </audio>
+                        )}
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                          Translation ({msg.target_language})
+                        </p>
+                        <p className="text-gray-700">{msg.translated_text}</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                        {msg.confidence_score && ` • Confidence: ${Math.round(msg.confidence_score * 100)}%`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
