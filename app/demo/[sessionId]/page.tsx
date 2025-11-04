@@ -199,12 +199,12 @@ function DemoChatContent() {
         </div>
       </div>
 
-      {/* Customer Side (Simulated) */}
+      {/* Customer Side */
       <div className="flex-1 flex flex-col bg-white">
         <div className="p-4 border-b bg-green-600 text-white space-y-2">
           <div>
-            <h2 className="text-lg font-semibold">Customer View (Simulated)</h2>
-            <p className="text-sm opacity-90">This simulates what the customer sees</p>
+            <h2 className="text-lg font-semibold">Customer View</h2>
+            <p className="text-sm opacity-90">Real-time translation with Verbum AI</p>
           </div>
           <LanguageSelector
             value={customerLanguage}

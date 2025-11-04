@@ -50,9 +50,20 @@ export async function GET(
       );
     }
 
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedMessages = (messages || []).map((msg: any) => ({
+      id: msg.id,
+      conversationId: msg.conversationId || msg.conversation_id,
+      speaker: msg.speaker,
+      originalText: msg.originalText || msg.original_text,
+      translatedText: msg.translatedText || msg.translated_text,
+      language: msg.language || msg.source_language,
+      timestamp: msg.timestamp,
+    }));
+
     return NextResponse.json({
       conversation,
-      messages: messages || [],
+      messages: transformedMessages,
     });
   } catch (error) {
     console.error("[Demo Join] Error:", error);
