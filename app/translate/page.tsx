@@ -194,7 +194,8 @@ function TranslatePageContent() {
     speaker: "user" | "guest"
   ) => {
     try {
-      await fetch("/api/conversations", {
+      console.log('[SaveMessage] Attempting to save:', { convId, userId, speaker, originalText, translatedText, sourceLang, targetLang });
+      const response = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,8 +210,16 @@ function TranslatePageContent() {
           targetLanguage: targetLang,
         }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[SaveMessage] Failed:', response.status, errorData);
+      } else {
+        const data = await response.json();
+        console.log('[SaveMessage] Success:', data);
+      }
     } catch (err) {
-      console.error("Error saving message:", err);
+      console.error("[SaveMessage] Error:", err);
     }
   };
 
