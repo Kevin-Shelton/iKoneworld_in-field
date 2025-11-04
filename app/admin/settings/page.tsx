@@ -218,8 +218,8 @@ function AdminSettingsContent() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="font-medium text-gray-900">Enable Audio Recording</label>
-                  <p className="text-sm text-gray-500">Master switch for all audio recording features</p>
+                  <label className="font-medium text-white">Enable Audio Recording</label>
+                  <p className="text-sm text-gray-300">Master switch for all audio recording features</p>
                 </div>
                 <input
                   type="checkbox"
@@ -231,8 +231,8 @@ function AdminSettingsContent() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="font-medium text-gray-900">Enable Per-Message Audio</label>
-                  <p className="text-sm text-gray-500">Record individual messages (future feature)</p>
+                  <label className="font-medium text-white">Enable Per-Message Audio</label>
+                  <p className="text-sm text-gray-300">Record individual messages (future feature)</p>
                 </div>
                 <input
                   type="checkbox"
@@ -244,7 +244,7 @@ function AdminSettingsContent() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-900 mb-2">Audio Retention Period</label>
+                <label className="block font-medium text-white mb-2">Audio Retention Period</label>
                 <div className="flex items-center space-x-4">
                   <input
                     type="number"
@@ -254,9 +254,9 @@ function AdminSettingsContent() {
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     min="1"
                   />
-                  <span className="text-sm text-gray-500">days</span>
+                  <span className="text-sm text-gray-300">days</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Audio files will be automatically deleted after this period. Leave empty to keep forever.</p>
+                <p className="text-xs text-gray-300 mt-1">Audio files will be automatically deleted after this period. Leave empty to keep forever.</p>
               </div>
             </CardContent>
           </Card>
@@ -270,8 +270,8 @@ function AdminSettingsContent() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="font-medium text-gray-900">Enable Transcripts</label>
-                  <p className="text-sm text-gray-500">Master switch for transcript features</p>
+                  <label className="font-medium text-white">Enable Transcripts</label>
+                  <p className="text-sm text-gray-300">Master switch for transcript features</p>
                 </div>
                 <input
                   type="checkbox"
@@ -283,8 +283,8 @@ function AdminSettingsContent() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="font-medium text-gray-900">Save Transcripts to Database</label>
-                  <p className="text-sm text-gray-500">Store conversation text in database</p>
+                  <label className="font-medium text-white">Save Transcripts to Database</label>
+                  <p className="text-sm text-gray-300">Store conversation text in database</p>
                 </div>
                 <input
                   type="checkbox"
@@ -296,7 +296,7 @@ function AdminSettingsContent() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-900 mb-2">Transcript Retention Period</label>
+                <label className="block font-medium text-white mb-2">Transcript Retention Period</label>
                 <div className="flex items-center space-x-4">
                   <input
                     type="number"
@@ -306,9 +306,9 @@ function AdminSettingsContent() {
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     min="1"
                   />
-                  <span className="text-sm text-gray-500">days</span>
+                  <span className="text-sm text-gray-300">days</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Transcripts will be automatically deleted after this period. Leave empty to keep forever.</p>
+                <p className="text-xs text-gray-300 mt-1">Transcripts will be automatically deleted after this period. Leave empty to keep forever.</p>
               </div>
             </CardContent>
           </Card>
@@ -321,7 +321,7 @@ function AdminSettingsContent() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block font-medium text-gray-900 mb-3">Audio Access Roles</label>
+                <label className="block font-medium text-white mb-3">Audio Access Roles</label>
                 <div className="grid grid-cols-2 gap-3">
                   {AVAILABLE_ROLES.map(role => (
                     <label key={role.value} className="flex items-start space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -333,7 +333,7 @@ function AdminSettingsContent() {
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium block">{role.label}</span>
-                        <span className="text-xs text-gray-500">{role.description}</span>
+                        <span className="text-xs text-gray-300">{role.description}</span>
                       </div>
                     </label>
                   ))}
@@ -341,7 +341,7 @@ function AdminSettingsContent() {
               </div>
 
               <div>
-                <label className="block font-medium text-gray-900 mb-3">Transcript Access Roles</label>
+                <label className="block font-medium text-white mb-3">Transcript Access Roles</label>
                 <div className="grid grid-cols-2 gap-3">
                   {AVAILABLE_ROLES.map(role => (
                     <label key={role.value} className="flex items-start space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -353,7 +353,7 @@ function AdminSettingsContent() {
                       />
                       <div className="flex-1">
                         <span className="text-sm font-medium block">{role.label}</span>
-                        <span className="text-xs text-gray-500">{role.description}</span>
+                        <span className="text-xs text-gray-300">{role.description}</span>
                       </div>
                     </label>
                   ))}
