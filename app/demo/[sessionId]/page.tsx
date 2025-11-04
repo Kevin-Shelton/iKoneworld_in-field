@@ -1,5 +1,4 @@
 "use client";
-// Demo chat with real-time Verbum AI translation
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// ScrollArea component not available, using div with overflow
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
@@ -38,7 +36,6 @@ function DemoChatContent() {
   const employeeScrollRef = useRef<HTMLDivElement>(null);
   const customerScrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch conversation data
   useEffect(() => {
     async function fetchConversation() {
       try {
@@ -59,13 +56,10 @@ function DemoChatContent() {
     }
 
     fetchConversation();
-
-    // Poll for new messages every 2 seconds
     const interval = setInterval(fetchConversation, 2000);
     return () => clearInterval(interval);
   }, [conversationId, router]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (employeeScrollRef.current) {
       employeeScrollRef.current.scrollTop = employeeScrollRef.current.scrollHeight;
@@ -144,7 +138,6 @@ function DemoChatContent() {
 
   return (
     <div className="h-screen flex bg-gray-100">
-      {/* Employee Side */}
       <div className="flex-1 flex flex-col border-r bg-white">
         <div className="p-4 border-b bg-blue-600 text-white space-y-2">
           <div>
@@ -200,7 +193,6 @@ function DemoChatContent() {
         </div>
       </div>
 
-      {/* Customer Side */
       <div className="flex-1 flex flex-col bg-white">
         <div className="p-4 border-b bg-green-600 text-white space-y-2">
           <div>
