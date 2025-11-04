@@ -105,9 +105,15 @@ export type InsertTttLanguage = typeof tttLanguages.$inferInsert;
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull(), // Foreign key to users table
+  enterprise_id: varchar("enterprise_id", { length: 255 }),
+  store_id: varchar("store_id", { length: 255 }),
+  department_id: varchar("department_id", { length: 255 }),
+  customer_id: integer("customer_id"),
   language1: varchar("language1", { length: 16 }).notNull(), // Primary language (e.g., "en-US")
   language2: varchar("language2", { length: 16 }).notNull(), // Secondary language (e.g., "es-MX")
   status: conversationStatusEnum("status").default("active").notNull(),
+  audio_url: text("audio_url"),
+  metadata: text("metadata").default('{}'), // JSONB stored as text, used for demo chat flag: {"is_demo": true}
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   endedAt: timestamp("endedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -123,11 +129,20 @@ export type InsertConversation = typeof conversations.$inferInsert;
 export const conversationMessages = pgTable("conversation_messages", {
   id: serial("id").primaryKey(),
   conversationId: integer("conversationId").notNull(), // Foreign key to conversations table
+  enterprise_id: varchar("enterprise_id", { length: 255 }),
+  user_id: integer("user_id"),
   speaker: messageSpeakerEnum("speaker").notNull(), // Who spoke (user or guest)
-  originalText: text("originalText").notNull(), // Original recognized text
-  translatedText: text("translatedText").notNull(), // Translated text
-  language: varchar("language", { length: 16 }).notNull(), // Language of original text
-  confidence: integer("confidence").notNull(), // Confidence score (0-100, stored as integer percentage)
+  originalText: text("originalText"), // Original recognized text (legacy)
+  translatedText: text("translatedText"), // Translated text (legacy)
+  original_text: text("original_text"), // Original recognized text (new)
+  translated_text: text("translated_text"), // Translated text (new)
+  language: varchar("language", { length: 16 }), // Language of original text (legacy)
+  source_language: varchar("source_language", { length: 16 }),
+  target_language: varchar("target_language", { length: 16 }),
+  confidence: integer("confidence"), // Confidence score (0-100, stored as integer percentage, legacy)
+  confidence_score: decimal("confidence_score", { precision: 5, scale: 2 }),
+  audio_url: text("audio_url"),
+  audio_duration_seconds: decimal("audio_duration_seconds", { precision: 10, scale: 2 }),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
