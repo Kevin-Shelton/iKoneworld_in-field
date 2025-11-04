@@ -193,7 +193,7 @@ function TranslatePageContent() {
     audioBlob: Blob,
     conversationId: number,
     enterpriseId: string,
-    speaker: 'user' | 'guest',
+    speaker: 'user' | 'guest' | 'conversation',
     timestamp: number
   ): Promise<string | null> => {
     try {
@@ -231,8 +231,7 @@ function TranslatePageContent() {
     translatedText: string,
     sourceLang: string,
     targetLang: string,
-    speaker: "user" | "guest",
-    audioUrl?: string | null
+    speaker: "user" | "guest"
   ) => {
     try {
       console.log('[SaveMessage] Attempting to save:', { convId, userId, speaker, originalText, translatedText, sourceLang, targetLang });
@@ -249,7 +248,6 @@ function TranslatePageContent() {
           translatedText,
           sourceLanguage: sourceLang,
           targetLanguage: targetLang,
-          audioUrl: audioUrl || null,
         }),
       });
       
@@ -415,23 +413,7 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Capture and upload audio recording
-      let audioUrl: string | null = null;
-      if (conversationId && audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioUrl = await uploadAudioRecording(
-          audioBlob,
-          conversationId,
-          DEFAULT_ENTERPRISE_ID,
-          'user',
-          Date.now()
-        );
-        // Clear chunks for next recording
-        audioChunksRef.current = [];
-        currentRecordingStartRef.current = Date.now();
-      }
-
-      // Save to database with audio URL
+      // Save to database (audio will be uploaded at conversation end)
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -440,8 +422,7 @@ function TranslatePageContent() {
           translated,
           userLang,
           guestLang,
-          "user",
-          audioUrl
+          "user"
         );
       }
 
@@ -462,23 +443,7 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Capture and upload audio recording
-      let audioUrl: string | null = null;
-      if (conversationId && audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioUrl = await uploadAudioRecording(
-          audioBlob,
-          conversationId,
-          DEFAULT_ENTERPRISE_ID,
-          'guest',
-          Date.now()
-        );
-        // Clear chunks for next recording
-        audioChunksRef.current = [];
-        currentRecordingStartRef.current = Date.now();
-      }
-
-      // Save to database with audio URL
+      // Save to database (audio will be uploaded at conversation end)
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -487,8 +452,7 @@ function TranslatePageContent() {
           translated,
           guestLang,
           userLang,
-          "guest",
-          audioUrl
+          "guest"
         );
       }
     }
@@ -839,12 +803,28 @@ function TranslatePageContent() {
 
     if (conversationId) {
       try {
+        // Upload the complete conversation audio
+        let audioUrl: string | null = null;
+        if (audioChunksRef.current.length > 0) {
+          console.log('[EndConversation] Uploading complete audio recording...');
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          audioUrl = await uploadAudioRecording(
+            audioBlob,
+            conversationId,
+            DEFAULT_ENTERPRISE_ID,
+            'conversation',
+            currentRecordingStartRef.current
+          );
+        }
+
+        // End conversation and save audio URL
         await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "end",
             conversationId,
+            audioUrl,
           }),
         });
       } catch (err) {

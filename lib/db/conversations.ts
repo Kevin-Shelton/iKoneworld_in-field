@@ -87,14 +87,21 @@ export async function saveMessage(params: SaveMessageParams) {
 /**
  * End a conversation and update its status
  */
-export async function endConversation(conversationId: number) {
+export async function endConversation(conversationId: number, audioUrl?: string | null) {
+  const updateData: any = {
+    status: 'completed',
+    endedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Add audio URL if provided
+  if (audioUrl) {
+    updateData.audio_url = audioUrl;
+  }
+
   const { data, error} = await supabaseAdmin
     .from('conversations')
-    .update({
-      status: 'completed',
-      endedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', conversationId)
     .select()
     .single();

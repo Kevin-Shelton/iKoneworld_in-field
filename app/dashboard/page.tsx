@@ -19,6 +19,8 @@ type Conversation = {
   status: string;
   startedAt: string;
   endedAt: string | null;
+  audio_url?: string;
+  audio_duration_seconds?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -372,6 +374,22 @@ function DashboardContent() {
             </div>
             
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Conversation Audio Player */}
+              {selectedConversation.audio_url && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Full Conversation Recording</h3>
+                  <audio controls className="w-full">
+                    <source src={selectedConversation.audio_url} type="audio/webm" />
+                    Your browser does not support the audio element.
+                  </audio>
+                  {selectedConversation.audio_duration_seconds && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Duration: {Math.floor(selectedConversation.audio_duration_seconds / 60)}:{String(selectedConversation.audio_duration_seconds % 60).padStart(2, '0')}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {loadingMessages ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
@@ -387,19 +405,11 @@ function DashboardContent() {
                     <div key={msg.id} className={`p-4 rounded-lg ${
                       msg.speaker === 'user' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
                     }`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
-                            {msg.speaker === 'user' ? 'You' : 'Guest'} ({msg.source_language})
-                          </p>
-                          <p className="text-gray-900 font-medium">{msg.original_text}</p>
-                        </div>
-                        {msg.audio_url && (
-                          <audio controls className="ml-4">
-                            <source src={msg.audio_url} type="audio/webm" />
-                            Your browser does not support the audio element.
-                          </audio>
-                        )}
+                      <div className="mb-2">
+                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                          {msg.speaker === 'user' ? 'You' : 'Guest'} ({msg.source_language})
+                        </p>
+                        <p className="text-gray-900 font-medium">{msg.original_text}</p>
                       </div>
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <p className="text-xs font-semibold text-gray-600 uppercase mb-1">

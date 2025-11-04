@@ -54,9 +54,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'end') {
-      const { conversationId } = body;
+      const { conversationId, audioUrl } = body;
       
-      const conversation = await endConversation(conversationId);
+      const conversation = await endConversation(conversationId, audioUrl);
 
       return NextResponse.json({ success: true, conversation });
     }
