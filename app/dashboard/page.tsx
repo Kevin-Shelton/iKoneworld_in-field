@@ -9,6 +9,7 @@ import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
+import { StartDemoChat } from '@/components/StartDemoChat';
 
 type Conversation = {
   id: number;
@@ -230,13 +231,14 @@ function DashboardContent() {
             <CardTitle className="text-white text-xl">Start New Conversation</CardTitle>
             <CardDescription className="text-gray-300">Begin a real-time translation session with a customer</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex gap-4">
             <button
               onClick={() => router.push('/select-language')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
             >
               Start Translation Session
             </button>
+            {dbUserId && <StartDemoChat userId={dbUserId} />}
           </CardContent>
         </Card>
 
