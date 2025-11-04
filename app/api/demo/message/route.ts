@@ -69,10 +69,10 @@ export async function POST(request: NextRequest) {
       .insert({
         conversationId,
         speaker,
-        originalText: content,
-        translatedText: translatedText,
-        language: sourceLang,
-        confidence: 100, // Verbum API doesn't provide confidence, default to 100
+        original_text: content,
+        translated_text: translatedText,
+        source_language: sourceLang,
+        target_language: targetLang,
         timestamp: new Date().toISOString(),
       })
       .select()

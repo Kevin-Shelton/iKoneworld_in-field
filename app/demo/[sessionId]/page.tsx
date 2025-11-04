@@ -184,7 +184,12 @@ function DemoChatContent() {
               placeholder="Type your message..."
               value={employeeMessage}
               onChange={(e) => setEmployeeMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleEmployeeSend()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleEmployeeSend();
+                }
+              }}
             />
             <Button onClick={handleEmployeeSend}>
               <Send className="h-4 w-4" />
@@ -239,7 +244,12 @@ function DemoChatContent() {
               placeholder="Type customer message..."
               value={customerMessage}
               onChange={(e) => setCustomerMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCustomerSend()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleCustomerSend();
+                }
+              }}
             />
             <Button onClick={handleCustomerSend} className="bg-green-600 hover:bg-green-700">
               <Send className="h-4 w-4" />
