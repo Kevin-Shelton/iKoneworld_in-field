@@ -181,15 +181,15 @@ export async function POST(request: NextRequest) {
     if (detectedLanguage !== 'en') {
       try {
         const translateResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_VERBUM_API_URL || 'https://api.verbum.ai'}/translate`,
+          'https://sdk.verbum.ai/v1/translator/translate',
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.VERBUM_API_KEY}`,
+              'x-api-key': process.env.VERBUM_API_KEY!,
             },
             body: JSON.stringify({
-              text: content,
+              texts: [{ text: content }],
               source_language: detectedLanguage,
               target_language: 'en',
             }),
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
 
         if (translateResponse.ok) {
           const translateData = await translateResponse.json();
-          translations.en = translateData.translated_text || content;
+          translations.en = translateData.translations?.[0]?.text || content;
         }
       } catch (err) {
         console.error('Translation failed:', err);
