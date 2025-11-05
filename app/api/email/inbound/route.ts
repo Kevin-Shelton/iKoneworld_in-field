@@ -20,9 +20,17 @@ interface ResendInboundEmail {
   reply_to?: string;
 }
 
+interface ResendWebhookPayload {
+  created_at: string;
+  data: ResendInboundEmail;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body: ResendInboundEmail = await request.json();
+    const payload = await request.json();
+    
+    // Resend sends the email data nested in a 'data' object
+    const body: ResendInboundEmail = payload.data || payload;
     
     console.log('Received inbound email:', {
       from: body.from,
