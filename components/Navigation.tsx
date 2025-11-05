@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Home, Languages, User, LogOut, Settings, Shield } from "lucide-react";
+import { Home, Languages, User, LogOut, Settings, Shield, Mail } from "lucide-react";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -62,6 +62,7 @@ export default function Navigation() {
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/select-language", label: "Translate", icon: Languages },
+    { href: "/email", label: "Email", icon: Mail },
   ];
 
   const adminLinks = [
