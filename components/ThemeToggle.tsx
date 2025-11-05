@@ -10,9 +10,9 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
       onClick={toggleTheme}
-      className="rounded-full"
+      className="rounded-full w-9 h-9 p-0"
       aria-label="Toggle theme"
     >
       {theme === 'light' ? (
