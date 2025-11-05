@@ -29,6 +29,9 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
     
+    // Log the full payload to debug
+    console.log('Full webhook payload:', JSON.stringify(payload, null, 2));
+    
     // Resend sends the email data nested in a 'data' object
     const body: ResendInboundEmail = payload.data || payload;
     
@@ -36,6 +39,8 @@ export async function POST(request: NextRequest) {
       from: body.from,
       to: body.to,
       subject: body.subject,
+      hasText: !!body.text,
+      hasHtml: !!body.html,
     });
 
     // Extract sender info
@@ -43,11 +48,11 @@ export async function POST(request: NextRequest) {
     const senderName = extractName(body.from) || senderEmail.split('@')[0];
     
     // Extract content (prefer text over HTML)
-    const content = body.text || stripHTML(body.html || '');
+    const content = body.text || stripHTML(body.html || '') || '(No content)';
     
-    if (!content || !senderEmail) {
+    if (!senderEmail) {
       return NextResponse.json(
-        { error: 'Invalid email content or sender' },
+        { error: 'Invalid sender email' },
         { status: 400 }
       );
     }
