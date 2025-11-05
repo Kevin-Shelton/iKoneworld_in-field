@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { sendTranslatedEmail } from '@/lib/resend';
 
 interface Recipient {
   email: string;
@@ -137,8 +138,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update or create contacts for each recipient
+    // Send actual emails via Resend and update contacts
+    const emailResults = [];
     for (const recipient of recipients as Recipient[]) {
+      try {
+        // Send the translated email
+        const result = await sendTranslatedEmail({
+          to: recipient.email,
+          toName: recipient.name,
+          subject: subject || '(No Subject)',
+          content: translations[recipient.language],
+          senderEmail,
+          senderName: senderEmail.split('@')[0],
+        });
+        
+        emailResults.push({
+          recipient: recipient.email,
+          success: true,
+          messageId: result.messageId,
+        });
+      } catch (err) {
+        console.error(`Failed to send email to ${recipient.email}:`, err);
+        emailResults.push({
+          recipient: recipient.email,
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+
+      // Update or create contact
       await supabaseAdmin
         .from('contacts')
         .upsert(
@@ -159,6 +187,7 @@ export async function POST(request: NextRequest) {
       message,
       threadId: finalThreadId,
       recipientCount: recipients.length,
+      emailResults,
     });
   } catch (error) {
     console.error('Error in send-multi API:', error);
