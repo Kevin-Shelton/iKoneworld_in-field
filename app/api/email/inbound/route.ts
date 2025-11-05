@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { Resend } from 'resend';
 
 /**
  * Webhook endpoint for receiving inbound emails from Resend
@@ -33,15 +34,46 @@ export async function POST(request: NextRequest) {
     console.log('Full webhook payload:', JSON.stringify(payload, null, 2));
     
     // Resend sends the email data nested in a 'data' object
-    const body: ResendInboundEmail = payload.data || payload;
+    const webhookData = payload.data || payload;
     
     console.log('Received inbound email:', {
-      from: body.from,
-      to: body.to,
-      subject: body.subject,
-      hasText: !!body.text,
-      hasHtml: !!body.html,
+      from: webhookData.from,
+      to: webhookData.to,
+      subject: webhookData.subject,
+      email_id: webhookData.email_id,
     });
+    
+    // Fetch the full email content from Resend API
+    // Webhooks don't include the body, we need to fetch it separately
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data: emailData, error: fetchError } = await resend.emails.receiving.get(
+      webhookData.email_id
+    );
+    
+    if (fetchError || !emailData) {
+      console.error('Error fetching email content:', fetchError);
+      return NextResponse.json(
+        { error: 'Failed to fetch email content' },
+        { status: 500 }
+      );
+    }
+    
+    console.log('Fetched email content:', {
+      hasText: !!emailData.text,
+      hasHtml: !!emailData.html,
+      textLength: emailData.text?.length || 0,
+    });
+    
+    // Merge webhook data with fetched email content
+    const body: ResendInboundEmail = {
+      from: webhookData.from,
+      to: webhookData.to,
+      subject: webhookData.subject,
+      text: emailData.text,
+      html: emailData.html,
+      headers: emailData.headers,
+      reply_to: webhookData.reply_to,
+    };
 
     // Extract sender info
     const senderEmail = extractEmail(body.from);
