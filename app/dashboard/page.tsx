@@ -260,7 +260,7 @@ function DashboardContent() {
                 today.setHours(0, 0, 0, 0);
                 return new Date(c.startedAt) >= today;
               }).length}</p>
-              <p className="text-sm text-gray-600 mt-1">Conversations today</p>
+              <p className="text-sm text-black dark:text-gray-400 mt-1">Conversations today</p>
             </CardContent>
           </Card>
 
@@ -274,7 +274,7 @@ function DashboardContent() {
                 weekAgo.setDate(weekAgo.getDate() - 7);
                 return new Date(c.startedAt) >= weekAgo;
               }).length}</p>
-              <p className="text-sm text-gray-600 mt-1">Total conversations</p>
+              <p className="text-sm text-black dark:text-gray-400 mt-1">Total conversations</p>
             </CardContent>
           </Card>
 
@@ -284,7 +284,7 @@ function DashboardContent() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-purple-600">{new Set(conversations.map(c => c.customer_id)).size}</p>
-              <p className="text-sm text-gray-600 mt-1">Unique customers served</p>
+              <p className="text-sm text-black dark:text-gray-400 mt-1">Unique customers served</p>
             </CardContent>
           </Card>
         </div>
@@ -332,10 +332,10 @@ function DashboardContent() {
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-gray-600">Loading...</p>
+                <p className="text-sm text-black dark:text-gray-400">Loading...</p>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
+              <div className="text-center py-8 text-black dark:text-gray-400">
                 <p>No conversations yet</p>
                 <p className="text-sm mt-2">Start your first translation session to see it here</p>
               </div>
@@ -344,7 +344,7 @@ function DashboardContent() {
                 {/* Filters */}
                 <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                    <label className="block text-sm font-medium text-black dark:text-gray-300 mb-1">Employee</label>
                     <select
                       value={filterEmployee}
                       onChange={(e) => setFilterEmployee(e.target.value)}
@@ -357,7 +357,7 @@ function DashboardContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-medium text-black dark:text-gray-300 mb-1">Type</label>
                     <select
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value)}
@@ -369,7 +369,7 @@ function DashboardContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                    <label className="block text-sm font-medium text-black dark:text-gray-300 mb-1">From Date</label>
                     <input
                       type="date"
                       value={filterDateFrom}
@@ -378,7 +378,7 @@ function DashboardContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                    <label className="block text-sm font-medium text-black dark:text-gray-300 mb-1">To Date</label>
                     <input
                       type="date"
                       value={filterDateTo}
@@ -392,21 +392,21 @@ function DashboardContent() {
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Employee</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Time</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Languages</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Duration</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Employee</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Time</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Languages</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Duration</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-black dark:text-gray-400 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {currentConversations.map((conv) => (
                         <tr key={conv.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-sm text-gray-900">#{conv.id}</td>
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-100">#{conv.id}</td>
                           <td className="px-4 py-3 text-sm">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               (conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo' || conv.metadata?.conversation_type === 'chat') 
@@ -416,19 +416,19 @@ function DashboardContent() {
                               {(conv.metadata?.is_demo || conv.metadata?.conversation_type === 'demo' || conv.metadata?.conversation_type === 'chat') ? 'Chat' : 'Translation'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-100">
                             {conv.metadata?.employee_name || 'Unknown Employee'}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-400">
                             {new Date(conv.startedAt + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-400">
                             {new Date(conv.startedAt + 'Z').toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-100">
                             <span className="font-medium">{conv.language1}</span> → <span className="font-medium">{conv.language2}</span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          <td className="px-4 py-3 text-sm text-black dark:text-gray-400">
                             {formatDuration(conv.startedAt, conv.endedAt)}
                           </td>
                           <td className="px-4 py-3">
@@ -464,7 +464,7 @@ function DashboardContent() {
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-black dark:text-gray-400">
                       Showing {indexOfFirstConversation + 1} to {Math.min(indexOfLastConversation, filteredConversations.length)} of {filteredConversations.length} conversations
                     </div>
                     <div className="flex gap-2">
@@ -514,14 +514,14 @@ function DashboardContent() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Conversation #{selectedConversation.id}</h2>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h2 className="text-2xl font-bold text-black dark:text-gray-100">Conversation #{selectedConversation.id}</h2>
+                  <p className="text-sm text-black dark:text-gray-400 mt-1">
                     {new Date(selectedConversation.startedAt).toLocaleString()} • {selectedConversation.language1} ↔ {selectedConversation.language2}
                   </p>
                 </div>
                 <button
                   onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                  className="text-gray-400 hover:text-black dark:text-gray-400 text-2xl font-bold"
                 >
                   ×
                 </button>
@@ -537,7 +537,7 @@ function DashboardContent() {
                 
                 return audioUrl ? (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Full Conversation Recording</h3>
+                    <h3 className="text-sm font-semibold text-black dark:text-gray-300 mb-2">Full Conversation Recording</h3>
                     <audio controls className="w-full" key={audioUrl}>
                       <source src={audioUrl} type="audio/webm" />
                       Your browser does not support the audio element.
@@ -554,10 +554,10 @@ function DashboardContent() {
               {loadingMessages ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Loading messages...</p>
+                  <p className="text-sm text-black dark:text-gray-400">Loading messages...</p>
                 </div>
               ) : conversationMessages.length === 0 ? (
-                <div className="text-center py-8 text-gray-600">
+                <div className="text-center py-8 text-black dark:text-gray-400">
                   <p>No messages in this conversation</p>
                 </div>
               ) : (
@@ -567,16 +567,16 @@ function DashboardContent() {
                       msg.speaker === 'user' ? 'bg-blue-50 border-l-4 border-blue-500' : 'bg-green-50 border-l-4 border-green-500'
                     }`}>
                       <div className="mb-2">
-                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                        <p className="text-xs font-semibold text-black dark:text-gray-400 uppercase mb-1">
                           {msg.speaker === 'user' ? 'You' : 'Guest'} ({msg.source_language})
                         </p>
-                        <p className="text-gray-900 font-medium">{msg.original_text}</p>
+                        <p className="text-black dark:text-gray-100 font-medium">{msg.original_text}</p>
                       </div>
                       <div className="mt-2 pt-2 border-t border-gray-200">
-                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                        <p className="text-xs font-semibold text-black dark:text-gray-400 uppercase mb-1">
                           Translation ({msg.target_language})
                         </p>
-                        <p className="text-gray-700">{msg.translated_text}</p>
+                        <p className="text-black dark:text-gray-300">{msg.translated_text}</p>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
                         {new Date(msg.timestamp).toLocaleTimeString()}
