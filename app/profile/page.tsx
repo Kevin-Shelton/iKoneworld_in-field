@@ -322,7 +322,7 @@ function ProfilePageContent() {
                               }}
                               disabled={saving}
                             >
-                              <span className="text-sm">
+                              <span className="text-sm text-gray-900">
                                 {lang.name} ({lang.nativeName})
                               </span>
                               {defaultLanguage === lang.code && (
