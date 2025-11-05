@@ -172,9 +172,14 @@ export default function EmailInboxPage() {
     setComposerMode('forward');
   }
 
-  function handleComposerSend() {
+  async function handleComposerSend() {
     setComposerMode(null);
-    loadThreads(); // Reload threads
+    await loadThreads(); // Reload threads
+    
+    // Refresh messages for the currently selected thread
+    if (selectedThread) {
+      selectThread(selectedThread);
+    }
   }
 
   function handleComposerCancel() {
