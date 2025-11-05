@@ -12,7 +12,8 @@ import {
   Loader2, 
   Languages,
   Eye,
-  EyeOff
+  EyeOff,
+  BookOpen
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Navigation from '@/components/Navigation';
@@ -214,14 +215,25 @@ export default function EmailThreadPage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => router.push('/email')}
-            className="mb-4 text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Inbox
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/email')}
+              className="text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Inbox
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/email/glossary')}
+              className="border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Glossary
+            </Button>
+          </div>
 
           {thread && (
             <div>
@@ -241,8 +253,16 @@ export default function EmailThreadPage() {
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-4 bg-slate-900/50 border-slate-800 animate-pulse">
+                <div className="space-y-2">
+                  <div className="h-4 bg-slate-800 rounded w-1/4" />
+                  <div className="h-3 bg-slate-800 rounded w-full" />
+                  <div className="h-3 bg-slate-800 rounded w-5/6" />
+                </div>
+              </Card>
+            ))}
           </div>
         )}
 

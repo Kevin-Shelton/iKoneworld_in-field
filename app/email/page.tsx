@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Inbox, Mail, MailOpen, Loader2 } from 'lucide-react';
+import { Inbox, Mail, MailOpen, Loader2, BookOpen } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -85,21 +85,42 @@ export default function EmailInboxPage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-blue-500/10 rounded-lg">
-              <Inbox className="h-8 w-8 text-blue-400" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <Inbox className="h-8 w-8 text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Email Inbox</h1>
+                <p className="text-slate-400">Multi-language email translation demo</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Email Inbox</h1>
-              <p className="text-slate-400">Multi-language email translation demo</p>
-            </div>
+            <Button
+              onClick={() => router.push('/email/glossary')}
+              variant="outline"
+              className="border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Glossary
+            </Button>
           </div>
         </div>
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-4 bg-slate-900/50 border-slate-800 animate-pulse">
+                <div className="flex items-start gap-4">
+                  <div className="h-5 w-5 bg-slate-800 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-800 rounded w-1/3" />
+                    <div className="h-3 bg-slate-800 rounded w-1/2" />
+                    <div className="h-3 bg-slate-800 rounded w-2/3" />
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
 
