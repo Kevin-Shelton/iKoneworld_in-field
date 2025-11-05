@@ -275,23 +275,39 @@ export function EmailComposer({
           </div>
 
           {/* Add recipient input */}
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              value={newRecipientEmail}
-              onChange={(e) => setNewRecipientEmail(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddRecipient()}
-              placeholder="Enter email address..."
-              className="bg-slate-950 border-slate-800 text-white"
-            />
-            <Button
-              onClick={handleAddRecipient}
-              variant="outline"
-              size="sm"
-              className="border-slate-700"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
+          <div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={newRecipientEmail}
+                onChange={(e) => setNewRecipientEmail(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddRecipient();
+                  }
+                }}
+                onBlur={() => {
+                  // Auto-add on blur if valid email
+                  if (newRecipientEmail.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newRecipientEmail.trim())) {
+                    handleAddRecipient();
+                  }
+                }}
+                placeholder="Enter email address..."
+                className="bg-slate-950 border-slate-800 text-white"
+              />
+              <Button
+                onClick={handleAddRecipient}
+                variant="outline"
+                size="sm"
+                className="border-slate-700"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            {recipients.length === 0 && !newRecipientEmail && (
+              <p className="text-xs text-slate-500 mt-1">Type an email and press Enter or click + to add</p>
+            )}
           </div>
         </div>
 
