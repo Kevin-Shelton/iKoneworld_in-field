@@ -123,9 +123,10 @@ export default function EmailInboxPage() {
     try {
       setSending(true);
 
-      const recipient = selectedThread.participants.find(
-        p => p.email !== user.email
-      ) || selectedThread.participants[0];
+      // Find the customer (non-ikoneworld email) as the recipient
+      const recipient = selectedThread.participants.find(p => 
+        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
+      ) || selectedThread.participants.find(p => p.email !== user.email) || selectedThread.participants[0];
 
       const response = await fetch('/api/email/send', {
         method: 'POST',
@@ -257,7 +258,10 @@ export default function EmailInboxPage() {
             )}
 
             {!loading && threads.map((thread) => {
-              const otherParticipant = thread.participants.find(p => p.email !== user?.email) || thread.participants[0];
+                    // Find the customer (non-ikoneworld email) as the recipient
+      const recipient = thread.participants.find(p => 
+        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
+      ) || thread.participants.find(p => p.email !== user?.email) || thread.participants[0];
               const isSelected = selectedThread?.id === thread.id;
 
               return (
@@ -385,7 +389,10 @@ export default function EmailInboxPage() {
                   <span>
                     Reply in {userLanguage.toUpperCase()} • Will auto-translate to{' '}
                     {(() => {
-                      const recipient = selectedThread.participants.find(p => p.email !== user?.email) || selectedThread.participants[0];
+                      // Find the customer (non-ikoneworld email) as the recipient
+                      const recipient = selectedThread.participants.find(p => 
+                        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
+                      ) || selectedThread.participants.find(p => p.email !== user?.email) || selectedThread.participants[0];
                       const langName = recipient.language === 'en' ? 'English' :
                                       recipient.language === 'es' ? 'Spanish' :
                                       recipient.language === 'fr' ? 'French' :
