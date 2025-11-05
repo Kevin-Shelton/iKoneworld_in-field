@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Home, Languages, User, LogOut, Settings, Shield } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -70,7 +71,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo Section */}
@@ -99,8 +100,8 @@ export default function Navigation() {
                   href={link.href}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-smooth ${
                     isActive
-                      ? "bg-gray-100 text-black font-medium"
-                      : "text-gray-600 hover:text-black hover:bg-gray-50"
+                      ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white font-medium"
+                      : "text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -117,8 +118,8 @@ export default function Navigation() {
                   href={link.href}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-smooth ${
                     isActive
-                      ? "bg-blue-100 text-blue-700 font-medium"
-                      : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium"
+                      : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -130,9 +131,10 @@ export default function Navigation() {
 
           {/* User Menu */}
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-black">{user?.email}</p>
-              <p className="text-xs text-gray-600">
+              <p className="text-sm font-medium text-black dark:text-white">{user?.email}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 {isAdmin ? 'Enterprise Admin' : userRole ? userRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'User'}
               </p>
             </div>
@@ -140,7 +142,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={() => router.push('/profile')}
-              className="transition-smooth hover:bg-gray-100 text-black px-3"
+              className="transition-smooth hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white px-3"
               title="Profile"
             >
               <User className="w-5 h-5" />
@@ -149,7 +151,7 @@ export default function Navigation() {
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="transition-smooth hover:bg-gray-100 text-black px-3"
+              className="transition-smooth hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white px-3"
               title="Sign Out"
             >
               <LogOut className="w-5 h-5" />
