@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
+import { Mail } from 'lucide-react';
 
 type Conversation = {
   id: number;
@@ -311,6 +312,13 @@ function DashboardContent() {
                 Loading...
               </button>
             )}
+            <button
+              onClick={() => router.push('/email')}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Mail className="w-4 h-4" />
+              Email
+            </button>
           </CardContent>
         </Card>
 
