@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { supabase as supabaseClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +70,7 @@ export default function GlossaryPage() {
   const [targetLanguage, setTargetLanguage] = useState('es');
   const [context, setContext] = useState('');
 
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   useEffect(() => {
     loadTerms();

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { supabase as supabaseClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -64,7 +64,7 @@ export default function EmailThreadPage() {
   const [replyContent, setReplyContent] = useState('');
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
 
-  const supabase = createClient();
+  const supabase = supabaseClient;
   const { translating, translateMessage } = useEmailTranslation(messages);
 
   useEffect(() => {
@@ -135,6 +135,8 @@ export default function EmailThreadPage() {
           content: replyContent,
           senderLanguage: userLanguage,
           recipientLanguage: recipient.language,
+          senderEmail: user.email || 'unknown@example.com',
+          senderName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
         }),
       });
 

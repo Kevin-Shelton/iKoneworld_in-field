@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Inbox, Mail, MailOpen, Loader2, BookOpen } from 'lucide-react';
@@ -32,7 +32,7 @@ export default function EmailInboxPage() {
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
+  // Using shared supabase client
 
   useEffect(() => {
     loadThreads();
