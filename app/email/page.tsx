@@ -382,7 +382,20 @@ export default function EmailInboxPage() {
               <div className="p-6 border-t border-slate-800 bg-slate-900/50">
                 <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
                   <Languages className="w-4 h-4" />
-                  <span>Reply in {userLanguage.toUpperCase()} • Auto-translates to recipient's language</span>
+                  <span>
+                    Reply in {userLanguage.toUpperCase()} • Will auto-translate to{' '}
+                    {(() => {
+                      const recipient = selectedThread.participants.find(p => p.email !== user?.email) || selectedThread.participants[0];
+                      const langName = recipient.language === 'en' ? 'English' :
+                                      recipient.language === 'es' ? 'Spanish' :
+                                      recipient.language === 'fr' ? 'French' :
+                                      recipient.language === 'de' ? 'German' :
+                                      recipient.language === 'ja' ? 'Japanese' :
+                                      recipient.language === 'zh' ? 'Chinese' :
+                                      recipient.language.toUpperCase();
+                      return `${langName} (${recipient.language.toUpperCase()})`;
+                    })()}
+                  </span>
                 </div>
                 <Textarea
                   value={replyContent}
