@@ -39,25 +39,28 @@ export async function POST(request: NextRequest) {
         // Call translation API
         try {
           const translateResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_VERBUM_API_URL || 'https://api.verbum.ai'}/translate`,
+            'https://sdk.verbum.ai/v1/translator/translate',
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.VERBUM_API_KEY}`,
+                'x-api-key': process.env.VERBUM_API_KEY!,
               },
               body: JSON.stringify({
-                text: content,
-                source_language: senderLanguage,
-                target_language: recipient.language,
+                texts: [{ text: content }],
+                from: senderLanguage,
+                to: [recipient.language],
               }),
             }
           );
 
           if (translateResponse.ok) {
             const translateData = await translateResponse.json();
-            translations[recipient.language] = translateData.translated_text || content;
+            console.log(`[Send Multi] Translation to ${recipient.language}:`, translateData);
+            translations[recipient.language] = translateData.translations?.[0]?.[0]?.text || content;
           } else {
+            const errorText = await translateResponse.text();
+            console.error(`[Send Multi] Translation API error for ${recipient.language}:`, translateResponse.status, errorText);
             // Fallback to original if translation fails
             translations[recipient.language] = content;
           }
