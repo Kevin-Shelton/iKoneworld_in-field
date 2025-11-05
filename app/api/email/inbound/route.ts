@@ -43,8 +43,18 @@ export async function POST(request: NextRequest) {
       email_id: webhookData.email_id,
     });
     
+    // Validate email_id exists
+    if (!webhookData.email_id) {
+      console.error('Missing email_id in webhook data:', webhookData);
+      return NextResponse.json(
+        { error: 'Missing email_id in webhook payload' },
+        { status: 400 }
+      );
+    }
+    
     // Fetch the full email content from Resend API
     // Webhooks don't include the body, we need to fetch it separately
+    console.log('Fetching email content for ID:', webhookData.email_id);
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { data: emailData, error: fetchError } = await resend.emails.receiving.get(
       webhookData.email_id
