@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmailTranslation } from '@/lib/hooks/useEmailTranslation';
 
 interface EmailThread {
   id: string;
@@ -63,6 +64,7 @@ export default function EmailThreadPage() {
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
 
   const supabase = createClient();
+  const { translating, translateMessage } = useEmailTranslation(messages);
 
   useEffect(() => {
     if (threadId) {
@@ -111,6 +113,7 @@ export default function EmailThreadPage() {
 
     try {
       setSending(true);
+      setError(null);
 
       // Get user's language from profile
       const userLanguage = user.user_metadata?.language || 'en';
@@ -120,39 +123,37 @@ export default function EmailThreadPage() {
         p => p.email !== user.email
       ) || thread.participants[0];
 
-      // For now, we'll create the message without translation
-      // Translation will be added in the next phase
-      const newMessage: Partial<EmailMessage> = {
-        thread_id: threadId,
-        sender_email: user.email || 'unknown@example.com',
-        sender_name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        sender_language: userLanguage,
-        original_content: replyContent,
-        original_language: userLanguage,
-        translations: {},
-        is_outbound: true,
-        metadata: {},
-      };
+      // Call API to send message with translation
+      const response = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          threadId,
+          content: replyContent,
+          senderLanguage: userLanguage,
+          recipientLanguage: recipient.language,
+        }),
+      });
 
-      const { data, error: insertError } = await supabase
-        .from('email_messages')
-        .insert(newMessage)
-        .select()
-        .single();
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
 
-      if (insertError) throw insertError;
-
-      // Update thread's last_message_at
-      await supabase
-        .from('email_threads')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', threadId);
-
-      // Add to local state
-      setMessages([...messages, data]);
-      setReplyContent('');
-
-      // TODO: Trigger translation in background
+      const data = await response.json();
+      
+      if (data.success && data.message) {
+        // Add to local state
+        setMessages([...messages, data.message]);
+        setReplyContent('');
+        
+        if (data.warning) {
+          console.warn(data.warning);
+        }
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err) {
       console.error('Error sending reply:', err);
       setError('Failed to send reply');
