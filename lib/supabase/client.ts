@@ -21,10 +21,8 @@ const createSupabaseClient = () => {
       detectSessionInUrl: true,
       persistSession: true,
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      // Configure cookie options for cross-domain sharing
-      // Note: Update the domain value based on your actual domain structure
-      // If using portal.ikoneworld.net and infield.ikoneworld.net, use '.ikoneworld.net'
-      // If using different structure, adjust accordingly
+      // Cookie sharing across demo-portal.ikoneworld.net, demo-infield.ikoneworld.net, demo-chat.ikoneworld.net
+      storageKey: 'ikoneworld-auth',
     }
   });
 };

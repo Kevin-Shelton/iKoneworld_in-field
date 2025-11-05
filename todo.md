@@ -84,8 +84,8 @@
 - [x] Update filter to show "Chat" option instead of "Demo Chat"
 
 ## Cross-Domain Authentication Setup
-- [ ] Update Supabase cookie configuration to share auth across domains
-- [ ] Configure cookie domain to .ikoneworld.net
+- [x] Update Supabase cookie configuration to share auth across domains
+- [x] Configure cookie domain to .ikoneworld.net
 - [ ] Test authentication flow from portal to in-field app
 - [ ] Document Supabase dashboard settings needed
 
