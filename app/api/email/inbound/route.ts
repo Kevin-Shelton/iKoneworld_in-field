@@ -190,15 +190,21 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
               texts: [{ text: content }],
-              source_language: detectedLanguage,
-              target_language: 'en',
+              from: detectedLanguage,
+              to: ['en'],
             }),
           }
         );
 
         if (translateResponse.ok) {
           const translateData = await translateResponse.json();
-          translations.en = translateData.translations?.[0]?.text || content;
+          console.log('Translation response:', JSON.stringify(translateData));
+          translations.en = translateData.translations?.[0]?.[0]?.text || content;
+          console.log('Translation successful:', translations.en.substring(0, 100));
+        } else {
+          const errorText = await translateResponse.text();
+          console.error('Translation API error:', translateResponse.status, errorText);
+          translations.en = content; // Fallback to original
         }
       } catch (err) {
         console.error('Translation failed:', err);
