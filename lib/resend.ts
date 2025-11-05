@@ -1,10 +1,16 @@
 import { Resend } from 'resend';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY environment variable is not set');
-}
+let resendClient: Resend | null = null;
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient(): Resend {
+  if (!resendClient) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY environment variable is not set');
+    }
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 // Email configuration
 export const EMAIL_CONFIG = {
@@ -35,6 +41,7 @@ export async function sendTranslatedEmail({
   senderName?: string;
 }) {
   try {
+    const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: [to],
