@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
             },
           ],
           last_message_at: new Date().toISOString(),
-          is_demo: false,
+          is_demo: true,
         })
         .select()
         .single();
