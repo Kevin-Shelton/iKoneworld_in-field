@@ -5,24 +5,25 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Inbox, 
   Send as SendIcon, 
   Mail, 
-  MailOpen, 
   Loader2, 
   BookOpen,
   Languages,
   Eye,
   EyeOff,
-  ArrowLeft,
-  Reply as ReplyIcon
+  Reply as ReplyIcon,
+  ReplyAll,
+  Forward,
+  Plus
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
+import { EmailComposer } from '@/components/EmailComposer';
 
 interface EmailThread {
   id: string;
@@ -49,6 +50,8 @@ interface EmailMessage {
   created_at: string;
 }
 
+type ComposerMode = 'compose' | 'reply' | 'reply-all' | 'forward' | null;
+
 export default function EmailInboxPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -59,11 +62,11 @@ export default function EmailInboxPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState('inbox');
-  const [replyContent, setReplyContent] = useState('');
-  const [sending, setSending] = useState(false);
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
+  const [composerMode, setComposerMode] = useState<ComposerMode>(null);
 
   const userLanguage = user?.user_metadata?.language || 'en';
+  const userEmail = user?.email || '';
 
   useEffect(() => {
     loadThreads();
@@ -83,8 +86,8 @@ export default function EmailInboxPage() {
 
       setThreads(data || []);
       
-      // Auto-select first thread
-      if (data && data.length > 0) {
+      // Auto-select first thread if not composing
+      if (data && data.length > 0 && !composerMode) {
         selectThread(data[0]);
       }
     } catch (err) {
@@ -97,6 +100,7 @@ export default function EmailInboxPage() {
 
   async function selectThread(thread: EmailThread) {
     setSelectedThread(thread);
+    setComposerMode(null); // Close composer when selecting a thread
     setLoadingMessages(true);
     
     try {
@@ -104,7 +108,7 @@ export default function EmailInboxPage() {
         .from('email_messages')
         .select('*')
         .eq('thread_id', thread.id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true});
 
       if (fetchError) throw fetchError;
 
@@ -114,47 +118,6 @@ export default function EmailInboxPage() {
       setError('Failed to load messages');
     } finally {
       setLoadingMessages(false);
-    }
-  }
-
-  async function handleSendReply() {
-    if (!replyContent.trim() || !selectedThread || !user) return;
-
-    try {
-      setSending(true);
-
-      // Find the customer (non-ikoneworld email) as the recipient
-      const recipient = selectedThread.participants.find(p => 
-        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
-      ) || selectedThread.participants.find(p => p.email !== user.email) || selectedThread.participants[0];
-
-      const response = await fetch('/api/email/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          threadId: selectedThread.id,
-          content: replyContent,
-          senderLanguage: userLanguage,
-          recipientLanguage: recipient.language,
-          senderEmail: user.email || 'unknown@example.com',
-          senderName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send message');
-      }
-
-      const newMessage = await response.json();
-      setMessages([...messages, newMessage.message]);
-      setReplyContent('');
-    } catch (err) {
-      console.error('Error sending reply:', err);
-      setError('Failed to send reply');
-    } finally {
-      setSending(false);
     }
   }
 
@@ -180,6 +143,74 @@ export default function EmailInboxPage() {
     }));
   }
 
+  function handleComposeNew() {
+    setComposerMode('compose');
+    setSelectedThread(null);
+  }
+
+  function handleReply() {
+    if (!selectedThread || !messages.length) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    const sender = {
+      email: lastMessage.sender_email,
+      name: lastMessage.sender_name,
+      language: lastMessage.sender_language,
+      isKnown: true,
+    };
+
+    setComposerMode('reply');
+  }
+
+  function handleReplyAll() {
+    if (!selectedThread) return;
+    setComposerMode('reply-all');
+  }
+
+  function handleForward() {
+    if (!selectedThread) return;
+    setComposerMode('forward');
+  }
+
+  function handleComposerSend() {
+    setComposerMode(null);
+    loadThreads(); // Reload threads
+  }
+
+  function handleComposerCancel() {
+    setComposerMode(null);
+  }
+
+  function getComposerRecipients() {
+    if (!selectedThread) return [];
+
+    switch (composerMode) {
+      case 'reply': {
+        const lastMessage = messages[messages.length - 1];
+        return [{
+          email: lastMessage.sender_email,
+          name: lastMessage.sender_name,
+          language: lastMessage.sender_language,
+          isKnown: true,
+        }];
+      }
+      case 'reply-all': {
+        return selectedThread.participants
+          .filter(p => p.email !== userEmail)
+          .map(p => ({
+            email: p.email,
+            name: p.name,
+            language: p.language,
+            isKnown: true,
+          }));
+      }
+      case 'forward':
+      case 'compose':
+      default:
+        return [];
+    }
+  }
+
   const folders = [
     { id: 'inbox', label: 'Inbox', icon: Inbox, count: threads.length },
     { id: 'sent', label: 'Sent', icon: SendIcon, count: 0 },
@@ -194,7 +225,13 @@ export default function EmailInboxPage() {
         {/* Left Sidebar - Folders */}
         <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
           <div className="p-4 border-b border-slate-800">
-            <h2 className="text-lg font-semibold text-white">Email</h2>
+            <Button
+              onClick={handleComposeNew}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Compose New
+            </Button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-2">
@@ -258,10 +295,10 @@ export default function EmailInboxPage() {
             )}
 
             {!loading && threads.map((thread) => {
-                    // Find the customer (non-ikoneworld email) as the recipient
-      const recipient = thread.participants.find(p => 
-        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
-      ) || thread.participants.find(p => p.email !== user?.email) || thread.participants[0];
+              // Find the customer (non-ikoneworld email) as the recipient
+              const recipient = thread.participants.find(p => 
+                !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
+              ) || thread.participants.find(p => p.email !== user?.email) || thread.participants[0];
               const isSelected = selectedThread?.id === thread.id;
 
               return (
@@ -276,7 +313,7 @@ export default function EmailInboxPage() {
                 >
                   <div className="flex items-start justify-between mb-1">
                     <span className="font-semibold text-white text-sm">
-                      {otherParticipant.name}
+                      {recipient.name}
                     </span>
                     <span className="text-xs text-slate-500">
                       {formatDistanceToNow(new Date(thread.last_message_at), { addSuffix: true })}
@@ -287,7 +324,7 @@ export default function EmailInboxPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                      {otherParticipant.language.toUpperCase()}
+                      {recipient.language.toUpperCase()}
                     </span>
                   </div>
                 </button>
@@ -296,28 +333,78 @@ export default function EmailInboxPage() {
           </div>
         </div>
 
-        {/* Right - Message Preview */}
+        {/* Right - Message Preview or Composer */}
         <div className="flex-1 bg-slate-950 flex flex-col">
-          {!selectedThread && (
+          {composerMode ? (
+            <div className="p-6 overflow-y-auto">
+              <EmailComposer
+                mode={composerMode}
+                threadId={selectedThread?.id}
+                initialRecipients={getComposerRecipients()}
+                initialSubject={
+                  composerMode === 'forward' && selectedThread
+                    ? `Fwd: ${selectedThread.subject}`
+                    : composerMode === 'reply' || composerMode === 'reply-all'
+                    ? `Re: ${selectedThread?.subject || ''}`
+                    : ''
+                }
+                onSend={handleComposerSend}
+                onCancel={handleComposerCancel}
+                userEmail={userEmail}
+                userLanguage={userLanguage}
+              />
+            </div>
+          ) : !selectedThread ? (
             <div className="flex-1 flex items-center justify-center text-slate-500">
               <div className="text-center">
                 <Mail className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>Select an email to view</p>
+                <p>Select an email to view or compose a new message</p>
               </div>
             </div>
-          )}
-
-          {selectedThread && (
+          ) : (
             <>
               {/* Email Header */}
               <div className="p-6 border-b border-slate-800">
                 <h1 className="text-2xl font-bold text-white mb-4">{selectedThread.subject}</h1>
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <span>{selectedThread.participants.length} participants</span>
-                  <span>•</span>
-                  <span>
-                    {selectedThread.participants.map(p => p.language.toUpperCase()).join(', ')}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <span>{selectedThread.participants.length} participants</span>
+                    <span>•</span>
+                    <span>
+                      {selectedThread.participants.map(p => p.language.toUpperCase()).join(', ')}
+                    </span>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleReply}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      <ReplyIcon className="w-4 h-4 mr-2" />
+                      Reply
+                    </Button>
+                    <Button
+                      onClick={handleReplyAll}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      <ReplyAll className="w-4 h-4 mr-2" />
+                      Reply All
+                    </Button>
+                    <Button
+                      onClick={handleForward}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      <Forward className="w-4 h-4 mr-2" />
+                      Forward
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -380,56 +467,6 @@ export default function EmailInboxPage() {
                     </Card>
                   );
                 })}
-              </div>
-
-              {/* Reply Box */}
-              <div className="p-6 border-t border-slate-800 bg-slate-900/50">
-                <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
-                  <Languages className="w-4 h-4" />
-                  <span>
-                    Reply in {userLanguage.toUpperCase()} • Will auto-translate to{' '}
-                    {(() => {
-                      // Find the customer (non-ikoneworld email) as the recipient
-                      const recipient = selectedThread.participants.find(p => 
-                        !p.email.includes('ikoneworld.com') && !p.email.includes('example.com')
-                      ) || selectedThread.participants.find(p => p.email !== user?.email) || selectedThread.participants[0];
-                      const langName = recipient.language === 'en' ? 'English' :
-                                      recipient.language === 'es' ? 'Spanish' :
-                                      recipient.language === 'fr' ? 'French' :
-                                      recipient.language === 'de' ? 'German' :
-                                      recipient.language === 'ja' ? 'Japanese' :
-                                      recipient.language === 'zh' ? 'Chinese' :
-                                      recipient.language.toUpperCase();
-                      return `${langName} (${recipient.language.toUpperCase()})`;
-                    })()}
-                  </span>
-                </div>
-                <Textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder="Type your reply..."
-                  className="mb-3 bg-slate-950 border-slate-800 text-white resize-none"
-                  rows={4}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSendReply}
-                    disabled={sending || !replyContent.trim()}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {sending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <ReplyIcon className="w-4 h-4 mr-2" />
-                        Send Reply
-                      </>
-                    )}
-                  </Button>
-                </div>
               </div>
             </>
           )}
