@@ -280,17 +280,18 @@ function stripHTML(html: string): string {
  * For now, we'll use a simple heuristic or call Verbum API
  */
 async function detectLanguage(text: string): Promise<string> {
-  // Simple heuristic: check for common words
-  const spanishWords = /\b(hola|gracias|por favor|buenos días)\b/i;
-  const frenchWords = /\b(bonjour|merci|s'il vous plaît)\b/i;
+  // Expanded heuristic with more common words
+  const spanishWords = /\b(hola|gracias|por favor|buenos días|estoy|interesado|actualización|teléfono|celular|gustaría|tener|activado|cómo|qué|dónde|cuándo)\b/i;
+  const frenchWords = /\b(bonjour|merci|s'il vous plaît|je suis|intéressé|comment|où|quand)\b/i;
   const japaneseChars = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
   
-  if (spanishWords.test(text)) return 'es';
-  if (frenchWords.test(text)) return 'fr';
-  if (japaneseChars.test(text)) return 'ja';
+  let detected = 'en';
+  if (spanishWords.test(text)) detected = 'es';
+  else if (frenchWords.test(text)) detected = 'fr';
+  else if (japaneseChars.test(text)) detected = 'ja';
   
-  // Default to English
-  return 'en';
+  console.log('Language detection:', { detected, textPreview: text.substring(0, 100) });
+  return detected;
 }
 
 // Also support GET for webhook verification
