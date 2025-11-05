@@ -82,3 +82,15 @@
 - [x] Update conversation type from "demo" to "chat"
 - [x] Update dashboard to display "Chat" instead of "Demo Chat"
 - [x] Update filter to show "Chat" option instead of "Demo Chat"
+
+## Cross-Domain Authentication Setup
+- [ ] Update Supabase cookie configuration to share auth across domains
+- [ ] Configure cookie domain to .ikoneworld.net
+- [ ] Test authentication flow from portal to in-field app
+- [ ] Document Supabase dashboard settings needed
+
+## Permanent Chat URL
+- [x] Create /chat landing page with Start Chat button
+- [x] Implement auto-create conversation on button click
+- [x] Add welcome message and instructions
+- [ ] Update QR code generation to use /chat URL
