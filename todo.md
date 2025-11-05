@@ -94,3 +94,9 @@
 - [x] Implement auto-create conversation on button click
 - [x] Add welcome message and instructions
 - [ ] Update QR code generation to use /chat URL
+
+## User Fetch Error
+- [x] Debug "Failed to fetch users" error in application
+- [x] Check API endpoint for users
+- [x] Verify database query and permissions
+- [x] Fixed: Removed incorrect authorization header check

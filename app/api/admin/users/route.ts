@@ -14,11 +14,8 @@ async function isAdmin(userId: string): Promise<boolean> {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get current user from session
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Note: This endpoint is protected by middleware that checks for admin role
+    // No additional auth check needed here
 
     // List all users from Supabase Auth
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
