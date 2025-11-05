@@ -55,18 +55,33 @@ export async function POST(request: NextRequest) {
     // Fetch the full email content from Resend API
     // Webhooks don't include the body, we need to fetch it separately
     console.log('Fetching email content for ID:', webhookData.email_id);
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const { data: emailData, error: fetchError } = await resend.emails.receiving.get(
-      webhookData.email_id
+    
+    // Use direct REST API call instead of SDK to avoid parameter issues
+    const emailResponse = await fetch(
+      `https://api.resend.com/emails/receiving/${webhookData.email_id}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
     );
     
-    if (fetchError || !emailData) {
-      console.error('Error fetching email content:', fetchError);
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error('Error fetching email content:', {
+        status: emailResponse.status,
+        statusText: emailResponse.statusText,
+        body: errorText,
+      });
       return NextResponse.json(
-        { error: 'Failed to fetch email content' },
+        { error: 'Failed to fetch email content from Resend API' },
         { status: 500 }
       );
     }
+    
+    const emailData = await emailResponse.json();
     
     console.log('Fetched email content:', {
       hasText: !!emailData.text,
