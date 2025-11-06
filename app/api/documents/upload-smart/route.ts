@@ -363,14 +363,25 @@ export async function POST(request: NextRequest) {
       });
       console.log('[Upload Smart] Stored chunks in database');
       
+      // Trigger translation asynchronously (fire and forget)
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+      fetch(`${baseUrl}/api/documents/${conversation.id}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }).catch(error => {
+        console.error('[Upload Smart] Failed to trigger translation:', error);
+      });
+      
+      console.log('[Upload Smart] Translation triggered for conversation:', conversation.id);
+      
       // Return async processing response
       return NextResponse.json({
         success: true,
         method: 'chunking',
         conversationId: conversation.id,
-        message: 'Document uploaded. Translation will begin shortly.',
+        message: 'Document uploaded. Translation is now processing.',
         estimatedTime: `${estimatedTime} seconds`,
-        status: 'queued',
+        status: 'processing',
         chunkCount: chunks.length,
       });
     }

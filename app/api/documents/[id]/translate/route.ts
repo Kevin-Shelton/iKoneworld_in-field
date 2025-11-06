@@ -69,7 +69,7 @@ export async function POST(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          texts: [{ text: message.original_text }],
+          texts: [{ text: message.originalText }],
           from: document.language1,
           to: [document.language2],
         }),

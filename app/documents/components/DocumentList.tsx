@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Download, CheckCircle, Clock, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -80,6 +80,44 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
     } catch (error) {
       console.error('Download error:', error);
       toast.error(error instanceof Error ? error.message : 'Download failed');
+    }
+  };
+
+  const handleCancel = async (documentId: number) => {
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to cancel translation');
+      }
+      
+      toast.success('Translation cancelled');
+      fetchDocuments(); // Refresh list
+    } catch (error) {
+      console.error('Cancel error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel');
+    }
+  };
+
+  const handleRetry = async (documentId: number) => {
+    try {
+      toast.info('Retrying translation...');
+      
+      const response = await fetch(`/api/documents/${documentId}/translate`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to retry translation');
+      }
+      
+      toast.success('Translation restarted');
+      fetchDocuments(); // Refresh list
+    } catch (error) {
+      console.error('Retry error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to retry');
     }
   };
 
@@ -238,16 +276,42 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
                     </p>
                   )}
 
-                  {/* Download Button */}
-                  {doc.status === 'completed' && (
-                    <Button
-                      onClick={() => handleDownload(doc.id, doc.originalFilename)}
-                      className="bg-green-600 hover:bg-green-700 text-white mt-2"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Translation
-                    </Button>
-                  )}
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mt-2">
+                    {/* Download Button */}
+                    {doc.status === 'completed' && (
+                      <Button
+                        onClick={() => handleDownload(doc.id, doc.originalFilename)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Translation
+                      </Button>
+                    )}
+                    
+                    {/* Retry Button for Failed Translations */}
+                    {doc.status === 'failed' && (
+                      <Button
+                        onClick={() => handleRetry(doc.id)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Retry Translation
+                      </Button>
+                    )}
+                    
+                    {/* Cancel Button for Active/Queued Translations */}
+                    {(doc.status === 'active' || doc.status === 'queued') && (
+                      <Button
+                        onClick={() => handleCancel(doc.id)}
+                        variant="outline"
+                        className="border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
