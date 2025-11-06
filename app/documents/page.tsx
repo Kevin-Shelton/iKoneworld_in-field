@@ -60,7 +60,7 @@ export default function DocumentsPage() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  if (!user || !dbUserId || !enterpriseId) {
+  if (!user || !dbUserId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -95,7 +95,7 @@ export default function DocumentsPage() {
           <div className="lg:col-span-1">
             <DocumentUpload
               userId={dbUserId}
-              enterpriseId={enterpriseId}
+              enterpriseId={enterpriseId || undefined}
               onUploadComplete={handleUploadComplete}
             />
           </div>
