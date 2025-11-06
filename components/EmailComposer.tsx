@@ -21,7 +21,7 @@ interface EmailComposerProps {
   threadId?: string;
   initialRecipients?: Recipient[];
   initialSubject?: string;
-  onSend?: () => void;
+  onSend?: (recipientLanguages: string[]) => void;
   onCancel?: () => void;
   userEmail?: string;
   userLanguage?: string;
@@ -171,10 +171,14 @@ export function EmailComposer({
         throw new Error('Failed to send email');
       }
 
+      const recipientLanguages = recipients
+        .map(r => r.language)
+        .filter(lang => lang !== userLanguage);
+      
       toast.success(`Email sent to ${recipients.length} recipient(s)`);
       
       if (onSend) {
-        onSend();
+        onSend(recipientLanguages);
       }
     } catch (err) {
       console.error('Error sending email:', err);
