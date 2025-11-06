@@ -271,11 +271,11 @@ export default function EmailInboxPage() {
 
       const { data: allMessages } = await supabase
         .from('email_messages')
-        .select('thread_id, is_outbound, is_deleted');
+        .select('thread_id, is_outbound, is_deleted, sender_email');
 
       const sentThreadIds = new Set();
       allMessages?.forEach((msg: any) => {
-        if (msg.is_outbound && !msg.is_deleted) {
+        if (msg.is_outbound && !msg.is_deleted && msg.sender_email === userEmail) {
           sentThreadIds.add(msg.thread_id);
         }
       });
