@@ -190,8 +190,8 @@ export default function EmailInboxPage() {
       
       // Mark unread messages as read
       const unreadIds = (data || [])
-        .filter(m => !m.is_read && !m.is_outbound)
-        .map(m => m.id);
+        .filter((m: EmailMessage) => !m.is_read && !m.is_outbound)
+        .map((m: EmailMessage) => m.id);
       
       if (unreadIds.length > 0) {
         await supabase
@@ -419,8 +419,8 @@ export default function EmailInboxPage() {
       }
       case 'reply-all': {
         return selectedThread.participants
-          .filter(p => p.email !== userEmail)
-          .map(p => ({
+          .filter((p: any) => p.email !== userEmail)
+          .map((p: any) => ({
             email: p.email,
             name: p.name,
             language: p.language,
@@ -553,7 +553,7 @@ export default function EmailInboxPage() {
               </div>
             ) : (
               filteredThreads.map((thread) => {
-                const participant = thread.participants.find(p => p.email !== userEmail) || thread.participants[0];
+                const participant = thread.participants.find((p: any) => p.email !== userEmail) || thread.participants[0];
                 const hasUnread = false; // Would need to check messages
                 
                 return (
