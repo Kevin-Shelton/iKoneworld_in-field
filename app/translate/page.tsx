@@ -988,92 +988,76 @@ function TranslatePageContent() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Employee Messages */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Employee Messages ({userLang})
+        {/* Unified Chat Messages */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Conversation
             </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.filter(m => m.speaker === "user").length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
-              ) : (
-                messages
-                  .filter(m => m.speaker === "user")
-                  .reverse()
-                  .map((message) => (
-                    <div key={message.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        {message.sentiment && (
-                          <span className={`text-2xl ${getSentimentColor(message.sentiment)}`} title={`Sentiment: ${message.sentiment}`}>
-                            {getSentimentIcon(message.sentiment)}
-                          </span>
-                        )}
-                        <div className="flex-1">
-                          <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                            → {message.translatedText}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                        {message.confidence !== undefined && (
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                            {(message.confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-              )}
+            <div className="flex gap-4 text-sm">
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                <span className="text-gray-600 dark:text-gray-400">Employee ({userLang})</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                <span className="text-gray-600 dark:text-gray-400">Customer ({guestLang})</span>
+              </span>
             </div>
           </div>
-
-          {/* Customer Messages */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Customer Messages ({guestLang})
-            </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.filter(m => m.speaker === "guest").length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
-              ) : (
-                messages
-                  .filter(m => m.speaker === "guest")
-                  .reverse()
-                  .map((message) => (
-                    <div key={message.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        {message.sentiment && (
-                          <span className={`text-2xl ${getSentimentColor(message.sentiment)}`} title={`Sentiment: ${message.sentiment}`}>
+          
+          <div className="space-y-4 max-h-[600px] overflow-y-auto px-2">
+            {messages.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">No messages yet</p>
+            ) : (
+              messages
+                .slice()
+                .reverse()
+                .map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.speaker === "user" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                        message.speaker === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-green-500 text-white"
+                      }`}
+                    >
+                      {/* Sentiment Icon */}
+                      {message.sentiment && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl" title={`Sentiment: ${message.sentiment}`}>
                             {getSentimentIcon(message.sentiment)}
                           </span>
-                        )}
-                        <div className="flex-1">
-                          <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                            → {message.translatedText}
-                          </p>
+                          <span className="text-xs opacity-75 font-medium">
+                            {message.speaker === "user" ? "Employee" : "Customer"}
+                          </span>
                         </div>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
+                      )}
+                      
+                      {/* Original Text */}
+                      <p className="font-medium leading-relaxed">{message.text}</p>
+                      
+                      {/* Translated Text */}
+                      <p className="text-sm opacity-90 mt-2 italic border-t border-white/20 pt-2">
+                        {message.translatedText}
+                      </p>
+                      
+                      {/* Metadata */}
+                      <div className="flex items-center justify-between mt-2 text-xs opacity-75">
+                        <span>{message.timestamp.toLocaleTimeString()}</span>
                         {message.confidence !== undefined && (
-                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded">
+                          <span className="bg-white/20 px-2 py-0.5 rounded">
                             {(message.confidence * 100).toFixed(0)}%
                           </span>
                         )}
                       </div>
                     </div>
-                  ))
-              )}
-            </div>
+                  </div>
+                ))
+            )}
           </div>
         </div>
       </div>
