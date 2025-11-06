@@ -48,7 +48,7 @@ export async function sendTranslatedEmail({
       subject: subject,
       text: content,
       html: formatEmailHTML(content, senderName || senderEmail),
-      replyTo: senderEmail, // Allow recipient to reply directly to sender
+      replyTo: 'email@ikoneworld.net', // Route all replies through translation system
       headers: {
         'X-Sender-Email': senderEmail,
         'X-Sender-Name': senderName || '',
