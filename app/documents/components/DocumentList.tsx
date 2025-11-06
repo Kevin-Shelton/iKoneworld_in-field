@@ -166,7 +166,7 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
     return (
       <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="text-black dark:text-white">Recent Translations</CardTitle>
+          <CardTitle className="text-black dark:text-white">Document Translation History</CardTitle>
         </CardHeader>
         <CardContent className="p-8 text-center">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
@@ -180,7 +180,7 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
   return (
     <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="text-black dark:text-white">Recent Translations</CardTitle>
+        <CardTitle className="text-black dark:text-white">Document Translation History</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
