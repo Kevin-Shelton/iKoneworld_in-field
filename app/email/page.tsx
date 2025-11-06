@@ -646,7 +646,7 @@ export default function EmailInboxPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950">
+    <div className="h-screen flex flex-col bg-slate-950 overflow-hidden">
       <div className="sticky top-0 z-50">
         <Navigation />
       </div>
