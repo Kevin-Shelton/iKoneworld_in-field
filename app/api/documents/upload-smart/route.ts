@@ -238,10 +238,15 @@ export async function POST(request: NextRequest) {
       console.log('[Upload Smart] Created conversation:', conversation.id);
       
       // Upload original file to Supabase
-      const uploadedFileUrl = await uploadDocumentToSupabase(
+      const uploadedFileUrl = await uploadDocumentToSupabase({
         fileBuffer,
-        `${conversation.id}/${sanitizedFilename}`
-      );
+        fileName: sanitizedFilename,
+        contentType: file.type,
+        enterpriseId: enterpriseId || undefined,
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
       
       console.log('[Upload Smart] Uploaded file to Supabase:', uploadedFileUrl);
       
