@@ -139,7 +139,7 @@ export default function EmailInboxPage() {
           .eq('sender_email', userEmail)
           .eq('is_outbound', true);
         
-        sentMessages?.forEach(msg => threadIds.add(msg.thread_id));
+        sentMessages?.forEach((msg: any) => threadIds.add(msg.thread_id));
         filteredData = filteredData.filter(t => threadIds.has(t.id));
       } else if (selectedFolder === 'inbox') {
         // Show threads with inbound messages
