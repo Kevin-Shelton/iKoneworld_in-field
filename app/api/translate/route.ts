@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 interface TranslateRequestBody {
-  texts: Array<{ text: string }>;
+  text?: string;  // Simplified format
+  texts?: Array<{ text: string }>;  // Legacy format
   from: string;
-  to: string[];
+  to: string | string[];  // Accept single string or array
 }
 
 /**
@@ -36,14 +37,24 @@ function mapToVerbumLanguageCode(code: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as TranslateRequestBody;
-    const { texts, from, to } = body;
+    let { texts, from, to } = body;
+
+    // Support simplified format: convert single text to array
+    if (body.text && !texts) {
+      texts = [{ text: body.text }];
+    }
 
     // Validate request body
     if (!texts || !Array.isArray(texts) || texts.length === 0) {
       return NextResponse.json(
-        { error: "Invalid request: texts array is required" },
+        { error: "Invalid request: text or texts array is required" },
         { status: 400 }
       );
+    }
+    
+    // Support single target language: convert to array
+    if (typeof to === 'string') {
+      to = [to];
     }
 
     if (!from || typeof from !== "string") {
@@ -55,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (!to || !Array.isArray(to) || to.length === 0) {
       return NextResponse.json(
-        { error: "Invalid request: to languages array is required" },
+        { error: "Invalid request: to language(s) required" },
         { status: 400 }
       );
     }
