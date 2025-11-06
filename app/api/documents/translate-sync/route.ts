@@ -155,7 +155,8 @@ export async function POST(request: NextRequest) {
     console.log(`[Skeleton Translate] Output file: ${newFilename} (${translatedBuffer.length} bytes)`);
     
     // Return the translated DOCX file
-    return new NextResponse(translatedBuffer, {
+    // Convert Buffer to Uint8Array for Next.js 16 compatibility
+    return new NextResponse(new Uint8Array(translatedBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

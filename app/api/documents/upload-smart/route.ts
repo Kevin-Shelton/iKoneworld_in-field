@@ -95,7 +95,8 @@ export async function POST(request: NextRequest) {
       console.log(`[Upload Smart] Skeleton translation completed in ${processingTime}ms`);
       
       // Return the file directly for download
-      return new NextResponse(Buffer.from(translatedBuffer), {
+      // Convert to Uint8Array for Next.js 16 compatibility
+      return new NextResponse(new Uint8Array(translatedBuffer), {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
