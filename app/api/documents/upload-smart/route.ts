@@ -195,20 +195,8 @@ export async function POST(request: NextRequest) {
       console.log(`[Upload Smart] ✓ Translation completed in ${processingTime}ms`);
       console.log(`[Upload Smart] Output file: ${newFilename} (${translatedBuffer.length} bytes)`);
       
-      // Step 6: Upload translated file to Supabase Storage
-      console.log('[Upload Smart] Step 6: Uploading translated file to storage');
-      const translatedStoragePath = await uploadDocumentToSupabase({
-        fileBuffer: translatedBuffer,
-        fileName: newFilename,
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        enterpriseId: enterpriseId || 'default',
-        userId: parseInt(userId),
-        conversationId: 0, // Will be set after creating conversation
-        isTranslated: true,
-      });
-      
-      // Step 7: Create database record
-      console.log('[Upload Smart] Step 7: Creating database record');
+      // Step 6: Create database record first to get conversation ID
+      console.log('[Upload Smart] Step 6: Creating database record');
       const conversation = await createDocumentTranslation({
         userId: parseInt(userId),
         enterpriseId: enterpriseId || undefined,
@@ -217,16 +205,29 @@ export async function POST(request: NextRequest) {
         fileSizeBytes: file.size,
         sourceLanguage,
         targetLanguage,
-        originalFileUrl: translatedStoragePath, // Use translated path as original for skeleton method
+        originalFileUrl: '', // Will be updated after upload
       });
       
-      // Update to completed status
+      // Step 7: Upload translated file to Supabase Storage with correct conversation ID
+      console.log('[Upload Smart] Step 7: Uploading translated file to storage');
+      const translatedStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: translatedBuffer,
+        fileName: newFilename,
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: true,
+      });
+      
+      // Update to completed status with full metadata
       const { supabaseAdmin } = await import('@/lib/supabase/server');
       const supabase = supabaseAdmin;
       await supabase
         .from('conversations')
         .update({
           status: 'completed',
+          audio_url: translatedStoragePath, // Store path for download
           metadata: {
             conversation_type: 'document',
             document_translation: {
@@ -236,9 +237,12 @@ export async function POST(request: NextRequest) {
               file_size_bytes: file.size,
               translated_file_size_bytes: translatedBuffer.length,
               translated_storage_path: translatedStoragePath,
+              translated_file_url: translatedStoragePath,
               progress_percentage: 100,
               processing_time_ms: processingTime,
               method: 'skeleton',
+              estimated_time_seconds: estimatedTime,
+              chunk_count: 1,
             },
           },
         })
