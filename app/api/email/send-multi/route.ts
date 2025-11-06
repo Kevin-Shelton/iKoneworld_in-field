@@ -28,16 +28,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Translate content to each recipient's language
+    // Translate content and subject to each recipient's language
     const translations: Record<string, string> = {};
+    const subjectTranslations: Record<string, string> = {};
     
     for (const recipient of recipients as Recipient[]) {
       if (recipient.language === senderLanguage) {
         // No translation needed
         translations[recipient.language] = content;
+        subjectTranslations[recipient.language] = subject || '(No Subject)';
       } else {
-        // Call translation API
+        // Call translation API for both content and subject
         try {
+          const textsToTranslate = [{ text: content }];
+          if (subject) {
+            textsToTranslate.push({ text: subject });
+          }
+
           const translateResponse = await fetch(
             'https://sdk.verbum.ai/v1/translator/translate',
             {
@@ -47,7 +54,7 @@ export async function POST(request: NextRequest) {
                 'x-api-key': process.env.VERBUM_API_KEY!,
               },
               body: JSON.stringify({
-                texts: [{ text: content }],
+                texts: textsToTranslate,
                 from: senderLanguage,
                 to: [recipient.language],
               }),
@@ -58,15 +65,18 @@ export async function POST(request: NextRequest) {
             const translateData = await translateResponse.json();
             console.log(`[Send Multi] Translation to ${recipient.language}:`, translateData);
             translations[recipient.language] = translateData.translations?.[0]?.[0]?.text || content;
+            subjectTranslations[recipient.language] = translateData.translations?.[0]?.[1]?.text || subject || '(No Subject)';
           } else {
             const errorText = await translateResponse.text();
             console.error(`[Send Multi] Translation API error for ${recipient.language}:`, translateResponse.status, errorText);
             // Fallback to original if translation fails
             translations[recipient.language] = content;
+            subjectTranslations[recipient.language] = subject || '(No Subject)';
           }
         } catch (err) {
           console.error(`Translation failed for ${recipient.language}:`, err);
           translations[recipient.language] = content;
+          subjectTranslations[recipient.language] = subject || '(No Subject)';
         }
       }
     }
@@ -149,7 +159,7 @@ export async function POST(request: NextRequest) {
         const result = await sendTranslatedEmail({
           to: recipient.email,
           toName: recipient.name,
-          subject: subject || '(No Subject)',
+          subject: subjectTranslations[recipient.language] || subject || '(No Subject)',
           content: translations[recipient.language],
           senderEmail,
           senderName: senderEmail.split('@')[0],

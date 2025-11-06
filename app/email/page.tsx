@@ -214,7 +214,8 @@ export default function EmailInboxPage() {
           .from('email_messages')
           .select('thread_id')
           .eq('sender_email', userEmail)
-          .eq('is_outbound', true);
+          .eq('is_outbound', true)
+          .eq('is_deleted', false);
         
         sentMessages?.forEach((msg: any) => threadIds.add(msg.thread_id));
         filteredData = filteredData.filter((t: EmailThread) => threadIds.has(t.id));
@@ -432,7 +433,11 @@ export default function EmailInboxPage() {
       });
     }
     
+    // Wait a moment for the database to update
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     await loadThreads();
+    await loadFolderCounts();
     
     // Refresh messages for the currently selected thread
     if (selectedThread) {
