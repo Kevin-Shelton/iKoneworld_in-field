@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
-import { Mail } from 'lucide-react';
+import { Mail, FileText } from 'lucide-react';
 
 type Conversation = {
   id: number;
@@ -318,6 +318,13 @@ function DashboardContent() {
             >
               <Mail className="w-4 h-4" />
               Email
+            </button>
+            <button
+              onClick={() => router.push('/documents')}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Documents
             </button>
           </CardContent>
         </Card>
