@@ -95,7 +95,7 @@ export default function DocumentsPage() {
           <div className="lg:col-span-1">
             <DocumentUpload
               userId={dbUserId}
-              enterpriseId={enterpriseId || undefined}
+              enterpriseId={enterpriseId}
               onUploadComplete={handleUploadComplete}
             />
           </div>

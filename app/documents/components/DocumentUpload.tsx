@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 interface DocumentUploadProps {
   userId: number;
-  enterpriseId: string;
+  enterpriseId?: string;
   onUploadComplete: () => void;
 }
 
