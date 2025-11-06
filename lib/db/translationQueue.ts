@@ -200,8 +200,8 @@ export async function getConversationProgress(conversationId: number): Promise<{
     }
     
     const total = messages.length;
-    const completed = messages.filter(m => m.translatedText && m.translatedText !== '').length;
-    const failed = messages.filter(m => m.metadata?.translation_status === 'failed').length;
+    const completed = messages.filter((m: any) => m.translatedText && m.translatedText !== '').length;
+    const failed = messages.filter((m: any) => m.metadata?.translation_status === 'failed').length;
     const pending = total - completed - failed;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     
