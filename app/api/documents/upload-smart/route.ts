@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
         fileBuffer,
         fileName: sanitizedFilename,
         contentType: file.type,
-        enterpriseId: enterpriseId || undefined,
+        enterpriseId: enterpriseId || 'default',
         userId: parseInt(userId),
         conversationId: conversation.id,
         isTranslated: false,
@@ -255,7 +255,11 @@ export async function POST(request: NextRequest) {
       console.log('[Upload Smart] Created chunks:', chunks.length);
       
       // Store chunks in database
-      await storeDocumentChunks(conversation.id, chunks);
+      await storeDocumentChunks({
+        conversationId: conversation.id,
+        chunks,
+        sourceLanguage,
+      });
       console.log('[Upload Smart] Stored chunks in database');
       
       // Return async processing response
