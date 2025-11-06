@@ -4,12 +4,11 @@ import { extractDocumentXml, createModifiedDocx, validateDocxStructure } from '@
 import { createDocumentTranslation, storeDocumentChunks } from '@/lib/db/documents';
 import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
 import {
-  extractTextFromDocument,
   chunkText,
   isValidFileType,
   isValidFileSize,
   sanitizeFilename,
-} from '@/lib/documentProcessor';
+} from '@/lib/documentUtils';
 
 /**
  * POST /api/documents/upload-smart
@@ -247,6 +246,9 @@ export async function POST(request: NextRequest) {
       
       // Extract text from document
       console.log('[Upload Smart] Extracting text from document...');
+      
+      // Dynamic import to avoid loading mammoth/xmldom in skeleton method
+      const { extractTextFromDocument } = await import('@/lib/documentUtils');
       const extractedText = await extractTextFromDocument(fileBuffer, file.type);
       
       if (!extractedText || extractedText.trim().length === 0) {
