@@ -682,11 +682,10 @@ export default function LanguageSelection() {
                   // Stop audio if playing
                   stopAudio();
                   setIsConfirmModalOpen(false);
-                  // Reset to language selection if on guest step
-                  if (selectionStep === "guest") {
-                    setSelectionStep("user");
-                    setSelectedLanguage(null);
-                  }
+                  setSelectedLanguage(null);
+                  // Don't reset to user step if userLanguage is already set
+                  // This allows users to cancel and pick a different guest language
+                  // without being forced to reselect their employee language
                 }} 
                 className="flex-1"
               >
