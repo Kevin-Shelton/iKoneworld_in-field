@@ -283,20 +283,39 @@ function stripHTML(html: string): string {
 
 /**
  * Detect language of text
- * For now, we'll use a simple heuristic or call Verbum API
+ * Uses keyword matching for common languages
+ * Prioritizes content over signature by checking first 500 chars
  */
 async function detectLanguage(text: string): Promise<string> {
-  // Expanded heuristic with more common words
-  const spanishWords = /\b(hola|gracias|por favor|buenos días|estoy|interesado|actualización|teléfono|celular|gustaría|tener|activado|cómo|qué|dónde|cuándo)\b/i;
-  const frenchWords = /\b(bonjour|merci|s'il vous plaît|je suis|intéressé|comment|où|quand)\b/i;
+  // Focus on the first 500 characters to avoid signature interference
+  const contentSample = text.substring(0, 500);
+  
+  // Language-specific word patterns
+  const germanWords = /\b(hallo|bitte|danke|könnten|sie|mir|ein|angebot|ich|habe|wäre|für|eine|schnelle|bearbeitung|sehr|dankbar|auf|von|mit|und|der|die|das)\b/i;
+  const spanishWords = /\b(hola|gracias|por favor|buenos días|estoy|interesado|actualización|teléfono|celular|gustaría|tener|activado|cómo|qué|dónde|cuándo|necesito|servicio)\b/i;
+  const frenchWords = /\b(bonjour|merci|s'il vous plaît|je suis|intéressé|comment|où|quand|besoin|service|pouvez|vous)\b/i;
+  const italianWords = /\b(ciao|grazie|per favore|buongiorno|sono|interessato|come|dove|quando|bisogno|servizio)\b/i;
+  const portugueseWords = /\b(olá|obrigado|por favor|bom dia|estou|interessado|como|onde|quando|preciso|serviço)\b/i;
   const japaneseChars = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
+  const koreanChars = /[\uAC00-\uD7AF]/;
+  const chineseChars = /[\u4E00-\u9FFF]/;
+  const russianWords = /\b(привет|спасибо|пожалуйста|здравствуйте|мне|нужно|как|где|когда)\b/i;
   
   let detected = 'en';
-  if (spanishWords.test(text)) detected = 'es';
-  else if (frenchWords.test(text)) detected = 'fr';
-  else if (japaneseChars.test(text)) detected = 'ja';
   
-  console.log('Language detection:', { detected, textPreview: text.substring(0, 100) });
+  // Check for character-based languages first (higher priority)
+  if (japaneseChars.test(contentSample)) detected = 'ja';
+  else if (koreanChars.test(contentSample)) detected = 'ko';
+  else if (chineseChars.test(contentSample)) detected = 'zh';
+  // Then check for word-based languages
+  else if (germanWords.test(contentSample)) detected = 'de';
+  else if (spanishWords.test(contentSample)) detected = 'es';
+  else if (frenchWords.test(contentSample)) detected = 'fr';
+  else if (italianWords.test(contentSample)) detected = 'it';
+  else if (portugueseWords.test(contentSample)) detected = 'pt';
+  else if (russianWords.test(contentSample)) detected = 'ru';
+  
+  console.log('Language detection:', { detected, textPreview: contentSample.substring(0, 100) });
   return detected;
 }
 
