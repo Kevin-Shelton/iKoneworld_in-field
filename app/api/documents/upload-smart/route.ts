@@ -89,19 +89,6 @@ export async function POST(request: NextRequest) {
       // ============================================
       console.log('[Upload Smart] Using skeleton method');
       
-      // Check file size
-      if (sizeCategory === 'large') {
-        return NextResponse.json(
-          { 
-            error: 'File too large for synchronous processing',
-            suggestion: 'Use async endpoint for files > 5MB',
-            fileSize: file.size,
-            maxSize: 5 * 1024 * 1024,
-          },
-          { status: 413 }
-        );
-      }
-      
       // Convert file to buffer
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
