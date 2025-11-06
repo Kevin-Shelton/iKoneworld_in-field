@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
 import { Mail, FileText } from 'lucide-react';
+import { DefaultLanguagePrompt } from '@/components/DefaultLanguagePrompt';
 
 type Conversation = {
   id: number;
@@ -241,6 +242,9 @@ function DashboardContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navigation />
+      
+      {/* Default Language Prompt */}
+      {user?.id && <DefaultLanguagePrompt userId={user.id} />}
       
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
