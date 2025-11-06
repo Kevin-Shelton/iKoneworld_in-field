@@ -62,7 +62,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('userId', userId.toString());
-      formData.append('enterpriseId', enterpriseId);
+      if (enterpriseId) {
+        formData.append('enterpriseId', enterpriseId);
+      }
       formData.append('sourceLanguage', sourceLanguage);
       formData.append('targetLanguage', targetLanguage);
 
