@@ -39,18 +39,22 @@ export async function GET(
       );
     }
     
-    // Get translated file URL from metadata
-    const translatedFileUrl = document.metadata?.document_translation?.translated_file_url;
+    // Get translated file path from metadata or audio_url
+    const translatedFilePath = 
+      document.metadata?.document_translation?.translated_file_url ||
+      document.metadata?.document_translation?.translated_storage_path ||
+      document.translatedFileUrl ||
+      document.originalFileUrl; // audio_url field
     
-    if (!translatedFileUrl) {
+    if (!translatedFilePath) {
       return NextResponse.json(
-        { error: 'Translated file URL not found' },
+        { error: 'Translated file path not found in document metadata' },
         { status: 404 }
       );
     }
     
     // Generate signed download URL (expires in 24 hours)
-    const downloadUrl = await getDocumentDownloadUrl(translatedFileUrl, 86400);
+    const downloadUrl = await getDocumentDownloadUrl(translatedFilePath, 86400);
     
     return NextResponse.json({
       success: true,
