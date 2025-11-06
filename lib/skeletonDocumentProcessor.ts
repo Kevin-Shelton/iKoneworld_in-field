@@ -165,13 +165,13 @@ export function buildDocument(
     const translation = segments[counter - 1];
     
     if (translation !== undefined) {
-      // Don't escape - Verbum API returns properly formatted text
-      // and original document may contain XML markup as text content
+      // Escape XML special characters to prevent corruption
+      const escapedTranslation = escapeXml(translation);
       
       // Replace all occurrences of this marker
       result = result.replace(
         new RegExp(`(<w:t[^>]*>)${escapeRegex(marker)}(<\/w:t>)`, 'g'),
-        `$1${translation}$2`
+        `$1${escapedTranslation}$2`
       );
     }
   }
