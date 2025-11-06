@@ -35,7 +35,7 @@ export async function createDocumentTranslation({
   originalFileUrl,
 }: {
   userId: number;
-  enterpriseId: string;
+  enterpriseId?: string;
   originalFilename: string;
   fileType: string;
   fileSizeBytes: number;
