@@ -600,19 +600,25 @@ export default function EmailInboxPage() {
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-400">Compose in</span>
-                  <button
-                    onClick={() => {
-                      // Toggle language selector
-                      const langs = ['en', 'es', 'fr', 'de', 'ja', 'zh'];
-                      const currentIndex = langs.indexOf(composerLanguage);
-                      const nextLang = langs[(currentIndex + 1) % langs.length];
-                      setComposerLanguage(nextLang);
-                      toast.info(`Composing in ${nextLang.toUpperCase()}`);
+                  <select
+                    value={composerLanguage}
+                    onChange={(e) => {
+                      setComposerLanguage(e.target.value);
+                      toast.info(`Composing in ${e.target.value.toUpperCase()}`);
                     }}
-                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors"
+                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors border-none outline-none cursor-pointer"
                   >
-                    {composerLanguage.toUpperCase()}
-                  </button>
+                    <option value="en" className="bg-slate-800">EN</option>
+                    <option value="es" className="bg-slate-800">ES</option>
+                    <option value="fr" className="bg-slate-800">FR</option>
+                    <option value="de" className="bg-slate-800">DE</option>
+                    <option value="ja" className="bg-slate-800">JA</option>
+                    <option value="zh" className="bg-slate-800">ZH</option>
+                    <option value="ko" className="bg-slate-800">KO</option>
+                    <option value="pt" className="bg-slate-800">PT</option>
+                    <option value="it" className="bg-slate-800">IT</option>
+                    <option value="ru" className="bg-slate-800">RU</option>
+                  </select>
                   <span className="text-sm text-slate-400">• Will auto-translate to each recipient's language</span>
                 </div>
               </div>
