@@ -435,7 +435,8 @@ export default function LanguageSelection() {
     } else {
       return {
         title: "Select Guest Language",
-        description: `You speak ${userLanguage?.name}. Now select the language you want to translate to.`
+        description: "Now select the language you want to translate to.",
+        userLanguageText: `You speak ${userLanguage?.name}.`
       };
     }
   };
@@ -454,16 +455,21 @@ export default function LanguageSelection() {
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             {headerText.title}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
+          <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
             {headerText.description}
           </p>
           {selectionStep === "guest" && userLanguage && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-lg">
-              <FlagIcon countryCode={userLanguage.countryCode} size="w-8 h-6" />
-              <span className="font-medium text-gray-900 dark:text-white">
-                Your language: {userLanguage.name}
-              </span>
-            </div>
+            <>
+              <p className="text-lg text-gray-600 dark:text-gray-300 mb-3">
+                {'userLanguageText' in headerText ? headerText.userLanguageText : ''}
+              </p>
+              <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-lg">
+                <FlagIcon countryCode={userLanguage.countryCode} size="w-8 h-6" />
+                <span className="font-medium text-gray-900 dark:text-white">
+                  Your language: {userLanguage.name}
+                </span>
+              </div>
+            </>
           )}
           
           {/* Search Bar */}
