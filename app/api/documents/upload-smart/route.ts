@@ -363,6 +363,27 @@ export async function POST(request: NextRequest) {
       });
       console.log('[Upload Smart] Stored chunks in database');
       
+      // Update conversation metadata with method and estimates
+      const { supabaseAdmin } = await import('@/lib/supabase/server');
+      const supabase = supabaseAdmin;
+      await supabase
+        .from('conversations')
+        .update({
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: sanitizedFilename,
+              file_type: file.type,
+              file_size_bytes: file.size,
+              progress_percentage: 0,
+              method: 'chunking',
+              chunk_count: chunks.length,
+              estimated_time_seconds: estimatedTime,
+            },
+          },
+        })
+        .eq('id', conversation.id);
+      
       // Translation will be processed by cron job (/api/cron/process-translations)
       // Chunks are stored with empty translatedText, which marks them as pending
       console.log('[Upload Smart] Document queued for translation. Cron job will process chunks.');

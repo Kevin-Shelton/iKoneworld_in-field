@@ -14,7 +14,9 @@ import {
   Users,
   FileText,
   Activity,
-  XCircle
+  XCircle,
+  Zap,
+  Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
@@ -35,6 +37,9 @@ interface QueueDocument {
   createdAt: string;
   startedAt?: string;
   endedAt?: string;
+  method?: 'skeleton' | 'chunking';
+  estimatedTimeSeconds?: number;
+  chunkCount?: number;
 }
 
 interface QueueStats {
@@ -348,6 +353,32 @@ export default function AdminQueuePage() {
                             <span>
                               {formatLanguage(doc.sourceLanguage)} → {formatLanguage(doc.targetLanguage)}
                             </span>
+                            {doc.method && (
+                              <>
+                                <span>•</span>
+                                <div className="flex items-center gap-1">
+                                  {doc.method === 'skeleton' ? (
+                                    <>
+                                      <Zap className="w-3.5 h-3.5 text-yellow-500" />
+                                      <span className="text-xs font-medium text-yellow-600 dark:text-yellow-500">Fast Mode</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Layers className="w-3.5 h-3.5 text-blue-500" />
+                                      <span className="text-xs font-medium text-blue-600 dark:text-blue-500">Chunked ({doc.chunkCount} parts)</span>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                            {doc.estimatedTimeSeconds && doc.status !== 'completed' && (
+                              <>
+                                <span>•</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  ~{Math.ceil(doc.estimatedTimeSeconds / 60)}min
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="flex-shrink-0 ml-4">

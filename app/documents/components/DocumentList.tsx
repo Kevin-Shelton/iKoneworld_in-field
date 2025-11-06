@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, CheckCircle, Clock, AlertCircle, X, RefreshCw } from 'lucide-react';
+import { Download, CheckCircle, Clock, AlertCircle, X, RefreshCw, Zap, Layers } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +26,9 @@ interface Document {
   createdAt: string;
   completedAt?: string;
   processingTimeMs?: number;
+  method?: 'skeleton' | 'chunking';
+  estimatedTimeSeconds?: number;
+  chunkCount?: number;
 }
 
 export default function DocumentList({ userId, refreshTrigger }: DocumentListProps) {
@@ -243,9 +246,37 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
                       <h3 className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
                         {doc.originalFilename}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {formatLanguage(doc.sourceLanguage)} → {formatLanguage(doc.targetLanguage)}
-                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatLanguage(doc.sourceLanguage)} → {formatLanguage(doc.targetLanguage)}
+                        </p>
+                        {doc.method && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <div className="flex items-center gap-1">
+                              {doc.method === 'skeleton' ? (
+                                <>
+                                  <Zap className="w-3.5 h-3.5 text-yellow-500" />
+                                  <span className="text-xs font-medium text-yellow-600 dark:text-yellow-500">Fast Mode</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Layers className="w-3.5 h-3.5 text-blue-500" />
+                                  <span className="text-xs font-medium text-blue-600 dark:text-blue-500">Chunked ({doc.chunkCount} parts)</span>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                        {doc.estimatedTimeSeconds && doc.status !== 'completed' && (
+                          <>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              ~{Math.ceil(doc.estimatedTimeSeconds / 60)}min
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex-shrink-0 ml-4">
                       {getStatusBadge(doc)}
