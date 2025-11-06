@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           subject: subject || '(No Subject)',
           participants,
           last_message_at: new Date().toISOString(),
-          is_demo: false,
+          is_demo: true,
         })
         .select()
         .single();
