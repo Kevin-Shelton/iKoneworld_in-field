@@ -647,7 +647,9 @@ export default function EmailInboxPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950">
-      <Navigation />
+      <div className="sticky top-0 z-50">
+        <Navigation />
+      </div>
       
       <main className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Folders */}
