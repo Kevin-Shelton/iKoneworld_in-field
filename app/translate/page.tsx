@@ -440,17 +440,8 @@ function TranslatePageContent() {
       // User/Employee spoke
       const messageId = Date.now().toString();
       
-      // EAGER TTS: Start translation and TTS in parallel
-      const translationPromise = translateText(winner.text, userLang, guestLang);
-      
-      // Start TTS as soon as translation completes (don't wait for message creation)
-      const ttsPromise = translationPromise.then(translated => {
-        console.log('[TTS] Starting synthesis immediately for:', translated.substring(0, 30));
-        return speakText(translated, guestLang);
-      });
-      
-      // Wait for translation to create message
-      const translated = await translationPromise;
+      // Wait for translation
+      const translated = await translateText(winner.text, userLang, guestLang);
       
       const newMessage: Message = {
         id: messageId,
@@ -489,23 +480,14 @@ function TranslatePageContent() {
         ).catch(err => console.error('[Database] Save error:', err));
       }
 
-      // CRITICAL PATH: Wait for TTS to complete (already started above)
-      await ttsPromise;
+      // CRITICAL PATH: Speak translation
+      await speakText(translated, guestLang);
     } else {
       // Guest/Customer spoke
       const messageId = Date.now().toString();
       
-      // EAGER TTS: Start translation and TTS in parallel
-      const translationPromise = translateText(winner.text, guestLang, userLang);
-      
-      // Start TTS as soon as translation completes (don't wait for message creation)
-      const ttsPromise = translationPromise.then(translated => {
-        console.log('[TTS] Starting synthesis immediately for:', translated.substring(0, 30));
-        return speakText(translated, userLang);
-      });
-      
-      // Wait for translation to create message
-      const translated = await translationPromise;
+      // Wait for translation
+      const translated = await translateText(winner.text, guestLang, userLang);
       
       const newMessage: Message = {
         id: messageId,
@@ -544,8 +526,8 @@ function TranslatePageContent() {
         ).catch(err => console.error('[Database] Save error:', err));
       }
       
-      // CRITICAL PATH: Wait for TTS to complete (already started above)
-      await ttsPromise;
+      // CRITICAL PATH: Speak translation
+      await speakText(translated, userLang);
     }
 
     setRecognizingText("");
