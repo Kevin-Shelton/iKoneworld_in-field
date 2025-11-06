@@ -78,12 +78,9 @@ export default function DocumentsPage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-black dark:text-white mb-2">
-            Document Translation
+          <h1 className="text-3xl font-bold text-gray-700 dark:text-white mb-2">
+            Enterprise Document Translation Platform
           </h1>
-          <p className="text-black dark:text-gray-300">
-            Upload and translate documents in multiple languages
-          </p>
         </div>
 
         {/* Stats Cards */}

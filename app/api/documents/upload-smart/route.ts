@@ -186,17 +186,65 @@ export async function POST(request: NextRequest) {
       console.log(`[Upload Smart] ✓ Translation completed in ${processingTime}ms`);
       console.log(`[Upload Smart] Output file: ${newFilename} (${translatedBuffer.length} bytes)`);
       
-      // Return the translated DOCX file
-      return new NextResponse(new Uint8Array(translatedBuffer), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'Content-Disposition': `attachment; filename="${newFilename}"`,
-          'Content-Length': translatedBuffer.length.toString(),
-          'X-Processing-Time': processingTime.toString(),
-          'X-Translation-Method': 'skeleton',
-          'X-File-Size-Category': sizeCategory,
-        },
+      // Step 6: Upload translated file to Supabase Storage
+      console.log('[Upload Smart] Step 6: Uploading translated file to storage');
+      const translatedStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: translatedBuffer,
+        fileName: newFilename,
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: 0, // Will be set after creating conversation
+        isTranslated: true,
+      });
+      
+      // Step 7: Create database record
+      console.log('[Upload Smart] Step 7: Creating database record');
+      const conversation = await createDocumentTranslation({
+        userId: parseInt(userId),
+        enterpriseId: enterpriseId || undefined,
+        originalFilename: file.name,
+        fileType: 'docx',
+        fileSizeBytes: file.size,
+        sourceLanguage,
+        targetLanguage,
+        originalFileUrl: translatedStoragePath, // Use translated path as original for skeleton method
+      });
+      
+      // Update to completed status
+      const { supabaseAdmin } = await import('@/lib/supabase/server');
+      const supabase = supabaseAdmin;
+      await supabase
+        .from('conversations')
+        .update({
+          status: 'completed',
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: file.name,
+              translated_filename: newFilename,
+              file_type: 'docx',
+              file_size_bytes: file.size,
+              translated_file_size_bytes: translatedBuffer.length,
+              translated_storage_path: translatedStoragePath,
+              progress_percentage: 100,
+              processing_time_ms: processingTime,
+              method: 'skeleton',
+            },
+          },
+        })
+        .eq('id', conversation.id);
+      
+      console.log(`[Upload Smart] ✓ Document saved with ID: ${conversation.id}`);
+      
+      // Return JSON response
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        filename: newFilename,
+        processingTime,
+        method: 'skeleton',
+        status: 'completed',
       });
       
       } catch (skeletonError) {
