@@ -363,35 +363,9 @@ export async function POST(request: NextRequest) {
       });
       console.log('[Upload Smart] Stored chunks in database');
       
-      // Trigger translation asynchronously (fire and forget)
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-      fetch(`${baseUrl}/api/documents/${conversation.id}/translate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(120000), // 2 minute timeout for trigger
-      }).then(async (response) => {
-        if (!response.ok) {
-          console.error('[Upload Smart] Translation trigger failed:', response.status);
-          // Mark as failed if trigger fails
-          await failDocumentTranslation({
-            conversationId: conversation.id,
-            errorMessage: 'Failed to start translation process',
-          });
-        }
-      }).catch(async (error) => {
-        console.error('[Upload Smart] Failed to trigger translation:', error);
-        // Mark as failed if trigger times out or errors
-        try {
-          await failDocumentTranslation({
-            conversationId: conversation.id,
-            errorMessage: error.name === 'TimeoutError' ? 'Translation request timed out' : 'Failed to start translation',
-          });
-        } catch (updateError) {
-          console.error('[Upload Smart] Failed to update error status:', updateError);
-        }
-      });
-      
-      console.log('[Upload Smart] Translation triggered for conversation:', conversation.id);
+      // Translation will be processed by cron job (/api/cron/process-translations)
+      // Chunks are stored with empty translatedText, which marks them as pending
+      console.log('[Upload Smart] Document queued for translation. Cron job will process chunks.');
       
       // Return async processing response
       return NextResponse.json({
