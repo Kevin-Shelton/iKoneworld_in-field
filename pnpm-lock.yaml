@@ -101,6 +101,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.6
         version: 8.15.6
+      '@xmldom/xmldom':
+        specifier: ^0.8.11
+        version: 0.8.11
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -122,6 +125,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       lucide-react:
         specifier: ^0.552.0
         version: 0.552.0(react@19.2.0)

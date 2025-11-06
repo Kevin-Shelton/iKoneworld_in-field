@@ -68,7 +68,8 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
       formData.append('sourceLanguage', sourceLanguage);
       formData.append('targetLanguage', targetLanguage);
 
-      const response = await fetch('/api/documents/upload', {
+      // Use smart routing endpoint
+      const response = await fetch('/api/documents/upload-smart', {
         method: 'POST',
         body: formData,
       });
@@ -78,14 +79,38 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
         throw new Error(error.error || 'Upload failed');
       }
 
-      const data = await response.json();
-
-      toast.success('Your document has been uploaded and translation will begin shortly.');
-
-      // Trigger translation
-      await fetch(`/api/documents/${data.conversationId}/translate`, {
-        method: 'POST',
-      });
+      // Check if response is a file (skeleton method) or JSON (chunking method)
+      const contentType = response.headers.get('Content-Type');
+      
+      if (contentType?.includes('application/vnd.openxmlformats')) {
+        // Skeleton method - file ready for immediate download
+        const blob = await response.blob();
+        const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'translated.docx';
+        const processingTime = response.headers.get('X-Processing-Time');
+        
+        // Trigger download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast.success(`Translation completed in ${processingTime ? Math.round(parseInt(processingTime) / 1000) : '?'} seconds! File downloaded.`);
+      } else {
+        // Chunking method - async processing
+        const data = await response.json();
+        toast.success('Your document has been uploaded and translation will begin shortly.');
+        
+        // Trigger translation for chunking method
+        if (data.conversationId) {
+          await fetch(`/api/documents/${data.conversationId}/translate`, {
+            method: 'POST',
+          });
+        }
+      }
 
       // Reset form
       setSelectedFile(null);
