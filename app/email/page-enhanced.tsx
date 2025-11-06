@@ -98,10 +98,16 @@ export default function EmailInboxPage() {
 
   useEffect(() => {
     loadThreads();
+    loadUnreadCounts();
+    loadFolderCounts();
+    loadThreadMessageCounts();
     
     // Set up auto-refresh every 10 seconds
     refreshIntervalRef.current = setInterval(() => {
       loadThreads(true); // Silent refresh
+      loadUnreadCounts();
+      loadFolderCounts();
+      loadThreadMessageCounts();
     }, 10000);
 
     return () => {
@@ -110,6 +116,70 @@ export default function EmailInboxPage() {
       }
     };
   }, [selectedFolder]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyPress(e: KeyboardEvent) {
+      // Ignore if typing in input/textarea (except Escape)
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key !== 'Escape') return;
+      }
+
+      switch(e.key.toLowerCase()) {
+        case 'c':
+          if (!composerMode) {
+            handleComposeNew();
+          }
+          break;
+        case 'r':
+          if (selectedThread && !composerMode) {
+            handleReply();
+          }
+          break;
+        case 'a':
+          if (selectedThread && !composerMode) {
+            handleReplyAll();
+          }
+          break;
+        case 'f':
+          if (selectedThread && !composerMode) {
+            handleForward();
+          }
+          break;
+        case 'delete':
+        case 'backspace':
+          if (selectedThread && !composerMode && e.target === document.body) {
+            e.preventDefault();
+            handleDeleteThread();
+          }
+          break;
+        case 'j':
+          if (!composerMode) {
+            e.preventDefault();
+            selectNextThread();
+          }
+          break;
+        case 'k':
+          if (!composerMode) {
+            e.preventDefault();
+            selectPreviousThread();
+          }
+          break;
+        case 'escape':
+          if (composerMode) {
+            handleComposerCancel();
+          }
+          break;
+        case '/':
+          e.preventDefault();
+          document.getElementById('email-search')?.focus();
+          break;
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [selectedThread, composerMode, threads]);
 
   async function loadThreads(silent = false) {
     try {
@@ -168,6 +238,95 @@ export default function EmailInboxPage() {
       if (!silent) {
         setLoading(false);
       }
+    }
+  }
+
+  async function loadUnreadCounts() {
+    try {
+      // Get all unread messages grouped by thread
+      const { data: unreadMessages } = await supabase
+        .from('email_messages')
+        .select('thread_id, id')
+        .eq('is_read', false)
+        .eq('is_deleted', false)
+        .eq('is_outbound', false); // Only count inbound messages as unread
+
+      const counts: Record<string, number> = {};
+      unreadMessages?.forEach((msg: any) => {
+        counts[msg.thread_id] = (counts[msg.thread_id] || 0) + 1;
+      });
+
+      setUnreadCounts(counts);
+    } catch (err) {
+      console.error('Error loading unread counts:', err);
+    }
+  }
+
+  async function loadFolderCounts() {
+    try {
+      // Count threads in each folder
+      const { data: allThreads } = await supabase
+        .from('email_threads')
+        .select('id, is_deleted, folder');
+
+      const { data: allMessages } = await supabase
+        .from('email_messages')
+        .select('thread_id, is_outbound, is_deleted');
+
+      const sentThreadIds = new Set();
+      allMessages?.forEach((msg: any) => {
+        if (msg.is_outbound && !msg.is_deleted) {
+          sentThreadIds.add(msg.thread_id);
+        }
+      });
+
+      const counts: Record<FolderType, number> = {
+        inbox: 0,
+        sent: 0,
+        drafts: 0,
+        trash: 0,
+        archive: 0,
+      };
+
+      allThreads?.forEach((thread: any) => {
+        if (thread.is_deleted) {
+          counts.trash++;
+        } else if (sentThreadIds.has(thread.id)) {
+          counts.sent++;
+        } else {
+          counts.inbox++;
+        }
+      });
+
+      // Count drafts separately
+      const { data: draftsList } = await supabase
+        .from('email_drafts')
+        .select('id')
+        .eq('user_email', userEmail);
+      
+      counts.drafts = draftsList?.length || 0;
+
+      setFolderCounts(counts);
+    } catch (err) {
+      console.error('Error loading folder counts:', err);
+    }
+  }
+
+  async function loadThreadMessageCounts() {
+    try {
+      const { data: messages } = await supabase
+        .from('email_messages')
+        .select('thread_id')
+        .eq('is_deleted', false);
+
+      const counts: Record<string, number> = {};
+      messages?.forEach((msg: any) => {
+        counts[msg.thread_id] = (counts[msg.thread_id] || 0) + 1;
+      });
+
+      setThreadMessageCounts(counts);
+    } catch (err) {
+      console.error('Error loading thread message counts:', err);
     }
   }
 
@@ -283,6 +442,22 @@ export default function EmailInboxPage() {
 
   function handleComposerCancel() {
     setComposerMode(null);
+  }
+
+  function selectNextThread() {
+    if (!selectedThread || threads.length === 0) return;
+    const currentIndex = threads.findIndex((t: EmailThread) => t.id === selectedThread.id);
+    if (currentIndex < threads.length - 1) {
+      selectThread(threads[currentIndex + 1]);
+    }
+  }
+
+  function selectPreviousThread() {
+    if (!selectedThread || threads.length === 0) return;
+    const currentIndex = threads.findIndex((t: EmailThread) => t.id === selectedThread.id);
+    if (currentIndex > 0) {
+      selectThread(threads[currentIndex - 1]);
+    }
   }
 
   async function handleDeleteThread() {
@@ -441,17 +616,16 @@ export default function EmailInboxPage() {
     }
   }
 
-  const getUnreadCount = () => {
-    // This would need a real-time subscription or periodic fetch
-    return 0;
+  const getTotalUnreadCount = () => {
+    return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   };
 
   const folders = [
-    { id: 'inbox' as FolderType, label: 'Inbox', icon: Inbox, count: selectedFolder === 'inbox' ? threads.length : 0 },
-    { id: 'sent' as FolderType, label: 'Sent', icon: SendIcon, count: 0 },
-    { id: 'drafts' as FolderType, label: 'Drafts', icon: Mail, count: 0 },
-    { id: 'archive' as FolderType, label: 'Archive', icon: Archive, count: 0 },
-    { id: 'trash' as FolderType, label: 'Trash', icon: Trash2, count: 0 },
+    { id: 'inbox' as FolderType, label: 'Inbox', icon: Inbox, count: folderCounts.inbox, unread: getTotalUnreadCount() },
+    { id: 'sent' as FolderType, label: 'Sent', icon: SendIcon, count: folderCounts.sent },
+    { id: 'drafts' as FolderType, label: 'Drafts', icon: Mail, count: folderCounts.drafts },
+    { id: 'archive' as FolderType, label: 'Archive', icon: Archive, count: folderCounts.archive },
+    { id: 'trash' as FolderType, label: 'Trash', icon: Trash2, count: folderCounts.trash },
   ];
 
   const filteredThreads = threads.filter(thread => {
@@ -500,11 +674,18 @@ export default function EmailInboxPage() {
                     <Icon className="w-4 h-4" />
                     <span className="text-sm font-medium">{folder.label}</span>
                   </div>
-                  {folder.count > 0 && (
-                    <span className="text-xs bg-slate-700 px-2 py-0.5 rounded-full">
-                      {folder.count}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {folder.id === 'inbox' && folder.unread && folder.unread > 0 && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full font-medium">
+                        {folder.unread}
+                      </span>
+                    )}
+                    {folder.count > 0 && folder.id !== 'inbox' && (
+                      <span className="text-xs bg-slate-700 px-2 py-0.5 rounded-full">
+                        {folder.count}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -530,8 +711,9 @@ export default function EmailInboxPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
+                id="email-search"
                 type="text"
-                placeholder="Search emails..."
+                placeholder="Search emails... (Press / to focus)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -561,7 +743,8 @@ export default function EmailInboxPage() {
             ) : (
               filteredThreads.map((thread) => {
                 const participant = thread.participants.find((p: any) => p.email !== userEmail) || thread.participants[0];
-                const hasUnread = false; // Would need to check messages
+                const hasUnread = (unreadCounts[thread.id] || 0) > 0;
+                const messageCount = threadMessageCounts[thread.id] || 0;
                 
                 return (
                   <button
@@ -569,10 +752,13 @@ export default function EmailInboxPage() {
                     onClick={() => selectThread(thread)}
                     className={`w-full text-left p-4 border-b border-slate-800 hover:bg-slate-800 transition-colors ${
                       selectedThread?.id === thread.id ? 'bg-slate-800' : ''
-                    }`}
+                    } ${hasUnread ? 'bg-slate-800/50' : ''}`}
                   >
                     <div className="flex items-start justify-between mb-1">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {hasUnread && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
+                        )}
                         <span className={`text-sm ${hasUnread ? 'font-bold text-white' : 'text-slate-300'} truncate`}>
                           {participant.name}
                         </span>
@@ -587,6 +773,11 @@ export default function EmailInboxPage() {
                     <div className={`text-sm mb-1 ${hasUnread ? 'font-semibold text-white' : 'text-slate-400'} truncate`}>
                       {thread.subject}
                     </div>
+                    {messageCount > 0 && (
+                      <div className="text-xs text-slate-500">
+                        {messageCount} message{messageCount !== 1 ? 's' : ''}
+                      </div>
+                    )}
                   </button>
                 );
               })
