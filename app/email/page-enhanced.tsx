@@ -606,7 +606,7 @@ export default function EmailInboxPage() {
                       setComposerLanguage(e.target.value);
                       toast.info(`Composing in ${e.target.value.toUpperCase()}`);
                     }}
-                    className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors border-none outline-none cursor-pointer"
+                    className="px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-medium rounded transition-colors outline-none cursor-pointer hover:bg-green-500/30"
                   >
                     <option value="en" className="bg-slate-800">EN</option>
                     <option value="es" className="bg-slate-800">ES</option>
