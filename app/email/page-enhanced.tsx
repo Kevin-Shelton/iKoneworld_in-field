@@ -82,9 +82,16 @@ export default function EmailInboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [translationStatus, setTranslationStatus] = useState<Record<string, string[]>>({});
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [currentDraftId, setCurrentDraftId] = useState<number | null>(null);
+  const [draftContent, setDraftContent] = useState({ subject: '', content: '', recipients: [] });
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [folderCounts, setFolderCounts] = useState<Record<FolderType, number>>({inbox: 0, sent: 0, drafts: 0, trash: 0, archive: 0});
+  const [threadMessageCounts, setThreadMessageCounts] = useState<Record<string, number>>({});
   
   // Auto-refresh interval
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const draftSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const userLanguage = user?.user_metadata?.language || 'en';
   const userEmail = user?.email || '';
