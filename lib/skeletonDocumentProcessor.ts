@@ -1,17 +1,14 @@
 /**
- * Skeleton Document Processor
+ * Skeleton Document Processor - Serverless Compatible
  * 
- * This module implements the skeleton methodology for DOCX translation.
- * Based on the proven PHP approach, it preserves document formatting perfectly
- * while enabling efficient translation.
+ * Based on the PHP methodology using pure string manipulation
+ * No DOM dependencies - works in serverless environments like Vercel
  * 
  * Core Workflow:
- * 1. STRIP - Extract text, create skeleton with markers
+ * 1. STRIP - Extract text from XML tags, create skeleton with markers
  * 2. TRANSLATE - Send clean text to Verbum API
  * 3. BUILD - Inject translated text back into skeleton
  */
-
-import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 
 /**
  * Special characters used as delimiters/markers
@@ -47,11 +44,8 @@ export interface StripResult {
 /**
  * Extract text from DOCX document.xml while preserving structure
  * 
- * This function:
- * - Parses the Word document XML
- * - Finds all text nodes (<w:t>)
- * - Replaces text with numbered markers (e.g., §1, §2, §3)
- * - Returns clean text + skeleton for later reconstruction
+ * Uses regex-based approach (like the PHP version) instead of DOM parsing
+ * to avoid serverless environment issues with DOMMatrix/Canvas
  * 
  * @param xml - The content of word/document.xml from the DOCX file
  * @returns StripResult containing parsed text, skeleton map, and delimiter
@@ -65,44 +59,71 @@ export function stripDocument(xml: string): StripResult {
     throw new Error('No unique special character available. Document uses all reserved markers.');
   }
 
-  // Parse XML with namespace support
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  // Regular expression to match text content within <w:t> tags
+  // Captures: opening tag, text content, closing tag
+  const textTagRegex = /(<w:t[^>]*>)(.*?)(<\/w:t>)/g;
   
-  // Get all text nodes using XPath-like approach
-  // In Word XML, all text is in <w:t> elements
-  const textNodes = doc.getElementsByTagNameNS(
-    'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-    't'
-  );
-
   let parsed = '';
   let counter = 1;
-
-  // Process each text node
-  for (let i = 0; i < textNodes.length; i++) {
-    const node = textNodes[i];
-    const text = node.textContent || '';
-
-    // Skip empty or whitespace-only nodes in parsed text
-    // But keep them in the map to preserve structure
+  let skeletonXml = xml;
+  
+  // Find all text nodes and process them
+  const matches: Array<{ fullMatch: string; openTag: string; text: string; closeTag: string; index: number }> = [];
+  
+  let match;
+  while ((match = textTagRegex.exec(xml)) !== null) {
+    matches.push({
+      fullMatch: match[0],
+      openTag: match[1],
+      text: match[2],
+      closeTag: match[3],
+      index: match.index,
+    });
+  }
+  
+  // Build parsed text in forward order (prepending reverses it)
+  const textSegments: string[] = [];
+  
+  for (const m of matches) {
+    const text = m.text;
+    
+    // Skip empty or whitespace-only nodes
     if (text.trim() === '') {
       continue;
     }
-
-    // Add text to parsed string with delimiter
-    parsed += special + text;
-
-    // Replace node content with numbered marker
-    node.textContent = special + counter;
+    
+    // Add text to segments
+    textSegments.push(text);
+  }
+  
+  // Build parsed string with delimiters
+  parsed = special + textSegments.join(special) + special;
+  
+  // Now process matches in reverse order to maintain string indices for skeleton
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    const text = m.text;
+    
+    // Skip empty or whitespace-only nodes
+    if (text.trim() === '') {
+      continue;
+    }
+    
+    // Replace text content with numbered marker in skeleton
+    const marker = special + counter;
+    const replacement = m.openTag + marker + m.closeTag;
+    
+    skeletonXml = 
+      skeletonXml.substring(0, m.index) +
+      replacement +
+      skeletonXml.substring(m.index + m.fullMatch.length);
+    
     counter++;
   }
-
-  // Serialize the modified document back to XML string
-  const map = new XMLSerializer().serializeToString(doc);
-
+  
   return {
     parsed,
-    map,
+    map: skeletonXml,
     special,
   };
 }
@@ -112,8 +133,7 @@ export function stripDocument(xml: string): StripResult {
  * 
  * This function:
  * - Splits translated text by delimiter
- * - Loads skeleton XML with markers
- * - Replaces each marker with corresponding translated segment
+ * - Replaces numbered markers with corresponding translated segments
  * - Returns complete XML ready to be saved as document.xml
  * 
  * @param translatedText - The translated text with delimiters (e.g., "§Hola§Mundo")
@@ -136,33 +156,46 @@ export function buildDocument(
     }
   }
 
-  // Parse skeleton XML
-  const doc = new DOMParser().parseFromString(map, 'text/xml');
+  let result = map;
   
-  // Get all text nodes
-  const textNodes = doc.getElementsByTagNameNS(
-    'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
-    't'
-  );
-
   // Replace numbered markers with translated text
-  let counter = 1;
-  for (let i = 0; i < textNodes.length; i++) {
-    const node = textNodes[i];
-    const value = node.textContent || '';
-
-    // Check if this is a numbered marker (e.g., §1, §2, §3)
-    if (value === special + counter) {
-      // Replace with corresponding translated segment
-      if (segments[counter - 1] !== undefined) {
-        node.textContent = segments[counter - 1];
-      }
-      counter++;
+  // Process in reverse order to maintain string indices
+  for (let counter = segments.length; counter >= 1; counter--) {
+    const marker = special + counter;
+    const translation = segments[counter - 1];
+    
+    if (translation !== undefined) {
+      // Escape XML special characters in translation
+      const escapedTranslation = escapeXml(translation);
+      
+      // Replace all occurrences of this marker
+      result = result.replace(
+        new RegExp(`(<w:t[^>]*>)${escapeRegex(marker)}(<\/w:t>)`, 'g'),
+        `$1${escapedTranslation}$2`
+      );
     }
   }
 
-  // Serialize back to XML string
-  return new XMLSerializer().serializeToString(doc);
+  return result;
+}
+
+/**
+ * Escape special XML characters
+ */
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Escape special regex characters
+ */
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
