@@ -405,25 +405,32 @@ function TranslatePageContent() {
       // User/Employee spoke
       const translated = await translateText(winner.text, userLang, guestLang);
       
-      // Analyze sentiment of original text
-      console.log('[Sentiment] Analyzing user message:', winner.text, 'language:', userLang);
-      const sentimentResult = await analyzeSentiment(winner.text, userLang);
-      console.log('[Sentiment] User result:', sentimentResult);
-      
+      const messageId = Date.now().toString();
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         text: winner.text,
         translatedText: translated,
         speaker: "user",
         timestamp: new Date(),
-        confidence: winner.conf,
-        sentiment: sentimentResult?.sentiment,
-        sentimentScores: sentimentResult?.confidenceScores
+        confidence: winner.conf
       };
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database (audio will be uploaded at conversation end)
+      // NON-BLOCKING: Analyze sentiment in background
+      console.log('[Sentiment] Analyzing user message (async):', winner.text, 'language:', userLang);
+      analyzeSentiment(winner.text, userLang).then(sentimentResult => {
+        console.log('[Sentiment] User result:', sentimentResult);
+        if (sentimentResult) {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId 
+              ? { ...m, sentiment: sentimentResult.sentiment, sentimentScores: sentimentResult.confidenceScores }
+              : m
+          ));
+        }
+      }).catch(err => console.error('[Sentiment] Error:', err));
+
+      // NON-BLOCKING: Save to database in background
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -433,34 +440,41 @@ function TranslatePageContent() {
           userLang,
           guestLang,
           "user"
-        );
+        ).catch(err => console.error('[Database] Save error:', err));
       }
 
-      // Speak translation in guest language
+      // CRITICAL PATH: Speak translation immediately
       await speakText(translated, guestLang);
     } else {
       // Guest/Customer spoke
       const translated = await translateText(winner.text, guestLang, userLang);
       
-      // Analyze sentiment of original text
-      console.log('[Sentiment] Analyzing guest message:', winner.text, 'language:', guestLang);
-      const sentimentResult = await analyzeSentiment(winner.text, guestLang);
-      console.log('[Sentiment] Guest result:', sentimentResult);
-      
+      const messageId = Date.now().toString();
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         text: winner.text,
         translatedText: translated,
         speaker: "guest",
         timestamp: new Date(),
-        confidence: winner.conf,
-        sentiment: sentimentResult?.sentiment,
-        sentimentScores: sentimentResult?.confidenceScores
+        confidence: winner.conf
       };
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database (audio will be uploaded at conversation end)
+      // NON-BLOCKING: Analyze sentiment in background
+      console.log('[Sentiment] Analyzing guest message (async):', winner.text, 'language:', guestLang);
+      analyzeSentiment(winner.text, guestLang).then(sentimentResult => {
+        console.log('[Sentiment] Guest result:', sentimentResult);
+        if (sentimentResult) {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId 
+              ? { ...m, sentiment: sentimentResult.sentiment, sentimentScores: sentimentResult.confidenceScores }
+              : m
+          ));
+        }
+      }).catch(err => console.error('[Sentiment] Error:', err));
+
+      // NON-BLOCKING: Save to database in background
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -470,7 +484,7 @@ function TranslatePageContent() {
           guestLang,
           userLang,
           "guest"
-        );
+        ).catch(err => console.error('[Database] Save error:', err));
       }
     }
 
