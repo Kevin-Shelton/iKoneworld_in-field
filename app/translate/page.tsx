@@ -8,6 +8,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { io, Socket } from "socket.io-client";
 import { analyzeSentiment, getSentimentIcon, getSentimentColor } from "@/lib/sentimentAnalysis";
+import { getCachedAudio, setCachedAudio, isCommonPhrase, warmCache } from "@/lib/ttsCache";
 
 type Message = {
   id: string;
@@ -119,6 +120,27 @@ function TranslatePageContent() {
       if (response.ok) {
         const data = await response.json();
         voicesRef.current = data.voices || {};
+        
+        // Warm cache for user and guest languages
+        if (userLang && guestLang) {
+          const userVoices = voicesRef.current[userLang];
+          const guestVoices = voicesRef.current[guestLang];
+          
+          const userVoice = userVoices?.male?.[0] || userVoices?.female?.[0];
+          const guestVoice = guestVoices?.male?.[0] || guestVoices?.female?.[0];
+          
+          // Warm cache in background (don't await)
+          if (userVoice) {
+            warmCache(userLang, userVoice).catch(err => 
+              console.error('[Cache] Failed to warm user language:', err)
+            );
+          }
+          if (guestVoice) {
+            warmCache(guestLang, guestVoice).catch(err => 
+              console.error('[Cache] Failed to warm guest language:', err)
+            );
+          }
+        }
       }
     } catch (err) {
       console.error("[Voices] Error fetching voices:", err);
@@ -338,23 +360,36 @@ function TranslatePageContent() {
           return;
         }
 
-        const response = await fetch('/api/synthesize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voice,
-            text,
-            audioFormat: 'Audio16Khz128KBitMp3',
-            model: 'default'
-          })
-        });
+        // Check cache first
+        const cached = getCachedAudio(voice, text, langCode);
+        if (cached) {
+          audioUrl = cached.url;
+        } else {
+          // Cache miss - synthesize audio
+          const response = await fetch('/api/synthesize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              voice,
+              text,
+              audioFormat: 'Audio16Khz128KBitMp3',
+              model: 'default'
+            })
+          });
 
-        if (!response.ok) {
-          throw new Error(`TTS failed: ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`TTS failed: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          
+          // Cache common phrases for future use
+          if (isCommonPhrase(text, langCode)) {
+            audioUrl = setCachedAudio(voice, text, langCode, blob);
+          } else {
+            audioUrl = URL.createObjectURL(blob);
+          }
         }
-
-        const blob = await response.blob();
-        audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
 
         setStatus('speaking');
