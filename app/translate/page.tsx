@@ -980,6 +980,7 @@ function TranslatePageContent() {
               ) : (
                 messages
                   .filter(m => m.speaker === "user")
+                  .reverse()
                   .map((message) => (
                     <div key={message.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
                       <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
@@ -1013,6 +1014,7 @@ function TranslatePageContent() {
               ) : (
                 messages
                   .filter(m => m.speaker === "guest")
+                  .reverse()
                   .map((message) => (
                     <div key={message.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
                       <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
