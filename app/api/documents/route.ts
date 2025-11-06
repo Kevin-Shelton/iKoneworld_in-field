@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const documents = await getDocumentTranslations(userIdNum);
     
     // Transform the data to a more frontend-friendly format
-    const transformedDocuments = documents.map(doc => ({
+    const transformedDocuments = documents.map((doc: any) => ({
       id: doc.id,
       userId: doc.userId,
       enterpriseId: doc.enterprise_id,

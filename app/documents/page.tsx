@@ -30,7 +30,7 @@ export default function DocumentsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             openId: user.id,
-            name: user.name,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
             email: user.email,
             loginMethod: 'manus',
           }),

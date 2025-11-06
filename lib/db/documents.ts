@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export interface DocumentTranslation {
   id: number;
@@ -43,7 +43,7 @@ export async function createDocumentTranslation({
   targetLanguage: string;
   originalFileUrl: string;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   const { data, error } = await supabase
     .from('conversations')
@@ -88,7 +88,7 @@ export async function updateDocumentProgress({
   progressPercentage: number;
   queuePosition?: number;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   // Get current metadata
   const { data: current } = await supabase
@@ -134,7 +134,7 @@ export async function completeDocumentTranslation({
   conversationId: number;
   translatedFileUrl: string;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   // Get current metadata
   const { data: current } = await supabase
@@ -182,7 +182,7 @@ export async function failDocumentTranslation({
   conversationId: number;
   errorMessage: string;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   // Get current metadata
   const { data: current } = await supabase
@@ -223,7 +223,7 @@ export async function failDocumentTranslation({
  * Get document translations for a user
  */
 export async function getDocumentTranslations(userId: number) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   const { data, error } = await supabase
     .from('conversations')
@@ -244,7 +244,7 @@ export async function getDocumentTranslations(userId: number) {
  * Get a single document translation
  */
 export async function getDocumentTranslation(conversationId: number) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   const { data, error } = await supabase
     .from('conversations')
@@ -265,7 +265,7 @@ export async function getDocumentTranslation(conversationId: number) {
  * Delete a document translation
  */
 export async function deleteDocumentTranslation(conversationId: number) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   // Delete conversation messages first
   await supabase
@@ -289,7 +289,7 @@ export async function deleteDocumentTranslation(conversationId: number) {
  * Get document translation statistics
  */
 export async function getDocumentStats(userId: number) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   const { data, error } = await supabase
     .from('conversations')
@@ -304,10 +304,10 @@ export async function getDocumentStats(userId: number) {
   
   const stats = {
     totalDocuments: data.length,
-    completedDocuments: data.filter(d => d.status === 'completed').length,
-    activeTranslations: data.filter(d => d.status === 'active').length,
-    failedDocuments: data.filter(d => d.status === 'failed').length,
-    totalStorageBytes: data.reduce((sum, d) => {
+    completedDocuments: data.filter((d: any) => d.status === 'completed').length,
+    activeTranslations: data.filter((d: any) => d.status === 'active').length,
+    failedDocuments: data.filter((d: any) => d.status === 'failed').length,
+    totalStorageBytes: data.reduce((sum: number, d: any) => {
       return sum + (d.metadata?.document_translation?.file_size_bytes || 0);
     }, 0),
   };
@@ -327,7 +327,7 @@ export async function storeDocumentChunks({
   chunks: string[];
   sourceLanguage: string;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   const messages = chunks.map((chunk, index) => ({
     conversationId,
@@ -362,7 +362,7 @@ export async function storeTranslatedChunks({
   translatedChunks: string[];
   targetLanguage: string;
 }) {
-  const supabase = await createClient();
+  const supabase = supabaseAdmin;
   
   // Get existing messages
   const { data: messages } = await supabase

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createDocumentTranslation, storeDocumentChunks } from '@/lib/db/documents';
-import { uploadDocumentToS3 } from '@/lib/s3';
+import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
 import {
   extractTextFromDocument,
   chunkText,
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
     
     console.log('[Document Upload] Created conversation:', conversation.id);
     
-    // Upload original document to S3
-    const s3Url = await uploadDocumentToS3({
+    // Upload original document to Supabase Storage
+    const storagePath = await uploadDocumentToSupabase({
       fileBuffer,
       fileName: sanitizedFilename,
       contentType: file.type,
@@ -89,14 +89,14 @@ export async function POST(request: NextRequest) {
       isTranslated: false,
     });
     
-    console.log('[Document Upload] Uploaded to S3:', s3Url);
+    console.log('[Document Upload] Uploaded to Supabase Storage:', storagePath);
     
-    // Update conversation with S3 URL
-    const { createClient } = await import('@/lib/supabase/server');
-    const supabase = await createClient();
+    // Update conversation with storage path
+    const { supabaseAdmin } = await import('@/lib/supabase/server');
+    const supabase = supabaseAdmin;
     await supabase
       .from('conversations')
-      .update({ audio_url: s3Url })
+      .update({ audio_url: storagePath })
       .eq('id', conversation.id);
     
     // Chunk the text for translation

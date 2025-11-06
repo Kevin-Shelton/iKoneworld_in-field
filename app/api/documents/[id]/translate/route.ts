@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentTranslation, updateDocumentProgress, completeDocumentTranslation, failDocumentTranslation, storeTranslatedChunks } from '@/lib/db/documents';
-import { uploadDocumentToS3 } from '@/lib/s3';
+import { uploadDocumentToSupabase, getDocumentDownloadUrl } from '@/lib/supabaseStorage';
 import { reconstructDocument, createTranslatedDocumentBuffer } from '@/lib/documentProcessor';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
  * POST /api/documents/[id]/translate
@@ -34,7 +34,7 @@ export async function POST(
     }
     
     // Get all chunks from conversation_messages
-    const supabase = await createClient();
+    const supabase = supabaseAdmin;
     const { data: messages, error: messagesError } = await supabase
       .from('conversation_messages')
       .select('*')
@@ -109,11 +109,11 @@ export async function POST(
       document.metadata?.document_translation?.file_type || 'text/plain'
     );
     
-    // Upload translated document to S3
+    // Upload translated document to Supabase Storage
     const originalFilename = document.metadata?.document_translation?.original_filename || 'document';
     const translatedFilename = originalFilename.replace(/\.[^.]+$/, '') + '_translated' + extension;
     
-    const translatedS3Url = await uploadDocumentToS3({
+    const translatedStoragePath = await uploadDocumentToSupabase({
       fileBuffer: buffer,
       fileName: translatedFilename,
       contentType: mimeType,
@@ -123,12 +123,12 @@ export async function POST(
       isTranslated: true,
     });
     
-    console.log('[Document Translate] Uploaded translated document to S3:', translatedS3Url);
+    console.log('[Document Translate] Uploaded translated document to Supabase Storage:', translatedStoragePath);
     
     // Mark translation as completed
     await completeDocumentTranslation({
       conversationId,
-      translatedFileUrl: translatedS3Url,
+      translatedFileUrl: translatedStoragePath,
     });
     
     console.log('[Document Translate] Translation completed successfully');
@@ -136,7 +136,6 @@ export async function POST(
     // Send completion email notification
     try {
       const { sendDocumentCompletionEmail } = await import('@/lib/resend');
-      const { getDocumentDownloadUrl } = await import('@/lib/s3');
       
       // Get user email
       const { data: user } = await supabase
@@ -147,7 +146,7 @@ export async function POST(
       
       if (user?.email) {
         // Generate download URL
-        const downloadUrl = await getDocumentDownloadUrl(translatedS3Url, 86400);
+        const downloadUrl = await getDocumentDownloadUrl(translatedStoragePath, 86400);
         
         await sendDocumentCompletionEmail({
           to: user.email,
@@ -169,7 +168,7 @@ export async function POST(
       success: true,
       message: 'Document translated successfully',
       conversationId,
-      translatedFileUrl: translatedS3Url,
+      translatedFileUrl: translatedStoragePath,
     });
     
   } catch (error) {

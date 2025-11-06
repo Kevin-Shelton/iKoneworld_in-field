@@ -1,5 +1,6 @@
-import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
+// @ts-ignore - pdf-parse doesn't have proper ESM support
+const pdfParse = require('pdf-parse');
 
 /**
  * Extract text from a document based on file type

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentTranslation, deleteDocumentTranslation } from '@/lib/db/documents';
-import { deleteDocumentFromS3 } from '@/lib/s3';
+import { deleteDocumentFromSupabase } from '@/lib/supabaseStorage';
 
 /**
  * GET /api/documents/[id]
@@ -98,19 +98,19 @@ export async function DELETE(
       );
     }
     
-    // Delete files from S3
+    // Delete files from Supabase Storage
     try {
       if (document.audio_url) {
-        await deleteDocumentFromS3(document.audio_url);
+        await deleteDocumentFromSupabase(document.audio_url);
       }
       
       const translatedUrl = document.metadata?.document_translation?.translated_file_url;
       if (translatedUrl) {
-        await deleteDocumentFromS3(translatedUrl);
+        await deleteDocumentFromSupabase(translatedUrl);
       }
-    } catch (s3Error) {
-      console.error('[Document DELETE] Error deleting from S3:', s3Error);
-      // Continue with database deletion even if S3 deletion fails
+    } catch (storageError) {
+      console.error('[Document DELETE] Error deleting from Supabase Storage:', storageError);
+      // Continue with database deletion even if storage deletion fails
     }
     
     // Delete from database

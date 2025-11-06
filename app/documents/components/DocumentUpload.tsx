@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { Upload, FileText } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface DocumentUploadProps {
   userId: number;
@@ -13,7 +13,6 @@ interface DocumentUploadProps {
 }
 
 export default function DocumentUpload({ userId, enterpriseId, onUploadComplete }: DocumentUploadProps) {
-  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -48,20 +47,12 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast({
-        title: 'No file selected',
-        description: 'Please select a file to upload',
-        variant: 'destructive',
-      });
+      toast.error('Please select a file to upload');
       return;
     }
 
     if (sourceLanguage === targetLanguage) {
-      toast({
-        title: 'Invalid languages',
-        description: 'Source and target languages must be different',
-        variant: 'destructive',
-      });
+      toast.error('Source and target languages must be different');
       return;
     }
 
@@ -87,10 +78,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
 
       const data = await response.json();
 
-      toast({
-        title: 'Upload successful',
-        description: 'Your document has been uploaded and translation will begin shortly.',
-      });
+      toast.success('Your document has been uploaded and translation will begin shortly.');
 
       // Trigger translation
       await fetch(`/api/documents/${data.conversationId}/translate`, {
@@ -102,11 +90,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
       onUploadComplete();
     } catch (error) {
       console.error('Upload error:', error);
-      toast({
-        title: 'Upload failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setUploading(false);
     }

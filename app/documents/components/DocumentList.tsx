@@ -5,7 +5,7 @@ import { Download, Trash2, FileText, Clock, CheckCircle, XCircle, Loader } from 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface DocumentListProps {
   userId: number;
@@ -28,7 +28,6 @@ interface Document {
 }
 
 export default function DocumentList({ userId, refreshTrigger }: DocumentListProps) {
-  const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,17 +75,10 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
       // Open download URL in new tab
       window.open(data.downloadUrl, '_blank');
       
-      toast({
-        title: 'Download started',
-        description: 'Your translated document is downloading.',
-      });
+      toast.success('Your translated document is downloading.');
     } catch (error) {
       console.error('Download error:', error);
-      toast({
-        title: 'Download failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Download failed');
     }
   };
 
@@ -104,19 +96,12 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
         throw new Error('Delete failed');
       }
 
-      toast({
-        title: 'Document deleted',
-        description: 'The document has been removed.',
-      });
+      toast.success('The document has been removed.');
 
       fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
-      toast({
-        title: 'Delete failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Delete failed');
     }
   };
 

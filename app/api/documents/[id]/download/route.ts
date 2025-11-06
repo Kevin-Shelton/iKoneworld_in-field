@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentTranslation } from '@/lib/db/documents';
-import { getDocumentDownloadUrl } from '@/lib/s3';
+import { getDocumentDownloadUrl } from '@/lib/supabaseStorage';
 
 /**
  * GET /api/documents/[id]/download
