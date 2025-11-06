@@ -619,7 +619,7 @@ export default function EmailInboxPage() {
               <EmailComposer
                 mode={composerMode}
                 threadId={selectedThread?.id}
-                recipients={getComposerRecipients()}
+                initialRecipients={getComposerRecipients()}
                 initialSubject={
                   composerMode === 'forward'
                     ? `Fwd: ${selectedThread?.subject || ''}`
