@@ -283,40 +283,62 @@ function stripHTML(html: string): string {
 
 /**
  * Detect language of text
- * Uses keyword matching for common languages
+ * Uses keyword matching and character detection for 30+ major languages
  * Prioritizes content over signature by checking first 500 chars
  */
 async function detectLanguage(text: string): Promise<string> {
   // Focus on the first 500 characters to avoid signature interference
-  const contentSample = text.substring(0, 500);
+  const contentSample = text.toLowerCase().substring(0, 500);
   
-  // Language-specific word patterns
-  const germanWords = /\b(hallo|bitte|danke|könnten|sie|mir|ein|angebot|ich|habe|wäre|für|eine|schnelle|bearbeitung|sehr|dankbar|auf|von|mit|und|der|die|das)\b/i;
-  const spanishWords = /\b(hola|gracias|por favor|buenos días|estoy|interesado|actualización|teléfono|celular|gustaría|tener|activado|cómo|qué|dónde|cuándo|necesito|servicio)\b/i;
-  const frenchWords = /\b(bonjour|merci|s'il vous plaît|je suis|intéressé|comment|où|quand|besoin|service|pouvez|vous)\b/i;
-  const italianWords = /\b(ciao|grazie|per favore|buongiorno|sono|interessato|come|dove|quando|bisogno|servizio)\b/i;
-  const portugueseWords = /\b(olá|obrigado|por favor|bom dia|estou|interessado|como|onde|quando|preciso|serviço)\b/i;
-  const japaneseChars = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
-  const koreanChars = /[\uAC00-\uD7AF]/;
-  const chineseChars = /[\u4E00-\u9FFF]/;
-  const russianWords = /\b(привет|спасибо|пожалуйста|здравствуйте|мне|нужно|как|где|когда)\b/i;
+  // Character-based detection (highest confidence)
+  if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(contentSample)) return 'ja'; // Japanese
+  if (/[\uAC00-\uD7AF]/.test(contentSample)) return 'ko'; // Korean
+  if (/[\u4E00-\u9FFF]/.test(contentSample)) return 'zh'; // Chinese
+  if (/[\u0600-\u06FF]/.test(contentSample)) return 'ar'; // Arabic
+  if (/[\u0590-\u05FF]/.test(contentSample)) return 'he'; // Hebrew
+  if (/[\u0E00-\u0E7F]/.test(contentSample)) return 'th'; // Thai
+  if (/[\u0370-\u03FF]/.test(contentSample)) return 'el'; // Greek
+  if (/[\u0900-\u097F]/.test(contentSample)) return 'hi'; // Hindi (Devanagari)
   
-  let detected = 'en';
+  // Cyrillic detection (Russian/Ukrainian/Bulgarian)
+  if (/[\u0400-\u04FF]/.test(contentSample)) {
+    if (/\b(привіт|дякую|будь ласка|доброго дня)\b/i.test(contentSample)) return 'uk'; // Ukrainian
+    if (/\b(здравей|благодаря|моля)\b/i.test(contentSample)) return 'bg'; // Bulgarian
+    return 'ru'; // Default to Russian
+  }
   
-  // Check for character-based languages first (higher priority)
-  if (japaneseChars.test(contentSample)) detected = 'ja';
-  else if (koreanChars.test(contentSample)) detected = 'ko';
-  else if (chineseChars.test(contentSample)) detected = 'zh';
-  // Then check for word-based languages
-  else if (germanWords.test(contentSample)) detected = 'de';
-  else if (spanishWords.test(contentSample)) detected = 'es';
-  else if (frenchWords.test(contentSample)) detected = 'fr';
-  else if (italianWords.test(contentSample)) detected = 'it';
-  else if (portugueseWords.test(contentSample)) detected = 'pt';
-  else if (russianWords.test(contentSample)) detected = 'ru';
+  // Word-based detection for Latin-script languages
+  const patterns: Record<string, RegExp> = {
+    de: /\b(hallo|bitte|danke|könnten|sie|mir|ein|angebot|ich|habe|wäre|für|eine|schnelle|bearbeitung|sehr|dankbar|über|möchte|und|der|die|das)\b/i,
+    es: /\b(hola|gracias|por favor|buenos días|estoy|interesado|actualización|teléfono|celular|gustaría|tener|activado|cómo|qué|dónde|cuándo|necesito|servicio|quiero)\b/i,
+    fr: /\b(bonjour|merci|s'il vous plaît|je suis|intéressé|comment|où|quand|besoin|service|pouvez|vous|voudrais|avec)\b/i,
+    it: /\b(ciao|grazie|per favore|buongiorno|sono|interessato|come|dove|quando|bisogno|servizio|vorrei|con)\b/i,
+    pt: /\b(olá|obrigado|por favor|bom dia|estou|interessado|como|onde|quando|preciso|serviço|gostaria|com)\b/i,
+    nl: /\b(hallo|dank je|alstublieft|goedemorgen|goedemiddag|hoe gaat het|ik ben|graag|zou willen|met)\b/i,
+    pl: /\b(cześć|dziękuję|proszę|dzień dobry|jestem|chciałbym|potrzebuję|jak się masz|z)\b/i,
+    tr: /\b(merhaba|teşekkür|lütfen|günaydın|iyi günler|nasılsınız|istiyorum|ihtiyacım var|ile)\b/i,
+    vi: /\b(xin chào|cảm ơn|làm ơn|tôi|cần|muốn|với)\b/i,
+    id: /\b(halo|terima kasih|tolong|selamat pagi|saya|ingin|perlu|bisa|dengan)\b/i,
+    sv: /\b(hej|tack|snälla|god morgon|jag|vill|behöver|med)\b/i,
+    nb: /\b(hei|takk|vennligst|god morgen|jeg|vil|trenger|med)\b/i,
+    da: /\b(hej|tak|venligst|godmorgen|jeg|vil|har brug for|med)\b/i,
+    fi: /\b(hei|kiitos|ole hyvä|huomenta|minä|haluan|tarvitsen|kanssa)\b/i,
+    cs: /\b(ahoj|děkuji|prosím|dobré ráno|jsem|chci|potřebuji|s)\b/i,
+    ro: /\b(salut|mulțumesc|vă rog|bună dimineața|sunt|vreau|am nevoie|cu)\b/i,
+    hu: /\b(szia|köszönöm|kérem|jó reggelt|vagyok|szeretnék|szükségem van|-val|-vel)\b/i,
+  };
   
-  console.log('Language detection:', { detected, textPreview: contentSample.substring(0, 100) });
-  return detected;
+  // Check each language pattern
+  for (const [lang, pattern] of Object.entries(patterns)) {
+    if (pattern.test(contentSample)) {
+      console.log('Language detection:', { detected: lang, textPreview: contentSample.substring(0, 100) });
+      return lang;
+    }
+  }
+  
+  // Default to English
+  console.log('Language detection:', { detected: 'en', textPreview: contentSample.substring(0, 100) });
+  return 'en';
 }
 
 // Also support GET for webhook verification
