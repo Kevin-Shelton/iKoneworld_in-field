@@ -406,7 +406,9 @@ function TranslatePageContent() {
       const translated = await translateText(winner.text, userLang, guestLang);
       
       // Analyze sentiment of original text
+      console.log('[Sentiment] Analyzing user message:', winner.text, 'language:', userLang);
       const sentimentResult = await analyzeSentiment(winner.text, userLang);
+      console.log('[Sentiment] User result:', sentimentResult);
       
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -441,7 +443,9 @@ function TranslatePageContent() {
       const translated = await translateText(winner.text, guestLang, userLang);
       
       // Analyze sentiment of original text
+      console.log('[Sentiment] Analyzing guest message:', winner.text, 'language:', guestLang);
       const sentimentResult = await analyzeSentiment(winner.text, guestLang);
+      console.log('[Sentiment] Guest result:', sentimentResult);
       
       const newMessage: Message = {
         id: Date.now().toString(),

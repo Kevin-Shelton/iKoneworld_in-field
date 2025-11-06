@@ -23,6 +23,7 @@ export async function analyzeSentiment(
   language: string
 ): Promise<SentimentResult | null> {
   try {
+    console.log('[Sentiment Helper] Calling API with:', { text: text.substring(0, 50), language });
     const response = await fetch('/api/sentiment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -32,19 +33,25 @@ export async function analyzeSentiment(
       })
     });
 
+    console.log('[Sentiment Helper] Response status:', response.status);
     if (!response.ok) {
-      console.error('[Sentiment] API error:', response.status);
+      const errorText = await response.text();
+      console.error('[Sentiment] API error:', response.status, errorText);
       return null;
     }
 
     const data = await response.json();
+    console.log('[Sentiment Helper] Response data:', data);
     if (data && Array.isArray(data) && data[0]) {
-      return {
+      const result = {
         sentiment: data[0].sentiment,
         confidenceScores: data[0].confidenceScores
       };
+      console.log('[Sentiment Helper] Returning:', result);
+      return result;
     }
     
+    console.log('[Sentiment Helper] No valid data in response');
     return null;
   } catch (err) {
     console.error('[Sentiment] Error:', err);
