@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Home, Languages, User, LogOut, Settings, Shield } from "lucide-react";
+import { Home, Languages, User, LogOut, Settings, Shield, ListChecks } from "lucide-react";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -65,6 +65,7 @@ export default function Navigation() {
   ];
 
   const adminLinks = [
+    { href: "/admin/queue", label: "Translation Queue", icon: ListChecks },
     { href: "/admin/settings", label: "Admin Settings", icon: Settings },
     { href: "/admin/users", label: "User Management", icon: Shield },
   ];

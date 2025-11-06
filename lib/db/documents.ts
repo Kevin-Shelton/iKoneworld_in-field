@@ -52,7 +52,7 @@ export async function createDocumentTranslation({
       enterprise_id: enterpriseId,
       language1: sourceLanguage,
       language2: targetLanguage,
-      status: 'active',
+      status: 'queued', // Start as queued, will be updated to 'active' when processing begins
       audio_url: originalFileUrl, // Repurpose for document URL
       metadata: {
         conversation_type: 'document',

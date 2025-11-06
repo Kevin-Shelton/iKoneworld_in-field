@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileSizeCategory, estimateProcessingTime, stripDocument, buildDocument } from '@/lib/skeletonDocumentProcessor';
 import { extractDocumentXml, createModifiedDocx, validateDocxStructure } from '@/lib/docxHandler';
-import { createDocumentTranslation, storeDocumentChunks } from '@/lib/db/documents';
+import { createDocumentTranslation, storeDocumentChunks, failDocumentTranslation } from '@/lib/db/documents';
 import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
 import {
   chunkText,
@@ -368,8 +368,27 @@ export async function POST(request: NextRequest) {
       fetch(`${baseUrl}/api/documents/${conversation.id}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      }).catch(error => {
+        signal: AbortSignal.timeout(120000), // 2 minute timeout for trigger
+      }).then(async (response) => {
+        if (!response.ok) {
+          console.error('[Upload Smart] Translation trigger failed:', response.status);
+          // Mark as failed if trigger fails
+          await failDocumentTranslation({
+            conversationId: conversation.id,
+            errorMessage: 'Failed to start translation process',
+          });
+        }
+      }).catch(async (error) => {
         console.error('[Upload Smart] Failed to trigger translation:', error);
+        // Mark as failed if trigger times out or errors
+        try {
+          await failDocumentTranslation({
+            conversationId: conversation.id,
+            errorMessage: error.name === 'TimeoutError' ? 'Translation request timed out' : 'Failed to start translation',
+          });
+        } catch (updateError) {
+          console.error('[Upload Smart] Failed to update error status:', updateError);
+        }
       });
       
       console.log('[Upload Smart] Translation triggered for conversation:', conversation.id);
