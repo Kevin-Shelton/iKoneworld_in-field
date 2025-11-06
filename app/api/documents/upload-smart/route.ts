@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
       // ============================================
       console.log('[Upload Smart] Using skeleton method');
       
+      try {
       // Convert file to buffer
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -118,6 +119,24 @@ export async function POST(request: NextRequest) {
       
       // Step 3: Translate text via Verbum API
       console.log('[Upload Smart] Step 3: Translating text');
+      
+      // Check if API key is configured
+      if (!process.env.VERBUM_API_KEY) {
+        console.error('[Upload Smart] VERBUM_API_KEY not configured');
+        return NextResponse.json(
+          {
+            error: 'Translation service not configured',
+            message: 'VERBUM_API_KEY environment variable is missing. Please configure it in Vercel settings.',
+            hint: 'Go to Vercel Dashboard → Project Settings → Environment Variables',
+          },
+          { status: 500 }
+        );
+      }
+      
+      console.log('[Upload Smart] Calling Verbum API...');
+      console.log('[Upload Smart] Source language:', sourceLanguage);
+      console.log('[Upload Smart] Target language:', targetLanguage);
+      console.log('[Upload Smart] Text length:', parsed.length);
       
       const translateResponse = await fetch(
         'https://sdk.verbum.ai/v1/translator/translate',
@@ -180,6 +199,22 @@ export async function POST(request: NextRequest) {
           'X-File-Size-Category': sizeCategory,
         },
       });
+      
+      } catch (skeletonError) {
+        console.error('[Upload Smart] Skeleton method error:', skeletonError);
+        
+        return NextResponse.json(
+          {
+            error: 'Skeleton translation failed',
+            message: skeletonError instanceof Error ? skeletonError.message : 'Unknown error during skeleton translation',
+            method: 'skeleton',
+            fileSize: file.size,
+            fileName: file.name,
+            stack: skeletonError instanceof Error ? skeletonError.stack : undefined,
+          },
+          { status: 500 }
+        );
+      }
       
     } else {
       // ============================================
