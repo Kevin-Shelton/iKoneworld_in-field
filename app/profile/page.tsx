@@ -193,11 +193,11 @@ function ProfilePageContent() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Email</Label>
-                  <p className="mt-1 text-sm text-gray-900">{profile?.email || 'Not set'}</p>
+                  <Label className="text-sm font-medium text-gray-200">Email</Label>
+                  <p className="mt-1 text-sm text-gray-100">{profile?.email || 'Not set'}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Role</Label>
+                  <Label className="text-sm font-medium text-gray-200">Role</Label>
                   <p className="mt-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       profile?.role === 'admin' 
@@ -209,14 +209,14 @@ function ProfilePageContent() {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Member Since</Label>
-                  <p className="mt-1 text-sm text-gray-900">
+                  <Label className="text-sm font-medium text-gray-200">Member Since</Label>
+                  <p className="mt-1 text-sm text-gray-100">
                     {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Last Login</Label>
-                  <p className="mt-1 text-sm text-gray-900">
+                  <Label className="text-sm font-medium text-gray-200">Last Login</Label>
+                  <p className="mt-1 text-sm text-gray-100">
                     {profile?.lastSignedIn ? new Date(profile.lastSignedIn).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
@@ -262,7 +262,7 @@ function ProfilePageContent() {
                     onChange={(e) => setName(e.target.value)}
                     disabled={saving}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-300">
                     This name will be displayed in the application
                   </p>
                 </div>
@@ -271,7 +271,7 @@ function ProfilePageContent() {
                   <Label htmlFor="defaultLanguage">Default Language</Label>
                   <div className="relative">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         id="languageSearch"
                         type="text"
@@ -322,7 +322,7 @@ function ProfilePageContent() {
                               }}
                               disabled={saving}
                             >
-                              <span className="text-sm">
+                              <span className="text-sm text-gray-900">
                                 {lang.name} ({lang.nativeName})
                               </span>
                               {defaultLanguage === lang.code && (
@@ -338,7 +338,7 @@ function ProfilePageContent() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-300">
                     Your preferred language for conversations. This will be pre-selected when starting new conversations.
                   </p>
                 </div>

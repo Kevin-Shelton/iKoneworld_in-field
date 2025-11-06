@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
-import { Mail } from 'lucide-react';
+import { Mail, FileText } from 'lucide-react';
+import { DefaultLanguagePrompt } from '@/components/DefaultLanguagePrompt';
 
 type Conversation = {
   id: number;
@@ -242,6 +243,9 @@ function DashboardContent() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navigation />
       
+      {/* Default Language Prompt */}
+      {user?.id && <DefaultLanguagePrompt userId={user.id} />}
+      
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
@@ -318,6 +322,13 @@ function DashboardContent() {
             >
               <Mail className="w-4 h-4" />
               Email
+            </button>
+            <button
+              onClick={() => router.push('/documents')}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Documents
             </button>
           </CardContent>
         </Card>

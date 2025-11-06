@@ -7,6 +7,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { io, Socket } from "socket.io-client";
+import { analyzeSentiment, getSentimentIcon, getSentimentColor } from "@/lib/sentimentAnalysis";
+import { getCachedAudio, setCachedAudio, isCommonPhrase, warmCache } from "@/lib/ttsCache";
 
 type Message = {
   id: string;
@@ -15,6 +17,12 @@ type Message = {
   speaker: "user" | "guest";
   timestamp: Date;
   confidence?: number;
+  sentiment?: "positive" | "negative" | "neutral" | "mixed";
+  sentimentScores?: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
 };
 
 type Status = "ready" | "listening" | "processing" | "speaking" | "reconnecting";
@@ -112,6 +120,27 @@ function TranslatePageContent() {
       if (response.ok) {
         const data = await response.json();
         voicesRef.current = data.voices || {};
+        
+        // Warm cache for user and guest languages
+        if (userLang && guestLang) {
+          const userVoices = voicesRef.current[userLang];
+          const guestVoices = voicesRef.current[guestLang];
+          
+          const userVoice = userVoices?.male?.[0] || userVoices?.female?.[0];
+          const guestVoice = guestVoices?.male?.[0] || guestVoices?.female?.[0];
+          
+          // Warm cache in background (don't await)
+          if (userVoice) {
+            warmCache(userLang, userVoice).catch(err => 
+              console.error('[Cache] Failed to warm user language:', err)
+            );
+          }
+          if (guestVoice) {
+            warmCache(guestLang, guestVoice).catch(err => 
+              console.error('[Cache] Failed to warm guest language:', err)
+            );
+          }
+        }
       }
     } catch (err) {
       console.error("[Voices] Error fetching voices:", err);
@@ -274,9 +303,9 @@ function TranslatePageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          texts: [{ text }],
+          text,
           from: baseLang(from),
-          to: [baseLang(to)]
+          to: baseLang(to)
         })
       });
 
@@ -331,23 +360,36 @@ function TranslatePageContent() {
           return;
         }
 
-        const response = await fetch('/api/synthesize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voice,
-            text,
-            audioFormat: 'Audio16Khz128KBitMp3',
-            model: 'default'
-          })
-        });
+        // Check cache first
+        const cached = getCachedAudio(voice, text, langCode);
+        if (cached) {
+          audioUrl = cached.url;
+        } else {
+          // Cache miss - synthesize audio
+          const response = await fetch('/api/synthesize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              voice,
+              text,
+              audioFormat: 'Audio16Khz128KBitMp3',
+              model: 'default'
+            })
+          });
 
-        if (!response.ok) {
-          throw new Error(`TTS failed: ${response.status}`);
+          if (!response.ok) {
+            throw new Error(`TTS failed: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          
+          // Cache common phrases for future use
+          if (isCommonPhrase(text, langCode)) {
+            audioUrl = setCachedAudio(voice, text, langCode, blob);
+          } else {
+            audioUrl = URL.createObjectURL(blob);
+          }
         }
-
-        const blob = await response.blob();
-        audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
 
         setStatus('speaking');
@@ -396,10 +438,13 @@ function TranslatePageContent() {
 
     if (winBase === lang1Base) {
       // User/Employee spoke
+      const messageId = Date.now().toString();
+      
+      // Wait for translation
       const translated = await translateText(winner.text, userLang, guestLang);
       
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         text: winner.text,
         translatedText: translated,
         speaker: "user",
@@ -409,7 +454,20 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database (audio will be uploaded at conversation end)
+      // NON-BLOCKING: Analyze sentiment in background
+      console.log('[Sentiment] Analyzing user message (async):', winner.text, 'language:', userLang);
+      analyzeSentiment(winner.text, userLang).then(sentimentResult => {
+        console.log('[Sentiment] User result:', sentimentResult);
+        if (sentimentResult) {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId 
+              ? { ...m, sentiment: sentimentResult.sentiment, sentimentScores: sentimentResult.confidenceScores }
+              : m
+          ));
+        }
+      }).catch(err => console.error('[Sentiment] Error:', err));
+
+      // NON-BLOCKING: Save to database in background
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -419,17 +477,20 @@ function TranslatePageContent() {
           userLang,
           guestLang,
           "user"
-        );
+        ).catch(err => console.error('[Database] Save error:', err));
       }
 
-      // Speak translation in guest language
+      // CRITICAL PATH: Speak translation
       await speakText(translated, guestLang);
     } else {
       // Guest/Customer spoke
+      const messageId = Date.now().toString();
+      
+      // Wait for translation
       const translated = await translateText(winner.text, guestLang, userLang);
       
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         text: winner.text,
         translatedText: translated,
         speaker: "guest",
@@ -439,7 +500,20 @@ function TranslatePageContent() {
       
       setMessages(prev => [...prev, newMessage]);
 
-      // Save to database (audio will be uploaded at conversation end)
+      // NON-BLOCKING: Analyze sentiment in background
+      console.log('[Sentiment] Analyzing guest message (async):', winner.text, 'language:', guestLang);
+      analyzeSentiment(winner.text, guestLang).then(sentimentResult => {
+        console.log('[Sentiment] Guest result:', sentimentResult);
+        if (sentimentResult) {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId 
+              ? { ...m, sentiment: sentimentResult.sentiment, sentimentScores: sentimentResult.confidenceScores }
+              : m
+          ));
+        }
+      }).catch(err => console.error('[Sentiment] Error:', err));
+
+      // NON-BLOCKING: Save to database in background
       if (conversationId && dbUserId) {
         saveMessageToDatabase(
           conversationId,
@@ -449,8 +523,11 @@ function TranslatePageContent() {
           guestLang,
           userLang,
           "guest"
-        );
+        ).catch(err => console.error('[Database] Save error:', err));
       }
+      
+      // CRITICAL PATH: Speak translation
+      await speakText(translated, userLang);
     }
 
     setRecognizingText("");
@@ -967,72 +1044,80 @@ function TranslatePageContent() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Employee Messages */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Employee Messages ({userLang})
+        {/* Unified Conversation */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Conversation
             </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.filter(m => m.speaker === "user").length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
-              ) : (
-                messages
-                  .filter(m => m.speaker === "user")
-                  .map((message) => (
-                    <div key={message.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                      <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                        → {message.translatedText}
-                      </p>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                        {message.confidence !== undefined && (
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                            {(message.confidence * 100).toFixed(0)}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-              )}
+            <div className="flex gap-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span className="text-gray-600 dark:text-gray-400">Employee</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                <span className="text-gray-600 dark:text-gray-400">Customer</span>
+              </span>
             </div>
           </div>
-
-          {/* Customer Messages */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Customer Messages ({guestLang})
-            </h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {messages.filter(m => m.speaker === "guest").length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">No messages yet</p>
-              ) : (
-                messages
-                  .filter(m => m.speaker === "guest")
-                  .map((message) => (
-                    <div key={message.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-                      <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                        → {message.translatedText}
-                      </p>
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                        {message.confidence !== undefined && (
-                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded">
-                            {(message.confidence * 100).toFixed(0)}%
+          
+          <div className="space-y-6 max-h-[600px] overflow-y-auto">
+            {messages.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">No messages yet</p>
+            ) : (
+              messages
+                .slice()
+                .reverse()
+                .map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.speaker === "user" ? "justify-start" : "justify-end"}`}
+                  >
+                    <div className={`max-w-[80%] ${message.speaker === "user" ? "text-left" : "text-right"}`}>
+                      {/* Speaker indicator with sentiment */}
+                      <div className={`flex items-center gap-2 mb-1 ${message.speaker === "user" ? "" : "justify-end"}`}>
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+                          message.speaker === "user" 
+                            ? "text-blue-600 dark:text-blue-400" 
+                            : "text-green-600 dark:text-green-400"
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            message.speaker === "user" ? "bg-blue-500" : "bg-green-500"
+                          }`}></span>
+                          {message.speaker === "user" ? "EMPLOYEE" : "CUSTOMER"}
+                        </span>
+                        {message.sentiment && (
+                          <span className="text-lg" title={`Sentiment: ${message.sentiment}`}>
+                            {getSentimentIcon(message.sentiment)}
                           </span>
                         )}
                       </div>
+                      
+                      {/* Original text */}
+                      <p className="text-gray-900 dark:text-white text-base font-medium leading-relaxed mb-1">
+                        {message.text}
+                      </p>
+                      
+                      {/* Translation */}
+                      <p className="text-gray-600 dark:text-gray-400 text-sm italic leading-relaxed mb-2">
+                        {message.translatedText}
+                      </p>
+                      
+                      {/* Metadata */}
+                      <div className={`flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500 ${message.speaker === "user" ? "" : "justify-end"}`}>
+                        <span>{message.timestamp.toLocaleTimeString()}</span>
+                        {message.confidence !== undefined && (
+                          <>
+                            <span>•</span>
+                            <span>{(message.confidence * 100).toFixed(0)}% confidence</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ))
-              )}
-            </div>
+                  </div>
+                ))
+            )}
           </div>
         </div>
       </div>

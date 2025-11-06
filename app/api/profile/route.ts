@@ -79,9 +79,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateData: any = {
-      updatedAt: new Date().toISOString(),
-    };
+    const updateData: any = {};
 
     if (name !== undefined) {
       updateData.name = name;
