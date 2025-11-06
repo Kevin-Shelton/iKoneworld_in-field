@@ -227,14 +227,18 @@ export function isValidDocx(buffer: Buffer): boolean {
  * @returns 'small' | 'medium' | 'large'
  */
 export function getFileSizeCategory(sizeInBytes: number): 'small' | 'medium' | 'large' {
+  const KB = 1024;
   const MB = 1024 * 1024;
   
-  if (sizeInBytes < 2 * MB) {
-    return 'small';  // < 2MB - Use skeleton method
-  } else if (sizeInBytes < 5 * MB) {
-    return 'medium'; // 2-5MB - Use skeleton method with caution
+  // Verbum API has character limit (~50k chars)
+  // A 100KB DOCX typically contains ~30-40k characters of text
+  // To be safe, only use skeleton method for files under 100KB
+  if (sizeInBytes < 100 * KB) {
+    return 'small';  // < 100KB - Safe for skeleton method
+  } else if (sizeInBytes < 200 * KB) {
+    return 'medium'; // 100-200KB - May exceed API limits, use chunking
   } else {
-    return 'large';  // > 5MB - Use chunking method
+    return 'large';  // > 200KB - Use chunking method
   }
 }
 

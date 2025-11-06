@@ -17,8 +17,8 @@ import {
  * 
  * This endpoint analyzes the uploaded file and routes it to the appropriate
  * translation method:
- * - Small/Medium DOCX files (< 5MB) → Skeleton method (sync)
- * - Large files or non-DOCX → Chunking method (async)
+ * - Small DOCX files (< 100KB) → Skeleton method (sync, fast)
+ * - Medium/Large files or non-DOCX → Chunking method (async)
  * 
  * Returns routing decision and processing instructions
  */
@@ -69,9 +69,10 @@ export async function POST(request: NextRequest) {
     const estimatedTime = estimateProcessingTime(file.size);
     
     // Routing decision
+    // Only use skeleton method for small files (< 100KB) to avoid Verbum API size limits
     const useSkeletonMethod = 
       fileExtension === 'docx' && 
-      (sizeCategory === 'small' || sizeCategory === 'medium');
+      sizeCategory === 'small';
     
     console.log('[Upload Smart] File analysis:', {
       name: file.name,
@@ -115,6 +116,14 @@ export async function POST(request: NextRequest) {
       
       console.log(`[Upload Smart] Extracted text length: ${parsed.length} characters`);
       console.log(`[Upload Smart] Using delimiter: ${special}`);
+      
+      // Check if text is too large for Verbum API (max ~50k characters)
+      const MAX_TEXT_LENGTH = 50000;
+      if (parsed.length > MAX_TEXT_LENGTH) {
+        console.log(`[Upload Smart] Text too large (${parsed.length} chars), falling back to chunking method`);
+        // Fall through to chunking method below
+        throw new Error('TEXT_TOO_LARGE');
+      }
       
       // Step 3: Translate text via Verbum API
       console.log('[Upload Smart] Step 3: Translating text');
@@ -250,17 +259,24 @@ export async function POST(request: NextRequest) {
       } catch (skeletonError) {
         console.error('[Upload Smart] Skeleton method error:', skeletonError);
         
-        return NextResponse.json(
-          {
-            error: 'Skeleton translation failed',
-            message: skeletonError instanceof Error ? skeletonError.message : 'Unknown error during skeleton translation',
-            method: 'skeleton',
-            fileSize: file.size,
-            fileName: file.name,
-            stack: skeletonError instanceof Error ? skeletonError.stack : undefined,
-          },
-          { status: 500 }
-        );
+        // If text is too large, fall back to chunking method
+        if (skeletonError instanceof Error && skeletonError.message === 'TEXT_TOO_LARGE') {
+          console.log('[Upload Smart] Falling back to chunking method due to text size');
+          // Continue to chunking method below (don't return error)
+        } else {
+          // Other errors - return error response
+          return NextResponse.json(
+            {
+              error: 'Skeleton translation failed',
+              message: skeletonError instanceof Error ? skeletonError.message : 'Unknown error during skeleton translation',
+              method: 'skeleton',
+              fileSize: file.size,
+              fileName: file.name,
+              stack: skeletonError instanceof Error ? skeletonError.stack : undefined,
+            },
+            { status: 500 }
+          );
+        }
       }
       
     } else {

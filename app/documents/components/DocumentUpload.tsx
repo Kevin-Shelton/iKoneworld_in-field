@@ -76,7 +76,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
+        const errorMessage = error.message || error.error || 'Upload failed';
+        const errorDetails = error.details ? `\n${error.details}` : '';
+        throw new Error(`${errorMessage}${errorDetails}`);
       }
 
       // Check if response is a file (skeleton method) or JSON (chunking method)
