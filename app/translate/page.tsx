@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { io, Socket } from "socket.io-client";
+import { analyzeSentiment, getSentimentIcon, getSentimentColor } from "@/lib/sentimentAnalysis";
 
 type Message = {
   id: string;
@@ -15,6 +16,12 @@ type Message = {
   speaker: "user" | "guest";
   timestamp: Date;
   confidence?: number;
+  sentiment?: "positive" | "negative" | "neutral" | "mixed";
+  sentimentScores?: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
 };
 
 type Status = "ready" | "listening" | "processing" | "speaking" | "reconnecting";
@@ -398,13 +405,18 @@ function TranslatePageContent() {
       // User/Employee spoke
       const translated = await translateText(winner.text, userLang, guestLang);
       
+      // Analyze sentiment of original text
+      const sentimentResult = await analyzeSentiment(winner.text, userLang);
+      
       const newMessage: Message = {
         id: Date.now().toString(),
         text: winner.text,
         translatedText: translated,
         speaker: "user",
         timestamp: new Date(),
-        confidence: winner.conf
+        confidence: winner.conf,
+        sentiment: sentimentResult?.sentiment,
+        sentimentScores: sentimentResult?.confidenceScores
       };
       
       setMessages(prev => [...prev, newMessage]);
@@ -428,13 +440,18 @@ function TranslatePageContent() {
       // Guest/Customer spoke
       const translated = await translateText(winner.text, guestLang, userLang);
       
+      // Analyze sentiment of original text
+      const sentimentResult = await analyzeSentiment(winner.text, guestLang);
+      
       const newMessage: Message = {
         id: Date.now().toString(),
         text: winner.text,
         translatedText: translated,
         speaker: "guest",
         timestamp: new Date(),
-        confidence: winner.conf
+        confidence: winner.conf,
+        sentiment: sentimentResult?.sentiment,
+        sentimentScores: sentimentResult?.confidenceScores
       };
       
       setMessages(prev => [...prev, newMessage]);
@@ -983,10 +1000,19 @@ function TranslatePageContent() {
                   .reverse()
                   .map((message) => (
                     <div key={message.id} className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-                      <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                        → {message.translatedText}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        {message.sentiment && (
+                          <span className={`text-2xl ${getSentimentColor(message.sentiment)}`} title={`Sentiment: ${message.sentiment}`}>
+                            {getSentimentIcon(message.sentiment)}
+                          </span>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
+                            → {message.translatedText}
+                          </p>
+                        </div>
+                      </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {message.timestamp.toLocaleTimeString()}
@@ -1017,10 +1043,19 @@ function TranslatePageContent() {
                   .reverse()
                   .map((message) => (
                     <div key={message.id} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-                      <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
-                        → {message.translatedText}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        {message.sentiment && (
+                          <span className={`text-2xl ${getSentimentColor(message.sentiment)}`} title={`Sentiment: ${message.sentiment}`}>
+                            {getSentimentIcon(message.sentiment)}
+                          </span>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-gray-900 dark:text-white font-medium">{message.text}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">
+                            → {message.translatedText}
+                          </p>
+                        </div>
+                      </div>
                       <div className="flex justify-between items-center mt-1">
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {message.timestamp.toLocaleTimeString()}
