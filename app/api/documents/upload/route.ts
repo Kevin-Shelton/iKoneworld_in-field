@@ -94,10 +94,36 @@ export async function POST(request: NextRequest) {
     // Update conversation with storage path
     const { supabaseAdmin } = await import('@/lib/supabase/server');
     const supabase = supabaseAdmin;
-    await supabase
+    
+    // Get current metadata to preserve it
+    const { data: currentConv } = await supabase
       .from('conversations')
-      .update({ audio_url: storagePath })
+      .select('metadata')
+      .eq('id', conversation.id)
+      .single();
+    
+    const updatedMetadata = {
+      ...currentConv?.metadata,
+      document_translation: {
+        ...currentConv?.metadata?.document_translation,
+        original_storage_path: storagePath, // Store in metadata as backup
+      },
+    };
+    
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({ 
+        audio_url: storagePath,
+        metadata: updatedMetadata,
+      })
       .eq('id', conversation.id);
+    
+    if (updateError) {
+      console.error('[Document Upload] Failed to update conversation with storage path:', updateError);
+      throw new Error('Failed to update conversation with storage path');
+    }
+    
+    console.log('[Document Upload] Updated conversation with storage path:', storagePath);
     
     // Chunk the text for translation
     const chunks = chunkText(extractedText);
