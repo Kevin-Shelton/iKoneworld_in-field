@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
+    // Import Supabase admin client at the top for proper scoping
+    const { supabaseAdmin } = await import('@/lib/supabase/server');
+    const supabase = supabaseAdmin;
+    
     // Parse form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -98,8 +102,6 @@ export async function POST(request: NextRequest) {
     });
     
     // Update with initial metadata
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
-    const supabase = supabaseAdmin;
     await supabase
       .from('conversations')
       .update({
@@ -292,8 +294,6 @@ export async function POST(request: NextRequest) {
       });
       
       // Update to completed status with full metadata
-      const { supabaseAdmin } = await import('@/lib/supabase/server');
-      const supabase = supabaseAdmin;
       await supabase
         .from('conversations')
         .update({
@@ -451,8 +451,6 @@ export async function POST(request: NextRequest) {
       console.log('[Upload Smart] Stored chunks in database');
       
       // Update conversation metadata with method and estimates
-      const { supabaseAdmin } = await import('@/lib/supabase/server');
-      const supabase = supabaseAdmin;
       await supabase
         .from('conversations')
         .update({
