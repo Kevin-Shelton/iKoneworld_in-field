@@ -38,6 +38,21 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  
+  // Get user-friendly status message based on progress
+  const getStatusMessage = (progress: number): string => {
+    if (progress === 0) return 'Uploading your document...';
+    if (progress <= 5) return 'Uploading your document...';
+    if (progress <= 15) return 'Analyzing document structure...';
+    if (progress <= 25) return 'Reading content...';
+    if (progress <= 35) return 'Preparing for translation...';
+    if (progress <= 70) return 'Translating your content...';
+    if (progress <= 80) return 'Rebuilding document layout...';
+    if (progress <= 90) return 'Performing quality checks...';
+    if (progress <= 95) return 'Finalizing your document...';
+    if (progress < 100) return 'Preparing download...';
+    return 'Translation complete!';
+  };
 
   useEffect(() => {
     fetchDocuments();
@@ -339,6 +354,17 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
                   {/* Progress Bar for Active and Queued Translations */}
                   {(doc.status === 'active' || doc.status === 'queued') && (
                     <div className="mb-3">
+                      {/* Status Message */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="animate-pulse">
+                          <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+                        </div>
+                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                          {getStatusMessage(doc.progressPercentage || 0)}
+                        </p>
+                      </div>
+                      
+                      {/* Progress Bar */}
                       <Progress value={doc.progressPercentage || 0} className="h-2 mb-1" />
                       <div className="flex justify-between items-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400">
