@@ -136,12 +136,18 @@ export async function getConversationMessages(conversationId: number) {
     const messagesWithFilePaths = data.map((message: any) => {
       if (message.audio_url) {
         try {
-          // Extract the file path from the public URL
-          const url = new URL(message.audio_url);
-          const pathParts = url.pathname.split('/audio-recordings/');
-          if (pathParts.length > 1) {
-            // Store the relative file path
-            message.audio_file_path = pathParts[1];
+          // Check if it's already a relative path (doesn't start with http)
+          if (!message.audio_url.startsWith('http')) {
+            // It's already a relative path, use it directly
+            message.audio_file_path = message.audio_url;
+          } else {
+            // Extract the file path from the public URL
+            const url = new URL(message.audio_url);
+            const pathParts = url.pathname.split('/audio-recordings/');
+            if (pathParts.length > 1) {
+              // Store the relative file path
+              message.audio_file_path = pathParts[1];
+            }
           }
         } catch (err) {
           console.error('Error processing message audio URL:', err);
@@ -177,12 +183,18 @@ export async function getConversationsByUser(userId: number) {
     const conversationsWithFilePaths = data.map((conversation: any) => {
       if (conversation.audio_url) {
         try {
-          // Extract the file path from the public URL
-          const url = new URL(conversation.audio_url);
-          const pathParts = url.pathname.split('/audio-recordings/');
-          if (pathParts.length > 1) {
-            // Store the relative file path
-            conversation.audio_file_path = pathParts[1];
+          // Check if it's already a relative path (doesn't start with http)
+          if (!conversation.audio_url.startsWith('http')) {
+            // It's already a relative path, use it directly
+            conversation.audio_file_path = conversation.audio_url;
+          } else {
+            // Extract the file path from the public URL
+            const url = new URL(conversation.audio_url);
+            const pathParts = url.pathname.split('/audio-recordings/');
+            if (pathParts.length > 1) {
+              // Store the relative file path
+              conversation.audio_file_path = pathParts[1];
+            }
           }
         } catch (err) {
           console.error('Error processing audio URL:', err);
