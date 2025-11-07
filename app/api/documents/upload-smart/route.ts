@@ -168,33 +168,49 @@ export async function POST(request: NextRequest) {
         throw new Error('TEXT_TOO_LARGE');
       }
       
-      // Update status to active
-      await supabase
-        .from('conversations')
-        .update({
-          status: 'active',
-          metadata: {
-            conversation_type: 'document',
-            document_translation: {
-              original_filename: file.name,
-              file_type: fileExtension || 'unknown',
-              file_size_bytes: file.size,
-              progress_percentage: 10,
-              method: 'skeleton',
-              estimated_time_seconds: estimatedTime,
+      // Helper function to update progress
+      const updateProgress = async (percentage: number) => {
+        await supabase
+          .from('conversations')
+          .update({
+            status: 'active',
+            metadata: {
+              conversation_type: 'document',
+              document_translation: {
+                original_filename: file.name,
+                file_type: fileExtension || 'unknown',
+                file_size_bytes: file.size,
+                progress_percentage: percentage,
+                method: 'skeleton',
+                estimated_time_seconds: estimatedTime,
+              },
             },
-          },
-        })
-        .eq('id', conversation.id);
+          })
+          .eq('id', conversation.id);
+      };
+      
+      // Update status to active with initial progress
+      await updateProgress(10);
       
       // Step 3: Process document with formatting preservation
       console.log('[Upload Smart] Step 2: Processing document with formatting preservation');
       console.log('[Upload Smart] Source language:', sourceLanguage);
       console.log('[Upload Smart] Target language:', targetLanguage);
       
-      // Create translation function that calls Verbum API
+      // Track translation progress
+      let segmentsTranslated = 0;
+      let totalSegments = 0;
+      
+      // Create translation function that calls Verbum API with progress tracking
       const translateFn = async (text: string): Promise<string> => {
         console.log('[Upload Smart] Translating text segment, length:', text.length);
+        
+        // Update progress (20% to 80% during translation)
+        if (totalSegments > 0) {
+          segmentsTranslated++;
+          const translationProgress = 20 + Math.floor((segmentsTranslated / totalSegments) * 60);
+          await updateProgress(Math.min(translationProgress, 80));
+        }
         
         const response = await fetch(
           'https://sdk.verbum.ai/v1/translator/translate',
@@ -228,10 +244,24 @@ export async function POST(request: NextRequest) {
         return data.translations[0][0].text;
       };
       
+      // Update progress: extracting text (15%)
+      await updateProgress(15);
+      
+      // Estimate segments for progress tracking based on file size
+      // Approximate: ~50 segments per 10KB of document
+      totalSegments = Math.max(Math.floor(file.size / 10240) * 50, 10);
+      console.log(`[Upload Smart] Estimated segments for progress: ${totalSegments}`);
+      
+      // Update progress: starting translation (20%)
+      await updateProgress(20);
+      
       // Process document with formatting preservation
       const result = await processDocxTranslation(buffer, translateFn);
       const translatedBuffer = result.translatedBuffer;
       const translatedText = result.translatedText;
+      
+      // Update progress: translation complete, preparing file (85%)
+      await updateProgress(85);
       
       console.log(`[Upload Smart] ✓ Translation completed with formatting preserved`);
       console.log(`[Upload Smart] Original text: ${result.originalText.length} chars`);
@@ -245,6 +275,9 @@ export async function POST(request: NextRequest) {
       const processingTime = Date.now() - startTime;
       console.log(`[Upload Smart] ✓ Translation completed in ${processingTime}ms`);
       console.log(`[Upload Smart] Output file: ${newFilename} (${translatedBuffer.length} bytes)`);
+      
+      // Update progress: uploading file (90%)
+      await updateProgress(90);
       
       // Step 6: Upload translated file to Supabase Storage with correct conversation ID
       console.log('[Upload Smart] Step 6: Uploading translated file to storage');
