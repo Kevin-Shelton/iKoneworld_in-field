@@ -224,3 +224,9 @@
 - [x] Add create date/time stamp to document list
 - [x] Rename "Recent Translation Activity" to "Document Translation History"
 - [x] Merge to main after testing confirms translation works
+
+## Timezone Fix
+- [x] Ensure creation timestamp displays in user's local timezone
+- [x] Updated toLocaleString with explicit format options
+- [x] Format: Nov 7, 2025, 01:30 AM (automatically converts to user's timezone)
+- [ ] Test with different timezones to confirm

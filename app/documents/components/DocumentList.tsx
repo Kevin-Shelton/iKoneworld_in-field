@@ -275,7 +275,14 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
                         </p>
                         <span className="text-gray-400">•</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(doc.createdAt).toLocaleString()}
+                          {new Date(doc.createdAt).toLocaleString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
                         </span>
                         {doc.method && (
                           <>
