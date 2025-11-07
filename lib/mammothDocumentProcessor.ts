@@ -150,7 +150,7 @@ interface ParsedElement {
   isBold: boolean;
   isItalic: boolean;
   isUnderline: boolean;
-  heading?: typeof HeadingLevel[keyof typeof HeadingLevel];
+  heading?: string; // Heading level (e.g., 'HEADING_1', 'HEADING_2', etc.)
 }
 
 function parseHtmlElement(html: string): ParsedElement {
@@ -161,12 +161,12 @@ function parseHtmlElement(html: string): ParsedElement {
     isBold: /<(strong|b)[\s>]/.test(html),
     isItalic: /<(em|i)[\s>]/.test(html),
     isUnderline: /<u[\s>]/.test(html),
-    heading: html.match(/<h1[\s>]/) ? HeadingLevel.HEADING_1 :
-             html.match(/<h2[\s>]/) ? HeadingLevel.HEADING_2 :
-             html.match(/<h3[\s>]/) ? HeadingLevel.HEADING_3 :
-             html.match(/<h4[\s>]/) ? HeadingLevel.HEADING_4 :
-             html.match(/<h5[\s>]/) ? HeadingLevel.HEADING_5 :
-             html.match(/<h6[\s>]/) ? HeadingLevel.HEADING_6 :
+    heading: html.match(/<h1[\s>]/) ? 'HEADING_1' :
+             html.match(/<h2[\s>]/) ? 'HEADING_2' :
+             html.match(/<h3[\s>]/) ? 'HEADING_3' :
+             html.match(/<h4[\s>]/) ? 'HEADING_4' :
+             html.match(/<h5[\s>]/) ? 'HEADING_5' :
+             html.match(/<h6[\s>]/) ? 'HEADING_6' :
              undefined,
   };
 }
@@ -199,10 +199,13 @@ export async function convertHtmlToDocx(html: string): Promise<Buffer> {
       underline: parsed.isUnderline ? {} : undefined,
     });
     
+    // Map string heading to HeadingLevel enum
+    const headingLevel = parsed.heading ? (HeadingLevel as any)[parsed.heading] : undefined;
+    
     paragraphs.push(
       new Paragraph({
         children: [textRun],
-        heading: parsed.heading,
+        heading: headingLevel,
       })
     );
   }
