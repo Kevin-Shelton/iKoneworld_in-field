@@ -405,6 +405,8 @@ export async function POST(request: NextRequest) {
         console.log('[Upload Smart] File type:', file.type);
         console.log('[Upload Smart] File size:', file.size, 'bytes');
         
+        const isPdf = file.type === 'application/pdf';
+        
         try {
           const { extractTextFromDocument } = await import('@/lib/documentUtils');
           extractedContent = await extractTextFromDocument(fileBuffer, file.type);
@@ -412,7 +414,15 @@ export async function POST(request: NextRequest) {
           console.log('[Upload Smart] Extracted text length:', extractedContent.length);
         } catch (extractError) {
           console.error('[Upload Smart] Text extraction failed:', extractError);
-          throw new Error(`Failed to extract text from ${file.type}: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`);
+          
+          // For PDFs, text extraction is optional since DeepL handles them directly
+          if (isPdf) {
+            console.log('[Upload Smart] PDF text extraction failed, but continuing (DeepL will handle translation)');
+            extractedContent = '[PDF content - will be translated by DeepL]';
+            isHtmlContent = false;
+          } else {
+            throw new Error(`Failed to extract text from ${file.type}: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`);
+          }
         }
       }
       
