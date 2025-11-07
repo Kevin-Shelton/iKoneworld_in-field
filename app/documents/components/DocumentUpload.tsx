@@ -125,56 +125,61 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
   };
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border-2 border-dashed border-green-400 dark:border-green-600">
-      <CardContent className="p-6">
-        {/* Drag and Drop Area */}
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className="text-center"
-        >
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            accept=".pdf,.doc,.docx,.txt"
-            onChange={handleFileSelect}
-            disabled={uploading}
-          />
-          <label htmlFor="file-upload" className="cursor-pointer">
-            <div className="flex flex-col items-center mb-4">
-              <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mb-3">
-                <FileText className="w-8 h-8 text-gray-800" />
+    <div className="space-y-4">
+      <Card className="bg-white dark:bg-gray-800 border-2 border-dashed border-green-400 dark:border-green-600">
+        <CardContent className="p-6">
+          {/* Drag and Drop Area */}
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            className="text-center"
+          >
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              disabled={uploading}
+            />
+            <label htmlFor="file-upload" className="cursor-pointer">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-yellow-400 rounded-lg flex items-center justify-center mb-3">
+                  <FileText className="w-8 h-8 text-gray-800" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Upload Document for Translation
+                </h3>
+                {selectedFile ? (
+                  <>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      Drag and drop files here or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      PDF, DOC, DOCX, TXT • Max 100MB
+                    </p>
+                  </>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Upload Document for Translation
-              </h3>
-              {selectedFile ? (
-                <>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    Drag and drop files here or click to browse
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    PDF, DOC, DOCX, TXT • Max 100MB
-                  </p>
-                </>
-              )}
-            </div>
-          </label>
+            </label>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Language Selection */}
-          <div className="flex gap-4 mb-4">
+      {/* Language Selection - Now outside the green border */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+        <div className="flex gap-4 mb-4">
             <div className="flex-1">
               <select
                 value={sourceLanguage}
@@ -218,28 +223,27 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
                 <option value="nl">Translate to: Dutch</option>
               </select>
             </div>
-          </div>
-
-          {/* Upload Button */}
-          <Button
-            onClick={handleUpload}
-            disabled={!selectedFile || uploading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload and Translate
-              </>
-            )}
-          </Button>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Upload Button */}
+        <Button
+          onClick={handleUpload}
+          disabled={!selectedFile || uploading}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload and Translate
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }

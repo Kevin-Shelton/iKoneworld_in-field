@@ -34,6 +34,8 @@ interface Document {
 export default function DocumentList({ userId, refreshTrigger }: DocumentListProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
     fetchDocuments();
@@ -244,6 +246,12 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
     );
   }
 
+  // Calculate pagination
+  const totalPages = Math.ceil(documents.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedDocuments = documents.slice(startIndex, endIndex);
+
   return (
     <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
       <CardHeader>
@@ -251,7 +259,7 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {documents.map((doc) => (
+          {paginatedDocuments.map((doc) => (
             <div
               key={doc.id}
               className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors"
@@ -394,6 +402,48 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
             </div>
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing {startIndex + 1}-{Math.min(endIndex, documents.length)} of {documents.length} documents
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+                size="sm"
+                className="border-gray-300 dark:border-gray-600"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    className={currentPage === page ? "" : "border-gray-300 dark:border-gray-600"}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                variant="outline"
+                size="sm"
+                className="border-gray-300 dark:border-gray-600"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
