@@ -21,8 +21,7 @@ export async function translateHtmlWithCheerio(
   
   // Load HTML into cheerio
   const $ = cheerio.load(html, {
-    decodeEntities: false, // Preserve HTML entities
-    xmlMode: false,
+    xml: false,
   });
   
   // Collect all text nodes
