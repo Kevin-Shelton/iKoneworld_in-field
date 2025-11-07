@@ -31,7 +31,7 @@ interface QueueDocument {
   fileSizeBytes: number;
   sourceLanguage: string;
   targetLanguage: string;
-  status: 'queued' | 'active' | 'completed' | 'failed';
+  status: 'active' | 'completed' | 'failed';
   progressPercentage: number;
   errorMessage?: string;
   createdAt: string;
@@ -44,7 +44,6 @@ interface QueueDocument {
 
 interface QueueStats {
   total: number;
-  queued: number;
   active: number;
   completed: number;
   failed: number;
@@ -54,13 +53,12 @@ export default function AdminQueuePage() {
   const [documents, setDocuments] = useState<QueueDocument[]>([]);
   const [stats, setStats] = useState<QueueStats>({
     total: 0,
-    queued: 0,
     active: 0,
     completed: 0,
     failed: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'queued' | 'active' | 'completed' | 'failed'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'failed'>('all');
 
   useEffect(() => {
     fetchDocuments();
@@ -179,8 +177,7 @@ export default function AdminQueuePage() {
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
       case 'active':
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Processing</Badge>;
-      case 'queued':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Queued</Badge>;
+
       case 'failed':
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Failed</Badge>;
       default:
@@ -194,8 +191,7 @@ export default function AdminQueuePage() {
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'active':
         return <Activity className="w-5 h-5 text-blue-600 animate-pulse" />;
-      case 'queued':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
+
       case 'failed':
         return <AlertCircle className="w-5 h-5 text-red-600" />;
       default:
@@ -241,18 +237,6 @@ export default function AdminQueuePage() {
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
               </div>
               <FileText className="w-10 h-10 text-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setFilter('queued')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Queued</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.queued}</p>
-              </div>
-              <Clock className="w-10 h-10 text-yellow-400" />
             </div>
           </CardContent>
         </Card>
@@ -435,7 +419,7 @@ export default function AdminQueuePage() {
                           </Button>
                         )}
                         
-                        {(doc.status === 'failed' || doc.status === 'queued') && (
+                        {doc.status === 'failed' && (
                           <Button
                             onClick={() => handleRetry(doc.id)}
                             size="sm"
@@ -446,7 +430,7 @@ export default function AdminQueuePage() {
                           </Button>
                         )}
                         
-                        {(doc.status === 'active' || doc.status === 'queued') && (
+                        {doc.status === 'active' && (
                           <Button
                             onClick={() => handleCancel(doc.id)}
                             size="sm"

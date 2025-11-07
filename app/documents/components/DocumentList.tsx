@@ -21,7 +21,7 @@ interface Document {
   fileSizeBytes: number;
   sourceLanguage: string;
   targetLanguage: string;
-  status: 'active' | 'completed' | 'failed' | 'queued';
+  status: 'active' | 'completed' | 'failed';
   progressPercentage: number;
   queuePosition?: number;
   errorMessage?: string;
@@ -59,7 +59,7 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
     
     // Poll for updates every 2 seconds if there are active translations
     const interval = setInterval(() => {
-      if (documents.some(doc => doc.status === 'active' || doc.status === 'queued')) {
+      if (documents.some(doc => doc.status === 'active')) {
         fetchDocuments();
       }
     }, 2000);
@@ -211,12 +211,7 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
             Processing
           </span>
         );
-      case 'queued':
-        return (
-          <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
-            Queued
-          </span>
-        );
+
       case 'failed':
         return (
           <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
@@ -234,8 +229,7 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
         return <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />;
       case 'active':
         return <Clock className="w-10 h-10 text-yellow-600 dark:text-yellow-400 animate-pulse" />;
-      case 'queued':
-        return <Clock className="w-10 h-10 text-gray-400" />;
+
       case 'failed':
         return <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />;
       default:
@@ -351,8 +345,8 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
                     </div>
                   </div>
 
-                  {/* Progress Bar for Active and Queued Translations */}
-                  {(doc.status === 'active' || doc.status === 'queued') && (
+                  {/* Progress Bar for Active Translations */}
+                  {doc.status === 'active' && (
                     <div className="mb-3">
                       {/* Status Message */}
                       <div className="flex items-center gap-2 mb-2">
@@ -379,12 +373,7 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
                     </div>
                   )}
 
-                  {/* Queue Position */}
-                  {doc.status === 'queued' && doc.queuePosition && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Position in queue: {doc.queuePosition}
-                    </p>
-                  )}
+
 
                   {/* Error Message */}
                   {doc.status === 'failed' && doc.errorMessage && (
@@ -417,8 +406,8 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
                       </Button>
                     )}
                     
-                    {/* Cancel Button for Active/Queued Translations */}
-                    {(doc.status === 'active' || doc.status === 'queued') && (
+                    {/* Cancel Button for Active Translations */}
+                    {doc.status === 'active' && (
                       <Button
                         onClick={() => handleCancel(doc.id)}
                         variant="outline"

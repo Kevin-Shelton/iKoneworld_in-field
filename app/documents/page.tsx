@@ -71,7 +71,7 @@ export default function DocumentsPage() {
       fileSizeBytes: fileInfo.fileSize,
       sourceLanguage: fileInfo.sourceLanguage,
       targetLanguage: fileInfo.targetLanguage,
-      status: 'queued',
+      status: 'active',
       progressPercentage: 0,
       createdAt: new Date().toISOString(),
       method: fileInfo.method,

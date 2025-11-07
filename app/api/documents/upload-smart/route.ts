@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
       estimatedTime: `${estimatedTime}s`,
     });
     
-    // Create database record IMMEDIATELY with queued status
-    console.log('[Upload Smart] Creating database record with queued status');
+    // Create database record IMMEDIATELY with active status
+    console.log('[Upload Smart] Creating database record with active status');
     const conversation = await createDocumentTranslation({
       userId: parseInt(userId),
       enterpriseId: enterpriseId || undefined,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('conversations')
       .update({
-        status: 'queued',
+        status: 'active',
         metadata: {
           conversation_type: 'document',
           document_translation: {
@@ -499,7 +499,7 @@ export async function POST(request: NextRequest) {
       
       // Translation will be processed by cron job (/api/cron/process-translations)
       // Chunks are stored with empty translatedText, which marks them as pending
-      console.log('[Upload Smart] Document queued for translation. Cron job will process chunks.');
+      console.log('[Upload Smart] Document is active. Cron job will process chunks.');
       
       // Return async processing response
       return NextResponse.json({

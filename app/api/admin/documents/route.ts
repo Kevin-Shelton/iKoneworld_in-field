@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
     // Calculate queue statistics
     const stats = {
       total: documents.length,
-      queued: documents.filter((d: any) => d.status === 'queued').length,
       active: documents.filter((d: any) => d.status === 'active').length,
       completed: documents.filter((d: any) => d.status === 'completed').length,
       failed: documents.filter((d: any) => d.status === 'failed').length,
