@@ -91,3 +91,6 @@ export default function ChatLandingPage() {
     </div>
   );
 }
+
+// Prevent static generation for this page
+export const dynamic = 'force-dynamic';
