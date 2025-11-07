@@ -2,11 +2,11 @@
  * Mammoth-based Document Processor with Formatting Preservation
  * 
  * Uses the mammoth library for reliable DOCX processing
- * Workflow: DOCX → HTML (with formatting) → Translate HTML → DOCX
+ * Workflow: DOCX → HTML (with formatting) → Translate HTML → DOCX (via TurboDocx)
  */
 
 import mammoth from 'mammoth';
-// Note: docx library imports moved to dynamic imports to avoid DOMMatrix errors in serverless
+import { convertHtmlToDocx, wrapHtmlDocument } from './turbodocxConverter';
 
 export interface TranslationResult {
   translatedBuffer: Buffer;
@@ -44,6 +44,21 @@ export async function convertDocxToHtml(buffer: Buffer): Promise<string> {
           };
         });
       }),
+      // Style mappings to preserve more formatting
+      styleMap: [
+        // Preserve heading styles
+        "p[style-name='Heading 1'] => h1:fresh",
+        "p[style-name='Heading 2'] => h2:fresh",
+        "p[style-name='Heading 3'] => h3:fresh",
+        "p[style-name='Heading 4'] => h4:fresh",
+        "p[style-name='Heading 5'] => h5:fresh",
+        "p[style-name='Heading 6'] => h6:fresh",
+        // Preserve list styles
+        "p[style-name='List Paragraph'] => p:fresh",
+        // Preserve bold and italic
+        "b => strong",
+        "i => em",
+      ],
     }
   );
   
@@ -84,8 +99,8 @@ export async function translateHtml(
   const textSegments: string[] = [];
   const segmentMarkers: string[] = [];
   
-  // Match text content in common tags
-  const tagPattern = /<(p|h[1-6]|li|td|th|strong|em|b|i|u|span)([^>]*)>(.*?)<\/\1>/gi;
+  // Match text content in common tags (including table cells)
+  const tagPattern = /<(p|h[1-6]|li|td|th|strong|em|b|i|u|span|div)([^>]*)>(.*?)<\/\1>/gi;
   
   let modifiedHtml = html;
   let match;
@@ -93,12 +108,21 @@ export async function translateHtml(
   
   // First pass: extract text segments
   const regex = new RegExp(tagPattern);
-  console.log('[Translate HTML] Starting text extraction with regex:', tagPattern);
+  console.log('[Translate HTML] Starting text extraction with regex');
+  
+  // Reset regex lastIndex
+  regex.lastIndex = 0;
+  
   while ((match = regex.exec(html)) !== null) {
     const fullMatch = match[0];
     const tagName = match[1];
     const attributes = match[2];
     const content = match[3];
+    
+    // Skip if content is empty or only whitespace
+    if (!content || !content.trim()) {
+      continue;
+    }
     
     // Check if content has nested tags
     if (/<[^>]+>/.test(content)) {
@@ -160,167 +184,12 @@ export async function translateHtml(
 }
 
 /**
- * Parse HTML element and extract formatting info
- */
-interface ParsedElement {
-  text: string;
-  isBold: boolean;
-  isItalic: boolean;
-  isUnderline: boolean;
-  heading?: string; // Heading level (e.g., 'HEADING_1', 'HEADING_2', etc.)
-}
-
-function parseHtmlElement(html: string): ParsedElement {
-  const text = extractTextFromHtml(html);
-  
-  return {
-    text,
-    isBold: /<(strong|b)[\s>]/.test(html),
-    isItalic: /<(em|i)[\s>]/.test(html),
-    isUnderline: /<u[\s>]/.test(html),
-    heading: html.match(/<h1[\s>]/) ? 'HEADING_1' :
-             html.match(/<h2[\s>]/) ? 'HEADING_2' :
-             html.match(/<h3[\s>]/) ? 'HEADING_3' :
-             html.match(/<h4[\s>]/) ? 'HEADING_4' :
-             html.match(/<h5[\s>]/) ? 'HEADING_5' :
-             html.match(/<h6[\s>]/) ? 'HEADING_6' :
-             undefined,
-  };
-}
-
-/**
- * Convert HTML back to DOCX with basic formatting
- * DEPRECATED: Use htmlToDocxConverter.ts instead (dynamic import to avoid DOMMatrix)
- * Keeping this for reference but should not be used
- */
-async function convertHtmlToDocx_DEPRECATED(html: string): Promise<Buffer> {
-  // Dynamic import to avoid loading docx library at module level
-  // This prevents DOMMatrix errors in serverless environments
-  const { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } = await import('docx');
-  
-  const paragraphs: any[] = [];
-  
-  // Split by paragraph and heading tags
-  const elements = html.match(/<(p|h[1-6]|li)[^>]*>.*?<\/\1>/gi) || [];
-  
-  for (const element of elements) {
-    const parsed = parseHtmlElement(element);
-    
-    if (!parsed.text.trim()) continue;
-    
-    const textRun = new TextRun({
-      text: parsed.text,
-      bold: parsed.isBold,
-      italics: parsed.isItalic,
-      underline: parsed.isUnderline ? {} : undefined,
-    });
-    
-    // Map string heading to HeadingLevel enum
-    const headingLevel = parsed.heading ? (HeadingLevel as any)[parsed.heading] : undefined;
-    
-    paragraphs.push(
-      new Paragraph({
-        children: [textRun],
-        heading: headingLevel,
-      })
-    );
-  }
-  
-  // Handle images - extract base64 data
-  const imageMatches = html.matchAll(/<img[^>]+src="data:image\/([^;]+);base64,([^"]+)"/gi);
-  for (const match of imageMatches) {
-    const mimeType = match[1];
-    const base64Data = match[2];
-    
-    try {
-      const imageBuffer = Buffer.from(base64Data, 'base64');
-      
-      // Note: Image support requires proper type configuration
-      // For now, add placeholder text
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun('[Image: embedded content]')],
-        })
-      );
-    } catch (error) {
-      console.error('[Convert HTML] Error processing image:', error);
-      // Add placeholder if image fails
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun('[Image]')],
-        })
-      );
-    }
-  }
-  
-  // Fallback: if no paragraphs found, create from plain text
-  if (paragraphs.length === 0) {
-    const plainText = extractTextFromHtml(html);
-    const lines = plainText.split('\n').filter(line => line.trim());
-    
-    for (const line of lines) {
-      paragraphs.push(
-        new Paragraph({
-          children: [new TextRun(line)],
-        })
-      );
-    }
-  }
-  
-  // Create document
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: paragraphs,
-      },
-    ],
-  });
-  
-  return await Packer.toBuffer(doc);
-}
-
-/**
- * Create a new DOCX file with translated text
- * Uses dynamic import to avoid DOMMatrix errors
+ * Process DOCX translation using HTML-based workflow with TurboDocx
  * 
- * @param originalBuffer - Original DOCX buffer (not used, kept for API compatibility)
- * @param translatedText - Translated text to put in new DOCX
- * @returns Buffer containing new DOCX file
- */
-export async function createTranslatedDocx(
-  originalBuffer: Buffer,
-  translatedText: string
-): Promise<Buffer> {
-  // Dynamic import to avoid DOMMatrix errors
-  const { Document, Paragraph, TextRun, Packer } = await import('docx');
-  
-  // Split translated text into paragraphs
-  const paragraphs = translatedText
-    .split('\n')
-    .filter(p => p.trim() !== '')
-    .map(text => 
-      new Paragraph({
-        children: [new TextRun(text)],
-      })
-    );
-  
-  // Create new document with translated paragraphs
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: paragraphs,
-    }],
-  });
-  
-  // Generate DOCX buffer
-  const buffer = await Packer.toBuffer(doc);
-  return buffer;
-}
-
-/**
- * Process DOCX translation (simple plain-text approach)
- * This is the working version from 24b7fc2
+ * Workflow:
+ * 1. DOCX → HTML (mammoth.js) - preserves images, tables, lists, formatting
+ * 2. Translate HTML (preserve structure)
+ * 3. HTML → DOCX (@turbodocx/html-to-docx) - comprehensive format preservation
  * 
  * @param originalBuffer - Original DOCX file
  * @param translateFn - Function that translates text (async)
@@ -330,34 +199,34 @@ export async function processDocxTranslation(
   originalBuffer: Buffer,
   translateFn: (text: string) => Promise<string>
 ): Promise<TranslationResult> {
-  console.log('[processDocxTranslation] Starting DOCX translation with formatting preservation');
+  console.log('[processDocxTranslation] Starting DOCX translation with HTML-based workflow');
   
   try {
-    // Import paragraph-level processor
-    const { parseDocxStructure, translateDocxStructure, rebuildDocx } = await import('./docxFormattingProcessor');
-    
-    // Parse DOCX structure
-    console.log('[processDocxTranslation] Parsing DOCX structure...');
-    const structure = await parseDocxStructure(originalBuffer);
-    console.log('[processDocxTranslation] Parsed', structure.paragraphs.length, 'paragraphs');
+    // Step 1: Convert DOCX to HTML (preserves images, tables, lists)
+    console.log('[processDocxTranslation] Step 1: Converting DOCX to HTML...');
+    const html = await convertDocxToHtml(originalBuffer);
+    console.log('[processDocxTranslation] Converted to HTML, length:', html.length);
     
     // Extract original text for metadata
-    const originalText = structure.paragraphs
-      .map(p => p.runs.map(r => r.text).join(''))
-      .join('\n');
+    const originalText = extractTextFromHtml(html);
+    console.log('[processDocxTranslation] Extracted original text, length:', originalText.length);
     
-    // Translate while preserving structure
-    console.log('[processDocxTranslation] Translating paragraphs...');
-    const translatedStructure = await translateDocxStructure(structure, translateFn);
+    // Step 2: Translate HTML while preserving structure
+    console.log('[processDocxTranslation] Step 2: Translating HTML...');
+    const translatedHtml = await translateHtml(html, translateFn);
+    console.log('[processDocxTranslation] Translated HTML, length:', translatedHtml.length);
     
     // Extract translated text for metadata
-    const translatedText = translatedStructure.paragraphs
-      .map(p => p.runs.map(r => r.text).join(''))
-      .join('\n');
+    const translatedText = extractTextFromHtml(translatedHtml);
+    console.log('[processDocxTranslation] Extracted translated text, length:', translatedText.length);
     
-    // Rebuild DOCX with formatting
-    console.log('[processDocxTranslation] Rebuilding DOCX with formatting...');
-    const translatedBuffer = await rebuildDocx(translatedStructure);
+    // Step 3: Convert HTML back to DOCX using TurboDocx
+    console.log('[processDocxTranslation] Step 3: Converting HTML to DOCX with TurboDocx...');
+    const wrappedHtml = wrapHtmlDocument(translatedHtml);
+    const translatedBuffer = await convertHtmlToDocx(wrappedHtml, {
+      title: 'Translated Document',
+      creator: 'iKoneworld Translation System',
+    });
     console.log('[processDocxTranslation] Created translated DOCX, size:', translatedBuffer.length);
     
     return {
@@ -366,13 +235,17 @@ export async function processDocxTranslation(
       translatedText,
     };
   } catch (error) {
-    console.error('[processDocxTranslation] Error with formatting preservation:', error);
+    console.error('[processDocxTranslation] Error with HTML-based workflow:', error);
     console.log('[processDocxTranslation] Falling back to plain-text approach');
     
-    // Fallback to plain-text approach if formatting preservation fails
+    // Fallback to plain-text approach if HTML workflow fails
     const originalText = await extractTextFromDocx(originalBuffer);
     const translatedText = await translateFn(originalText);
-    const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
+    
+    // Create simple DOCX with translated text using TurboDocx
+    const simpleHtml = `<p>${translatedText.split('\n').join('</p><p>')}</p>`;
+    const wrappedHtml = wrapHtmlDocument(simpleHtml);
+    const translatedBuffer = await convertHtmlToDocx(wrappedHtml);
     
     return {
       translatedBuffer,

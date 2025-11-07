@@ -1,6 +1,6 @@
 import mammoth from 'mammoth';
 import { convertDocxToHtml } from './mammothDocumentProcessor';
-// Note: convertHtmlToDocx is dynamically imported to avoid DOMMatrix errors
+import { convertHtmlToDocx, wrapHtmlDocument } from './turbodocxConverter';
 // @ts-ignore - pdf-parse doesn't have proper ESM support
 const pdfParse = require('pdf-parse');
 
@@ -247,12 +247,15 @@ export async function createTranslatedDocumentBuffer(
   isHtml: boolean = false
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   
-  // If content is HTML and original was DOCX, convert back to DOCX
+  // If content is HTML and original was DOCX, convert back to DOCX using TurboDocx
   if (isHtml && (originalMimeType.includes('word') || originalMimeType.includes('document'))) {
-    console.log('[Create Document] Converting HTML back to DOCX with formatting');
-    // Dynamic import to avoid loading docx library at module level
-    const { convertHtmlToDocx } = await import('./htmlToDocxConverter');
-    const buffer = await convertHtmlToDocx(translatedContent);
+    console.log('[Create Document] Converting HTML back to DOCX with TurboDocx');
+    // Wrap HTML in complete document structure
+    const wrappedHtml = wrapHtmlDocument(translatedContent);
+    const buffer = await convertHtmlToDocx(wrappedHtml, {
+      title: 'Translated Document',
+      creator: 'iKoneworld Translation System',
+    });
     return {
       buffer,
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
