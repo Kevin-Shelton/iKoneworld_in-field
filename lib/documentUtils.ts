@@ -85,17 +85,19 @@ export function isValidFileType(mimeType: string): boolean {
 }
 
 /**
- * Validate file size (max 25MB)
+ * Validate file size (max 100MB)
  * 
- * Rationale for 25MB limit:
- * - Vercel serverless timeout: 60s (Hobby), 300s (Pro)
- * - Supabase free tier: 50MB per file
- * - Translation API limits: Large files require many chunks
- * - User experience: 25MB ≈ 250 pages (reasonable business document)
- * - Processing time: 25MB ≈ 5-10 minutes (acceptable)
+ * Rationale for 100MB limit:
+ * - Supabase Pro: 5GB per file (plenty of room)
+ * - Vercel Pro: 300s timeout (5 minutes)
+ * - Translation processing: ~1 second per 10KB
+ * - User experience: 100MB ≈ 1000 pages (large enterprise documents)
+ * - Processing time: 100MB ≈ 15-20 minutes (acceptable for large files)
+ * 
+ * Note: Requires Pro plans (Supabase Pro + Vercel Pro) for optimal performance
  */
 export function isValidFileSize(sizeInBytes: number): boolean {
-  const maxSize = 25 * 1024 * 1024; // 25MB
+  const maxSize = 100 * 1024 * 1024; // 100MB
   return sizeInBytes <= maxSize;
 }
 
