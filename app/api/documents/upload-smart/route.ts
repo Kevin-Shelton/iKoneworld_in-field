@@ -462,10 +462,12 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('conversations')
         .update({
+          audio_url: uploadedFileUrl, // Store original file path
           metadata: {
             conversation_type: 'document',
             document_translation: {
               original_filename: sanitizedFilename,
+              original_storage_path: uploadedFileUrl, // Store in metadata as backup
               file_type: file.type,
               file_size_bytes: file.size,
               progress_percentage: 0,
@@ -477,6 +479,8 @@ export async function POST(request: NextRequest) {
           },
         })
         .eq('id', conversation.id);
+      
+      console.log('[Upload Smart] Stored original file path:', uploadedFileUrl);
       
       // Translation will be processed by cron job (/api/cron/process-translations)
       // Chunks are stored with empty translatedText, which marks them as pending
