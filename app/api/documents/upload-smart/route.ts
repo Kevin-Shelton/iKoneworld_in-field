@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileSizeCategory, estimateProcessingTime, stripDocument, buildDocument } from '@/lib/skeletonDocumentProcessor';
+import { extractTextFromDocx, createTranslatedDocx } from '@/lib/mammothDocumentProcessor';
 import { extractDocumentXml, createModifiedDocx, validateDocxStructure } from '@/lib/docxHandler';
 import { createDocumentTranslation, storeDocumentChunks, failDocumentTranslation } from '@/lib/db/documents';
 import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
@@ -106,16 +107,11 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Step 1: Extract document.xml
-      console.log('[Upload Smart] Step 1: Extracting document.xml');
-      const documentXml = await extractDocumentXml(buffer);
-      
-      // Step 2: Strip text and create skeleton
-      console.log('[Upload Smart] Step 2: Stripping text and creating skeleton');
-      const { parsed, map, special } = stripDocument(documentXml);
+      // Step 1: Extract text using mammoth
+      console.log('[Upload Smart] Step 1: Extracting text with mammoth');
+      const parsed = await extractTextFromDocx(buffer);
       
       console.log(`[Upload Smart] Extracted text length: ${parsed.length} characters`);
-      console.log(`[Upload Smart] Using delimiter: ${special}`);
       
       // Check if text is too large for Verbum API (max ~50k characters)
       const MAX_TEXT_LENGTH = 50000;
@@ -178,23 +174,9 @@ export async function POST(request: NextRequest) {
       const translatedText = translateData.translations[0][0].text;
       console.log(`[Upload Smart] Translated text length: ${translatedText.length} characters`);
       
-      // Step 4: Build document with translated text
-      console.log('[Upload Smart] Step 4: Building document with translations');
-      const newDocumentXml = buildDocument(translatedText, map, special);
-      
-      // Validate XML structure
-      console.log('[Upload Smart] Validating XML structure...');
-      console.log('[Upload Smart] New XML length:', newDocumentXml.length);
-      console.log('[Upload Smart] Original XML length:', documentXml.length);
-      
-      // Check if XML is well-formed by looking for basic structure
-      if (!newDocumentXml.includes('<w:document') || !newDocumentXml.includes('</w:document>')) {
-        throw new Error('Generated XML is missing document tags');
-      }
-      
-      // Step 5: Create new DOCX file
-      console.log('[Upload Smart] Step 5: Creating new DOCX file');
-      const translatedBuffer = await createModifiedDocx(buffer, newDocumentXml);
+      // Step 4: Create translated DOCX using mammoth
+      console.log('[Upload Smart] Step 4: Creating translated DOCX with mammoth');
+      const translatedBuffer = await createTranslatedDocx(buffer, translatedText);
       
       // Generate filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
