@@ -6,13 +6,21 @@
  */
 
 export interface TextRun {
-  text: string;
+  text?: string;  // Optional for image-only runs
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
   color?: string;
   font?: string;
   size?: number;
+  // Image support
+  image?: {
+    data: Buffer;  // Image binary data
+    width: number;  // Width in EMUs (English Metric Units)
+    height: number; // Height in EMUs
+    type: string;   // MIME type (image/png, image/jpeg, etc.)
+    name?: string;  // Original filename
+  };
 }
 
 export interface FormattedParagraph {
@@ -34,6 +42,7 @@ export interface FormattedParagraph {
 
 export interface DocxStructure {
   paragraphs: FormattedParagraph[];
+  media?: Map<string, Buffer>; // Map of relationship ID to image data
 }
 
 /**
@@ -65,7 +74,7 @@ export async function parseDocxStructure(buffer: Buffer): Promise<DocxStructure>
     const paragraph = parseParagraph(pNode);
     
     // Skip empty paragraphs
-    if (paragraph.runs.length > 0 && paragraph.runs.some(r => r.text.trim())) {
+    if (paragraph.runs.length > 0 && paragraph.runs.some(r => r.text?.trim())) {
       paragraphs.push(paragraph);
     }
   }
