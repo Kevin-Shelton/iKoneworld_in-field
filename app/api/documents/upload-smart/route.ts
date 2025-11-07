@@ -84,6 +84,42 @@ export async function POST(request: NextRequest) {
       estimatedTime: `${estimatedTime}s`,
     });
     
+    // Create database record IMMEDIATELY with queued status
+    console.log('[Upload Smart] Creating database record with queued status');
+    const conversation = await createDocumentTranslation({
+      userId: parseInt(userId),
+      enterpriseId: enterpriseId || undefined,
+      originalFilename: file.name,
+      fileType: fileExtension || 'unknown',
+      fileSizeBytes: file.size,
+      sourceLanguage,
+      targetLanguage,
+      originalFileUrl: '', // Will be updated after upload
+    });
+    
+    // Update with initial metadata
+    const { supabaseAdmin } = await import('@/lib/supabase/server');
+    const supabase = supabaseAdmin;
+    await supabase
+      .from('conversations')
+      .update({
+        status: 'queued',
+        metadata: {
+          conversation_type: 'document',
+          document_translation: {
+            original_filename: file.name,
+            file_type: fileExtension || 'unknown',
+            file_size_bytes: file.size,
+            progress_percentage: 0,
+            method: useSkeletonMethod ? 'skeleton' : 'chunking',
+            estimated_time_seconds: estimatedTime,
+          },
+        },
+      })
+      .eq('id', conversation.id);
+    
+    console.log(`[Upload Smart] ✓ Database record created with ID: ${conversation.id}`);
+    
     if (useSkeletonMethod) {
       // ============================================
       // SKELETON METHOD (Synchronous)
@@ -131,6 +167,25 @@ export async function POST(request: NextRequest) {
         console.log(`[Upload Smart] Text too large (${parsed.length} chars), falling back to chunking method`);
         throw new Error('TEXT_TOO_LARGE');
       }
+      
+      // Update status to active
+      await supabase
+        .from('conversations')
+        .update({
+          status: 'active',
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: file.name,
+              file_type: fileExtension || 'unknown',
+              file_size_bytes: file.size,
+              progress_percentage: 10,
+              method: 'skeleton',
+              estimated_time_seconds: estimatedTime,
+            },
+          },
+        })
+        .eq('id', conversation.id);
       
       // Step 3: Process document with formatting preservation
       console.log('[Upload Smart] Step 2: Processing document with formatting preservation');
@@ -191,21 +246,8 @@ export async function POST(request: NextRequest) {
       console.log(`[Upload Smart] ✓ Translation completed in ${processingTime}ms`);
       console.log(`[Upload Smart] Output file: ${newFilename} (${translatedBuffer.length} bytes)`);
       
-      // Step 6: Create database record first to get conversation ID
-      console.log('[Upload Smart] Step 6: Creating database record');
-      const conversation = await createDocumentTranslation({
-        userId: parseInt(userId),
-        enterpriseId: enterpriseId || undefined,
-        originalFilename: file.name,
-        fileType: 'docx',
-        fileSizeBytes: file.size,
-        sourceLanguage,
-        targetLanguage,
-        originalFileUrl: '', // Will be updated after upload
-      });
-      
-      // Step 7: Upload translated file to Supabase Storage with correct conversation ID
-      console.log('[Upload Smart] Step 7: Uploading translated file to storage');
+      // Step 6: Upload translated file to Supabase Storage with correct conversation ID
+      console.log('[Upload Smart] Step 6: Uploading translated file to storage');
       const translatedStoragePath = await uploadDocumentToSupabase({
         fileBuffer: translatedBuffer,
         fileName: newFilename,
@@ -340,19 +382,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Create document translation record
-      const conversation = await createDocumentTranslation({
-        userId: parseInt(userId),
-        enterpriseId: enterpriseId || undefined,
-        originalFilename: sanitizedFilename,
-        fileType: file.type,
-        fileSizeBytes: file.size,
-        sourceLanguage,
-        targetLanguage,
-        originalFileUrl: '', // Will be updated after S3 upload
-      });
-      
-      console.log('[Upload Smart] Created conversation:', conversation.id);
+      console.log('[Upload Smart] Using conversation ID:', conversation.id);
       
       // Upload original file to Supabase
       const uploadedFileUrl = await uploadDocumentToSupabase({
