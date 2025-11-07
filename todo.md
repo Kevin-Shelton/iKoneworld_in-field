@@ -189,14 +189,14 @@
 - [x] Solution: Convert docx library imports to dynamic imports (only load when needed)
 
 ## Translation Not Occurring Bug
-- [x] Documents upload and download successfully
-- [x] But content is not being translated (still in original language)
-- [x] Root cause: Regional language codes (en-US, es-MX) passed to Verbum API
-- [x] Verbum API only accepts generic codes (en, es) for most languages
-- [x] Solution: Added mapToVerbumLanguageCode function to upload-smart route
-- [x] Now maps regional codes to generic codes before calling Verbum API
+- [ ] Documents upload and download successfully
+- [ ] But content is not being translated (still in original language)
+- [ ] Initial hypothesis: Language code mapping issue - INCORRECT
+- [ ] Reverted language mapping changes (working version didn't have mapping)
+- [ ] Need to investigate actual root cause
 
 ## Review Working Version Language Logic
-- [ ] Check version FdPRfb6Ka which had working language translation
-- [ ] Compare language mapping logic with current implementation
-- [ ] Update current code to match working version
+- [x] Check version FdPRfb6Ka (commit 24b7fc2) which had working language translation
+- [x] Compare language mapping logic with current implementation
+- [x] Working version did NOT have language mapping - used codes directly
+- [x] Reverted unnecessary language mapping changes
