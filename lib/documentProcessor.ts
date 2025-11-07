@@ -1,6 +1,7 @@
 import mammoth from 'mammoth';
 import { convertDocxToHtml } from './mammothDocumentProcessor';
 import { sanitizeForPDF } from './pdfTextSanitizer';
+import { extractPDFStructure, reconstructPDFWithStructure, type PDFStructure } from './pdfStructureExtractor';
 // Note: convertHtmlToDocx is dynamically imported to avoid DOMMatrix errors
 
 /**
@@ -65,60 +66,11 @@ export async function extractHtmlFromDocument(
 }
 
 /**
- * Extract text from PDF using pdf2json (serverless-compatible)
+ * Extract text from PDF using pdf2json with structure preservation
  */
 async function extractTextFromPDF(fileBuffer: Buffer): Promise<string> {
-  const PDFParser = require('pdf2json');
-  
-  return new Promise<string>((resolve, reject) => {
-    const pdfParser = new PDFParser();
-    
-    pdfParser.on('pdfParser_dataError', (errData: any) => {
-      reject(new Error(`PDF parsing error: ${errData.parserError}`));
-    });
-    
-    pdfParser.on('pdfParser_dataReady', (pdfData: any) => {
-      try {
-        // Extract text from all pages
-        const textContent: string[] = [];
-        
-        if (pdfData.Pages && Array.isArray(pdfData.Pages)) {
-          pdfData.Pages.forEach((page: any) => {
-            if (page.Texts && Array.isArray(page.Texts)) {
-              const pageText = page.Texts
-                .map((text: any) => {
-                  if (text.R && Array.isArray(text.R)) {
-                    return text.R
-                      .map((r: any) => decodeURIComponent(r.T || ''))
-                      .join(' ');
-                  }
-                  return '';
-                })
-                .filter((t: string) => t.trim().length > 0)
-                .join(' ');
-              
-              if (pageText.trim()) {
-                textContent.push(pageText);
-              }
-            }
-          });
-        }
-        
-        const fullText = textContent.join('\n\n');
-        
-        if (!fullText || fullText.trim().length === 0) {
-          reject(new Error('PDF parsing returned empty result'));
-        } else {
-          resolve(fullText);
-        }
-      } catch (error) {
-        reject(new Error(`Failed to extract text from PDF data: ${error instanceof Error ? error.message : 'Unknown error'}`));
-      }
-    });
-    
-    // Parse the PDF buffer
-    pdfParser.parseBuffer(fileBuffer);
-  });
+  const structure = await extractPDFStructure(fileBuffer);
+  return structure.formattedText;
 }
 
 /**
@@ -316,83 +268,12 @@ export async function createTranslatedDocumentBuffer(
   let extension = '.txt';
   
   if (originalMimeType === 'application/pdf') {
-    console.log('[Create Document] Creating PDF from translated text');
-    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    console.log('[Create Document] Creating PDF from translated text with structure preservation');
     
-    // Create a new PDF document
-    const pdfDoc = await PDFDocument.create();
-    
-    // Embed a standard font
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontSize = 12;
-    const lineHeight = fontSize * 1.2;
-    const margin = 50;
-    
-    // Sanitize text to remove unsupported Unicode characters
-    const sanitizedContent = sanitizeForPDF(translatedContent);
-    
-    // Split text into lines and pages
-    const lines = sanitizedContent.split('\n');
-    let currentPage = pdfDoc.addPage();
-    let { width, height } = currentPage.getSize();
-    let yPosition = height - margin;
-    
-    for (const line of lines) {
-      // Wrap long lines
-      const maxWidth = width - (2 * margin);
-      const words = line.split(' ');
-      let currentLine = '';
-      
-      for (const word of words) {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
-        
-        if (textWidth > maxWidth && currentLine) {
-          // Draw current line
-          currentPage.drawText(currentLine, {
-            x: margin,
-            y: yPosition,
-            size: fontSize,
-            font,
-            color: rgb(0, 0, 0),
-          });
-          
-          yPosition -= lineHeight;
-          currentLine = word;
-          
-          // Check if we need a new page
-          if (yPosition < margin) {
-            currentPage = pdfDoc.addPage();
-            yPosition = height - margin;
-          }
-        } else {
-          currentLine = testLine;
-        }
-      }
-      
-      // Draw the last line
-      if (currentLine) {
-        currentPage.drawText(currentLine, {
-          x: margin,
-          y: yPosition,
-          size: fontSize,
-          font,
-          color: rgb(0, 0, 0),
-        });
-        
-        yPosition -= lineHeight;
-        
-        // Check if we need a new page
-        if (yPosition < margin) {
-          currentPage = pdfDoc.addPage();
-          yPosition = height - margin;
-        }
-      }
-    }
-    
-    // Serialize the PDF to bytes
-    const pdfBytes = await pdfDoc.save();
-    const buffer = Buffer.from(pdfBytes);
+    // Use structured PDF reconstruction
+    // Note: originalStructure would ideally be passed from extraction phase
+    // For now, we reconstruct based on the formatted text structure
+    const buffer = await reconstructPDFWithStructure(translatedContent, { blocks: [], formattedText: '' });
     
     return {
       buffer,
