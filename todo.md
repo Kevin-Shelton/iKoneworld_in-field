@@ -262,3 +262,20 @@
 - [x] Added indentation preservation (left, right, first line)
 - [ ] Test with real document containing various formatting
 - [ ] Verify spacing matches original document
+
+## CRITICAL: Missing Complex Formatting
+Based on user feedback, current implementation is missing:
+- [ ] **Images/Logos**: Logos and images are completely missing from translated documents
+- [ ] **Tables**: Table structure not preserved (showing as plain text)
+- [ ] **Lists**: Bullet points and numbered lists not working
+- [ ] **Complex layouts**: Header/footer, multi-column layouts not preserved
+- [ ] **Overall structure**: Document looks "very bad" compared to original
+
+Priority: HIGH - These are blocking issues for production use
+
+## Research: Document Handling Libraries
+- [ ] Research open-source DOCX libraries with format preservation
+- [ ] Research libraries for other document formats (PDF, RTF, ODT, etc.)
+- [ ] Evaluate if libraries can work with Verbum AI translation
+- [ ] Compare features, performance, and ease of integration
+- [ ] Document findings and recommend best approach

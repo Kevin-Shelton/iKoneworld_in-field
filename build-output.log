@@ -1,0 +1,26 @@
+
+> ikoneworld-nextjs@0.1.0 build /home/ubuntu/demo-email-app
+> next build
+
+ ⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.9s
+   Running TypeScript ...
+Failed to compile.
+
+./lib/docxFormattingProcessor.ts:77:63
+Type error: 'r.text' is possibly 'undefined'.
+
+[0m [90m 75 |[39m     
+ [90m 76 |[39m     [90m// Skip empty paragraphs[39m
+[31m[1m>[22m[39m[90m 77 |[39m     [36mif[39m (paragraph[33m.[39mruns[33m.[39mlength [33m>[39m [35m0[39m [33m&&[39m paragraph[33m.[39mruns[33m.[39msome(r [33m=>[39m r[33m.[39mtext[33m.[39mtrim())) {
+ [90m    |[39m                                                               [31m[1m^[22m[39m
+ [90m 78 |[39m       paragraphs[33m.[39mpush(paragraph)[33m;[39m
+ [90m 79 |[39m     }
+ [90m 80 |[39m   }[0m
+Next.js build worker exited with code: 1 and signal: null
+ ELIFECYCLE  Command failed with exit code 1.

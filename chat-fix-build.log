@@ -1,0 +1,49 @@
+
+> ikoneworld-nextjs@0.1.0 build /home/ubuntu/demo-email-app
+> next build
+
+ ⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+   ▲ Next.js 16.0.1 (Turbopack)
+
+   Creating an optimized production build ...
+Turbopack build encountered 1 warnings:
+./app/api/documents/upload/route.ts:137:14
+Next.js can't recognize the exported `config` field in route. Page config in `config` is deprecated and ignored, use individual exports instead.
+[0m [90m 135 |[39m
+ [90m 136 |[39m [90m// Configure Next.js to handle larger file uploads[39m
+[31m[1m>[22m[39m[90m 137 |[39m [36mexport[39m [36mconst[39m config [33m=[39m {
+ [90m     |[39m              [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 138 |[39m   api[33m:[39m {
+ [90m 139 |[39m     bodyParser[33m:[39m [36mfalse[39m[33m,[39m
+ [90m 140 |[39m   }[33m,[39m[0m
+
+The exported configuration object in a source file needs to have a very specific format from which some properties can be statically parsed at compiled-time.
+
+https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+
+
+ ✓ Compiled successfully in 6.2s
+   Running TypeScript ...
+   Collecting page data ...
+(node:122775) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:122748) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:122761) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:122768) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Error: supabaseUrl is required.
+    at module evaluation (.next/server/chunks/[root-of-the-server]__def04111._.js:1:1426)
+    at instantiateModule (.next/server/chunks/[turbopack]_runtime.js:715:9)
+    at instantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:743:12)
+    at getOrInstantiateRuntimeModule (.next/server/chunks/[turbopack]_runtime.js:756:12)
+    at Object.m (.next/server/chunks/[turbopack]_runtime.js:765:18)
+    at Object.<anonymous> (.next/server/app/api/documents/[id]/delete/route.js:8:3)
+
+> Build error occurred
+Error: Failed to collect page data for /api/documents/[id]/delete
+    at ignore-listed frames {
+  type: 'Error'
+}
+ ELIFECYCLE  Command failed with exit code 1.

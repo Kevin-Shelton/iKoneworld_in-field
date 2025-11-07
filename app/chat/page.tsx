@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -91,3 +91,6 @@ export default function ChatLandingPage() {
     </div>
   );
 }
+
+// Prevent static generation - this page needs client-side features
+export const dynamic = 'force-dynamic';
