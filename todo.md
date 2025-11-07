@@ -191,12 +191,16 @@
 - [x] Updated documentProcessor.ts and mammothDocumentProcessor.ts to dynamically import converter
 - [x] This prevents docx library from loading at module evaluation time
 
-## Translation Not Occurring Bug
-- [ ] Documents upload and download successfully
-- [ ] But content is not being translated (still in original language)
-- [ ] Initial hypothesis: Language code mapping issue - INCORRECT
-- [ ] Reverted language mapping changes (working version didn't have mapping)
-- [ ] Need to investigate actual root cause
+## Translation Not Occurring Bug - translateHtml Function
+- [x] Documents upload and download successfully
+- [x] But content is not being translated (still in original language)
+- [x] Initial hypothesis: Language code mapping issue - INCORRECT
+- [x] Reverted language mapping changes (working version didn't have mapping)
+- [ ] Add debug logging to translateHtml function
+- [ ] Check if text segments are being extracted correctly
+- [ ] Verify translateFn is being called
+- [ ] Check if translated text is being replaced back into HTML
+- [ ] Test with simple HTML to isolate the issue
 
 ## Review Working Version Language Logic
 - [x] Check version FdPRfb6Ka (commit 24b7fc2) which had working language translation

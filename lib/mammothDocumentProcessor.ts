@@ -77,6 +77,9 @@ export async function translateHtml(
   html: string,
   translateFn: (text: string) => Promise<string>
 ): Promise<string> {
+  console.log('[Translate HTML] Starting translation, HTML length:', html.length);
+  console.log('[Translate HTML] First 200 chars of HTML:', html.substring(0, 200));
+  
   // Extract all text content for translation
   const textSegments: string[] = [];
   const segmentMarkers: string[] = [];
@@ -90,6 +93,7 @@ export async function translateHtml(
   
   // First pass: extract text segments
   const regex = new RegExp(tagPattern);
+  console.log('[Translate HTML] Starting text extraction with regex:', tagPattern);
   while ((match = regex.exec(html)) !== null) {
     const fullMatch = match[0];
     const tagName = match[1];
@@ -120,6 +124,9 @@ export async function translateHtml(
     }
   }
   
+  console.log(`[Translate HTML] Extracted ${textSegments.length} text segments`);
+  console.log('[Translate HTML] First 3 segments:', textSegments.slice(0, 3));
+  
   if (textSegments.length === 0) {
     console.log('[Translate HTML] No text segments found, returning original');
     return html;
@@ -128,9 +135,16 @@ export async function translateHtml(
   // Translate all segments together
   const combinedText = textSegments.join('\n\n---SEGMENT---\n\n');
   console.log(`[Translate HTML] Translating ${textSegments.length} text segments`);
+  console.log('[Translate HTML] Combined text length:', combinedText.length);
+  console.log('[Translate HTML] First 200 chars of combined text:', combinedText.substring(0, 200));
   
   const translatedCombined = await translateFn(combinedText);
+  console.log('[Translate HTML] Translation complete, result length:', translatedCombined.length);
+  console.log('[Translate HTML] First 200 chars of translated:', translatedCombined.substring(0, 200));
+  
   const translatedSegments = translatedCombined.split(/\n\n---SEGMENT---\n\n/);
+  console.log(`[Translate HTML] Split into ${translatedSegments.length} translated segments`);
+  console.log('[Translate HTML] First 3 translated segments:', translatedSegments.slice(0, 3));
   
   // Replace markers with translated text
   let translatedHtml = modifiedHtml;
@@ -138,6 +152,9 @@ export async function translateHtml(
     const translatedText = translatedSegments[index] || textSegments[index];
     translatedHtml = translatedHtml.replace(marker, translatedText);
   });
+  
+  console.log('[Translate HTML] Final translated HTML length:', translatedHtml.length);
+  console.log('[Translate HTML] First 200 chars of result:', translatedHtml.substring(0, 200));
   
   return translatedHtml;
 }
