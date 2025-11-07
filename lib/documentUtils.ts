@@ -132,35 +132,56 @@ export async function extractTextFromDocument(
   try {
     switch (mimeType) {
       case 'application/pdf':
-        // Use pdfjs-dist which is serverless-compatible (no canvas/DOM dependencies)
-        // Use dynamic import for ES modules
-        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        // Use pdf2json which is truly serverless-compatible (no canvas/DOM dependencies)
+        const PDFParser = require('pdf2json');
         
         // Add timeout protection for PDF parsing (30 seconds max)
-        const pdfPromise = (async () => {
-          const loadingTask = pdfjsLib.getDocument({
-            data: new Uint8Array(fileBuffer),
-            useSystemFonts: true,
-            standardFontDataUrl: undefined, // Don't load font data in serverless
+        const pdfPromise = new Promise<string>((resolve, reject) => {
+          const pdfParser = new PDFParser();
+          
+          pdfParser.on('pdfParser_dataError', (errData: any) => {
+            reject(new Error(`PDF parsing error: ${errData.parserError}`));
           });
           
-          const pdf = await loadingTask.promise;
-          const textContent = [];
+          pdfParser.on('pdfParser_dataReady', (pdfData: any) => {
+            try {
+              // Extract text from all pages
+              const textContent: string[] = [];
+              
+              if (pdfData.Pages && Array.isArray(pdfData.Pages)) {
+                pdfData.Pages.forEach((page: any) => {
+                  if (page.Texts && Array.isArray(page.Texts)) {
+                    const pageText = page.Texts
+                      .map((text: any) => {
+                        if (text.R && Array.isArray(text.R)) {
+                          return text.R
+                            .map((r: any) => decodeURIComponent(r.T || ''))
+                            .join(' ');
+                        }
+                        return '';
+                      })
+                      .filter((t: string) => t.trim().length > 0)
+                      .join(' ');
+                    
+                    if (pageText.trim()) {
+                      textContent.push(pageText);
+                    }
+                  }
+                });
+              }
+              
+              const fullText = textContent.join('\n\n');
+              resolve(fullText);
+            } catch (error) {
+              reject(new Error(`Failed to extract text from PDF data: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            }
+          });
           
-          // Extract text from each page
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const content = await page.getTextContent();
-            const pageText = content.items
-              .map((item: any) => item.str)
-              .join(' ');
-            textContent.push(pageText);
-          }
-          
-          return textContent.join('\n\n');
-        })();
+          // Parse the PDF buffer
+          pdfParser.parseBuffer(fileBuffer);
+        });
         
-        const timeoutPromise = new Promise((_, reject) => {
+        const timeoutPromise = new Promise<string>((_, reject) => {
           setTimeout(() => reject(new Error('PDF parsing timeout after 30 seconds')), 30000);
         });
         
