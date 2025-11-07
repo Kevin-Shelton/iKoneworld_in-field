@@ -223,4 +223,4 @@
 ## UI Improvements
 - [x] Add create date/time stamp to document list
 - [x] Rename "Recent Translation Activity" to "Document Translation History"
-- [ ] Merge to main after testing confirms translation works
+- [x] Merge to main after testing confirms translation works
