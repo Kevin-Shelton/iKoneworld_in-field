@@ -57,7 +57,7 @@ export async function translatePDFWithDeepL(
     const pollInterval = 2000; // 2 seconds
     const startTime = Date.now();
 
-    while (!status.done && (Date.now() - startTime) < maxWaitTime) {
+    while (status.status !== 'done' && (Date.now() - startTime) < maxWaitTime) {
       if (status.status === 'error') {
         throw new Error(`DeepL translation failed: ${status.errorMessage || 'Unknown error'}`);
       }
@@ -72,8 +72,8 @@ export async function translatePDFWithDeepL(
       status = await translator.getDocumentStatus(uploadResult);
     }
 
-    if (!status.done) {
-      throw new Error('DeepL translation timeout - exceeded maximum wait time');
+    if (status.status !== 'done') {
+      throw new Error(`DeepL translation timeout - last status: ${status.status}`);
     }
 
     console.log('[DeepL] Translation completed successfully');
