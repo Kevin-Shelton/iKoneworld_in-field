@@ -74,6 +74,42 @@ function extractTextNodes(xmlString: string): string[] {
 }
 
 /**
+ * Lock Word field codes to prevent recalculation
+ * Converts dynamic fields (like DATE) to static text by removing field instructions
+ */
+function lockFieldCodes(xmlString: string): string {
+  // Find all field code sequences and lock them
+  // Field structure: <w:fldChar type="begin"/> ... <w:instrText>...</w:instrText> ... <w:fldChar type="separate"/> ... <w:t>value</w:t> ... <w:fldChar type="end"/>
+  
+  let modifiedXml = xmlString;
+  
+  // Pattern to match complete field code blocks
+  const fieldPattern = /(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>\s*<\/w:r>)(.*?)(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>\s*<\/w:r>)/gs;
+  
+  modifiedXml = modifiedXml.replace(fieldPattern, (match, begin, middle, end) => {
+    // Check if this is a DATE field
+    if (middle.includes('DATE') || middle.includes('w:instrText')) {
+      console.log('[Field Lock] Found DATE field, locking...');
+      
+      // Extract the cached result value (text between separate and end)
+      const resultPattern = /<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>(.*?)(?=<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end")/s;
+      const resultMatch = middle.match(resultPattern);
+      
+      if (resultMatch && resultMatch[1]) {
+        // Return only the result value, removing field instructions
+        // This converts the dynamic field to static text
+        return resultMatch[1];
+      }
+    }
+    
+    // Keep non-DATE fields unchanged
+    return match;
+  });
+  
+  return modifiedXml;
+}
+
+/**
  * Replace text nodes in XML with translated versions
  */
 function replaceTextNodes(xmlString: string, translatedTexts: string[]): string {
@@ -220,8 +256,11 @@ export async function processDocxWithStructurePreservation(
       const fileTranslatedSegments = translatedSegments.slice(segmentIndex, segmentIndex + textCount);
       segmentIndex += textCount;
       
+      // Lock field codes first (convert dynamic fields to static text)
+      const xmlWithLockedFields = lockFieldCodes(xmlContent);
+      
       // Replace text nodes
-      const modifiedXml = replaceTextNodes(xmlContent, fileTranslatedSegments);
+      const modifiedXml = replaceTextNodes(xmlWithLockedFields, fileTranslatedSegments);
       
       // Update file in ZIP
       zip.file(filename, modifiedXml);
