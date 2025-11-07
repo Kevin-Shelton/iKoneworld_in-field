@@ -13,10 +13,12 @@ const supabase = createClient(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const conversationId = parseInt(params.id);
+    // Next.js 16: params is now a Promise
+    const { id } = await params;
+    const conversationId = parseInt(id);
 
     if (isNaN(conversationId)) {
       return NextResponse.json(

@@ -152,3 +152,7 @@
 - [x] Fixed download endpoint
 - [x] Fixed stuck translations
 - [x] Replaced broken skeleton method with mammoth
+
+## Build Error - Next.js 16 Async Params
+- [x] Fix TypeScript error in delete route: params is now Promise<{ id: string }> in Next.js 16
+- [x] Update DELETE handler to await params before accessing id
