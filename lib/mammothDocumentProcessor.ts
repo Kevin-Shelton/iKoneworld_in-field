@@ -330,54 +330,44 @@ export async function processDocxTranslation(
   originalBuffer: Buffer,
   translateFn: (text: string) => Promise<string>
 ): Promise<TranslationResult> {
-  console.log('[processDocxTranslation] Starting DOCX translation with formatting preservation');
+  console.log('[processDocxTranslation] Starting DOCX translation with FULL structure preservation');
   
   try {
-    // Import paragraph-level processor
-    const { parseDocxStructure, translateDocxStructure, rebuildDocx } = await import('./docxFormattingProcessor');
+    // Use structure preserver to maintain ALL elements (images, headers, footers, spacing)
+    const { processDocxWithStructurePreservation } = await import('./docxStructurePreserver');
     
-    // Parse DOCX structure
-    console.log('[processDocxTranslation] Parsing DOCX structure...');
-    const structure = await parseDocxStructure(originalBuffer);
-    console.log('[processDocxTranslation] Parsed', structure.paragraphs.length, 'paragraphs');
+    console.log('[processDocxTranslation] Using structure preservation method...');
+    const result = await processDocxWithStructurePreservation(originalBuffer, translateFn);
+    console.log('[processDocxTranslation] Structure preservation complete');
     
-    // Extract original text for metadata
-    const originalText = structure.paragraphs
-      .map(p => p.runs.map(r => r.text).join(''))
-      .join('\n');
-    
-    // Translate while preserving structure
-    console.log('[processDocxTranslation] Translating paragraphs...');
-    const translatedStructure = await translateDocxStructure(structure, translateFn);
-    
-    // Extract translated text for metadata
-    const translatedText = translatedStructure.paragraphs
-      .map(p => p.runs.map(r => r.text).join(''))
-      .join('\n');
-    
-    // Rebuild DOCX with formatting
-    console.log('[processDocxTranslation] Rebuilding DOCX with formatting...');
-    const translatedBuffer = await rebuildDocx(translatedStructure);
-    console.log('[processDocxTranslation] Created translated DOCX, size:', translatedBuffer.length);
-    
-    return {
-      translatedBuffer,
-      originalText,
-      translatedText,
-    };
+    return result;
   } catch (error) {
-    console.error('[processDocxTranslation] Error with formatting preservation:', error);
-    console.log('[processDocxTranslation] Falling back to plain-text approach');
+    console.error('[processDocxTranslation] Error with structure preservation:', error);
+    console.log('[processDocxTranslation] Falling back to paragraph-level formatting');
     
-    // Fallback to plain-text approach if formatting preservation fails
-    const originalText = await extractTextFromDocx(originalBuffer);
-    const translatedText = await translateFn(originalText);
-    const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
-    
-    return {
-      translatedBuffer,
-      originalText,
-      translatedText,
-    };
+    try {
+      // Fallback 1: Try paragraph-level processor
+      const { parseDocxStructure, translateDocxStructure, rebuildDocx } = await import('./docxFormattingProcessor');
+      
+      const structure = await parseDocxStructure(originalBuffer);
+      const originalText = structure.paragraphs.map(p => p.runs.map(r => r.text).join('')).join('\n');
+      
+      const translatedStructure = await translateDocxStructure(structure, translateFn);
+      const translatedText = translatedStructure.paragraphs.map(p => p.runs.map(r => r.text).join('')).join('\n');
+      
+      const translatedBuffer = await rebuildDocx(translatedStructure);
+      
+      return { translatedBuffer, originalText, translatedText };
+    } catch (fallbackError) {
+      console.error('[processDocxTranslation] Fallback 1 failed:', fallbackError);
+      console.log('[processDocxTranslation] Using plain-text fallback');
+      
+      // Fallback 2: Plain-text approach
+      const originalText = await extractTextFromDocx(originalBuffer);
+      const translatedText = await translateFn(originalText);
+      const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
+      
+      return { translatedBuffer, originalText, translatedText };
+    }
   }
 }
