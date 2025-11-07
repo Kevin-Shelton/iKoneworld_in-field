@@ -100,3 +100,59 @@
 - [x] Check API endpoint for users
 - [x] Verify database query and permissions
 - [x] Fixed: Removed incorrect authorization header check
+
+## Document Translation - Formatting Preservation & Delete (Current Sprint)
+
+### Delete Functionality
+- [x] Add delete button to DocumentList component
+- [x] Create DELETE /api/documents/[id]/delete endpoint
+- [x] Delete conversation from database
+- [x] Delete files from Supabase storage (original + translated)
+- [x] Add confirmation dialog before delete
+- [ ] Add delete button to admin queue page (optional)
+
+### Formatting Preservation
+- [x] Update mammothDocumentProcessor to use convertToHtml() instead of extractRawText()
+- [x] Preserve HTML structure during translation
+- [x] Convert HTML back to DOCX with formatting intact
+- [x] Update upload-smart route to use new formatting-preserving processor
+- [ ] Test with images/logos (placeholders implemented, full support pending)
+- [ ] Test with headers and colored text
+- [ ] Test with bullet lists and numbering
+- [ ] Test with tables
+- [ ] Test with fonts and text styling
+
+### Testing
+- [ ] Test delete functionality (user view)
+- [ ] Test delete functionality (admin view)
+- [ ] Test formatting preservation with original document
+- [ ] Verify images are preserved
+- [ ] Verify colors and fonts are preserved
+- [ ] Verify layout is preserved
+
+## Document Translation - Completed Features ✅
+
+### Phase 1: Core Translation System
+- [x] Mammoth-based DOCX translation
+- [x] Verbum API integration
+- [x] File upload and storage
+- [x] Basic translation workflow
+
+### Phase 2: Queue Management
+- [x] Async queue system with Vercel Cron
+- [x] Admin queue management interface
+- [x] Status tracking (queued → active → completed)
+- [x] Cancel/Retry functionality
+- [x] Method indicators (Fast/Chunked)
+- [x] Error handling and timeout detection
+
+### Phase 3: Bug Fixes
+- [x] Fixed DOCX corruption issues
+- [x] Fixed database schema mismatches
+- [x] Fixed download endpoint
+- [x] Fixed stuck translations
+- [x] Replaced broken skeleton method with mammoth
+
+## Build Error - Next.js 16 Async Params
+- [x] Fix TypeScript error in delete route: params is now Promise<{ id: string }> in Next.js 16
+- [x] Update DELETE handler to await params before accessing id

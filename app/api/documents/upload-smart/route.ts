@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileSizeCategory, estimateProcessingTime, stripDocument, buildDocument } from '@/lib/skeletonDocumentProcessor';
-import { extractTextFromDocx, createTranslatedDocx } from '@/lib/mammothDocumentProcessor';
+import { extractTextFromDocx, processDocxTranslation } from '@/lib/mammothDocumentProcessor';
 import { extractDocumentXml, createModifiedDocx, validateDocxStructure } from '@/lib/docxHandler';
 import { createDocumentTranslation, storeDocumentChunks, failDocumentTranslation } from '@/lib/db/documents';
 import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
@@ -107,24 +107,7 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Step 1: Extract text using mammoth
-      console.log('[Upload Smart] Step 1: Extracting text with mammoth');
-      const parsed = await extractTextFromDocx(buffer);
-      
-      console.log(`[Upload Smart] Extracted text length: ${parsed.length} characters`);
-      
-      // Check if text is too large for Verbum API (max ~50k characters)
-      const MAX_TEXT_LENGTH = 50000;
-      if (parsed.length > MAX_TEXT_LENGTH) {
-        console.log(`[Upload Smart] Text too large (${parsed.length} chars), falling back to chunking method`);
-        // Fall through to chunking method below
-        throw new Error('TEXT_TOO_LARGE');
-      }
-      
-      // Step 3: Translate text via Verbum API
-      console.log('[Upload Smart] Step 3: Translating text');
-      
-      // Check if API key is configured
+      // Step 1: Check if API key is configured
       if (!process.env.VERBUM_API_KEY) {
         console.error('[Upload Smart] VERBUM_API_KEY not configured');
         return NextResponse.json(
@@ -137,46 +120,67 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      console.log('[Upload Smart] Calling Verbum API...');
+      // Step 2: Extract text to check size
+      console.log('[Upload Smart] Step 1: Extracting text to check size');
+      const parsed = await extractTextFromDocx(buffer);
+      console.log(`[Upload Smart] Extracted text length: ${parsed.length} characters`);
+      
+      // Check if text is too large for Verbum API (max ~50k characters)
+      const MAX_TEXT_LENGTH = 50000;
+      if (parsed.length > MAX_TEXT_LENGTH) {
+        console.log(`[Upload Smart] Text too large (${parsed.length} chars), falling back to chunking method`);
+        throw new Error('TEXT_TOO_LARGE');
+      }
+      
+      // Step 3: Process document with formatting preservation
+      console.log('[Upload Smart] Step 2: Processing document with formatting preservation');
       console.log('[Upload Smart] Source language:', sourceLanguage);
       console.log('[Upload Smart] Target language:', targetLanguage);
-      console.log('[Upload Smart] Text length:', parsed.length);
       
-      const translateResponse = await fetch(
-        'https://sdk.verbum.ai/v1/translator/translate',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.VERBUM_API_KEY!,
-          },
-          body: JSON.stringify({
-            texts: [{ text: parsed }],
-            from: sourceLanguage,
-            to: [targetLanguage],
-          }),
+      // Create translation function that calls Verbum API
+      const translateFn = async (text: string): Promise<string> => {
+        console.log('[Upload Smart] Translating text segment, length:', text.length);
+        
+        const response = await fetch(
+          'https://sdk.verbum.ai/v1/translator/translate',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.VERBUM_API_KEY!,
+            },
+            body: JSON.stringify({
+              texts: [{ text }],
+              from: sourceLanguage,
+              to: [targetLanguage],
+            }),
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[Upload Smart] Translation API error:', errorText);
+          throw new Error(`Translation API failed: ${response.status}`);
         }
-      );
+        
+        const data = await response.json();
+        
+        if (!data.translations?.[0]?.[0]?.text) {
+          console.error('[Upload Smart] Invalid translation response:', data);
+          throw new Error('Invalid translation response from Verbum API');
+        }
+        
+        return data.translations[0][0].text;
+      };
       
-      if (!translateResponse.ok) {
-        const errorText = await translateResponse.text();
-        console.error('[Upload Smart] Translation API error:', errorText);
-        throw new Error(`Translation API failed: ${translateResponse.status}`);
-      }
+      // Process document with formatting preservation
+      const result = await processDocxTranslation(buffer, translateFn);
+      const translatedBuffer = result.translatedBuffer;
+      const translatedText = result.translatedText;
       
-      const translateData = await translateResponse.json();
-      
-      if (!translateData.translations?.[0]?.[0]?.text) {
-        console.error('[Upload Smart] Invalid translation response:', translateData);
-        throw new Error('Invalid translation response from Verbum API');
-      }
-      
-      const translatedText = translateData.translations[0][0].text;
-      console.log(`[Upload Smart] Translated text length: ${translatedText.length} characters`);
-      
-      // Step 4: Create translated DOCX using mammoth
-      console.log('[Upload Smart] Step 4: Creating translated DOCX with mammoth');
-      const translatedBuffer = await createTranslatedDocx(buffer, translatedText);
+      console.log(`[Upload Smart] ✓ Translation completed with formatting preserved`);
+      console.log(`[Upload Smart] Original text: ${result.originalText.length} chars`);
+      console.log(`[Upload Smart] Translated text: ${translatedText.length} chars`);
       
       // Generate filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, CheckCircle, Clock, AlertCircle, X, RefreshCw, Zap, Layers } from 'lucide-react';
+import { Download, CheckCircle, Clock, AlertCircle, X, RefreshCw, Zap, Layers, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -121,6 +121,29 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
     } catch (error) {
       console.error('Retry error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to retry');
+    }
+  };
+
+  const handleDelete = async (documentId: number, filename: string) => {
+    if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/documents/${documentId}/delete`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete document');
+      }
+      
+      toast.success('Document deleted successfully');
+      fetchDocuments(); // Refresh list
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete');
     }
   };
 
@@ -340,6 +363,18 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
                       >
                         <X className="w-4 h-4 mr-2" />
                         Cancel
+                      </Button>
+                    )}
+                    
+                    {/* Delete Button for Completed/Failed Translations */}
+                    {(doc.status === 'completed' || doc.status === 'failed') && (
+                      <Button
+                        onClick={() => handleDelete(doc.id, doc.originalFilename)}
+                        variant="outline"
+                        className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
                       </Button>
                     )}
                   </div>
