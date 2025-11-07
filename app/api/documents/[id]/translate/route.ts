@@ -47,6 +47,17 @@ export async function POST(
     
     console.log(`[Document Translate] Translating ${messages.length} chunks`);
     
+    // Update status to 'active' now that translation is actually starting
+    await supabase
+      .from('conversations')
+      .update({ 
+        status: 'active',
+        startedAt: new Date().toISOString(),
+      })
+      .eq('id', conversationId);
+    
+    console.log(`[Document Translate] Status updated to 'active'`);
+    
     // Translate each chunk
     const translatedChunks: string[] = [];
     
@@ -69,7 +80,7 @@ export async function POST(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          texts: [{ text: message.original_text }],
+          texts: [{ text: message.originalText }],
           from: document.language1,
           to: [document.language2],
         }),

@@ -35,7 +35,7 @@ export async function createDocumentTranslation({
   originalFileUrl,
 }: {
   userId: number;
-  enterpriseId: string;
+  enterpriseId?: string;
   originalFilename: string;
   fileType: string;
   fileSizeBytes: number;
@@ -52,7 +52,7 @@ export async function createDocumentTranslation({
       enterprise_id: enterpriseId,
       language1: sourceLanguage,
       language2: targetLanguage,
-      status: 'active',
+      status: 'queued', // Start as queued, will be updated to 'active' when processing begins
       audio_url: originalFileUrl, // Repurpose for document URL
       metadata: {
         conversation_type: 'document',
@@ -332,8 +332,10 @@ export async function storeDocumentChunks({
   const messages = chunks.map((chunk, index) => ({
     conversationId,
     speaker: 'user',
-    original_text: chunk,
-    source_language: sourceLanguage,
+    originalText: chunk,
+    translatedText: '', // Empty string placeholder (will be updated after translation)
+    language: sourceLanguage,
+    confidence: 0, // Will be updated after translation
     metadata: {
       chunk_index: index,
       chunk_total: chunks.length,
@@ -380,8 +382,9 @@ export async function storeTranslatedChunks({
     await supabase
       .from('conversation_messages')
       .update({
-        translated_text: translatedChunks[i],
-        target_language: targetLanguage,
+        translatedText: translatedChunks[i],
+        language: targetLanguage, // Update to target language
+        confidence: 95, // Default confidence for translations
       })
       .eq('id', messages[i].id);
   }
