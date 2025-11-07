@@ -9,6 +9,7 @@
  */
 
 import { extractDocumentXml, createModifiedDocx } from './docxHandler';
+import JSZip from 'jszip';
 
 interface ChunkingOptions {
   fileBuffer: Buffer;
@@ -35,7 +36,7 @@ export async function processLargeDocx(options: ChunkingOptions): Promise<Chunki
     // Step 1: Extract XML structure (5%)
     if (onProgress) await onProgress(5, 'Analyzing document structure...');
     
-    const { documentXml, otherXmlFiles } = await extractDocumentXml(fileBuffer);
+    const documentXml = await extractDocumentXml(fileBuffer);
     
     // Step 2: Lock field codes to preserve dates (10%)
     if (onProgress) await onProgress(10, 'Preserving document metadata...');
@@ -115,7 +116,14 @@ export async function processLargeDocx(options: ChunkingOptions): Promise<Chunki
     // Step 7: Create modified DOCX (90%)
     if (onProgress) await onProgress(90, 'Finalizing your document...');
     
-    const translatedBuffer = await createModifiedDocx(modifiedXml, otherXmlFiles, fileBuffer);
+    // Load original DOCX and replace document.xml
+    const zip = await JSZip.loadAsync(fileBuffer);
+    zip.file('word/document.xml', modifiedXml);
+    const translatedBuffer = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 9 },
+    });
     
     // Step 8: Complete (100%)
     if (onProgress) await onProgress(100, 'Translation complete!');
