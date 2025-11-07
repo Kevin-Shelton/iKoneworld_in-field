@@ -195,3 +195,8 @@
 - [x] Verbum API only accepts generic codes (en, es) for most languages
 - [x] Solution: Added mapToVerbumLanguageCode function to upload-smart route
 - [x] Now maps regional codes to generic codes before calling Verbum API
+
+## Review Working Version Language Logic
+- [ ] Check version FdPRfb6Ka which had working language translation
+- [ ] Compare language mapping logic with current implementation
+- [ ] Update current code to match working version
