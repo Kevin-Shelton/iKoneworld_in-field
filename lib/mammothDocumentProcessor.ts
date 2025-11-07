@@ -6,7 +6,7 @@
  */
 
 import mammoth from 'mammoth';
-import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel, ImageRun } from 'docx';
+// Note: docx library imports moved to dynamic imports to avoid DOMMatrix errors in serverless
 
 export interface TranslationResult {
   translatedBuffer: Buffer;
@@ -178,7 +178,11 @@ function parseHtmlElement(html: string): ParsedElement {
  * @returns DOCX buffer
  */
 export async function convertHtmlToDocx(html: string): Promise<Buffer> {
-  const paragraphs: Paragraph[] = [];
+  // Dynamic import to avoid loading docx library at module level
+  // This prevents DOMMatrix errors in serverless environments
+  const { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } = await import('docx');
+  
+  const paragraphs: any[] = [];
   
   // Split by paragraph and heading tags
   const elements = html.match(/<(p|h[1-6]|li)[^>]*>.*?<\/\1>/gi) || [];

@@ -182,3 +182,8 @@
 4. Translate each HTML chunk (preserve tags)
 5. Reassemble translated HTML chunks
 6. Convert HTML → DOCX with formatting
+
+## DOMMatrix Error in Serverless Environment
+- [x] Fix "DOMMatrix is not defined" error during document upload
+- [x] Issue: docx library requires browser APIs not available in serverless
+- [x] Solution: Convert docx library imports to dynamic imports (only load when needed)
