@@ -275,17 +275,13 @@ export async function createTranslatedDocumentBuffer(
       throw new Error('Original PDF file buffer is required for format preservation');
     }
     
-    // Use overlay method to preserve images, colors, fonts, and layout
-    const { extractTextWithPositions, createTranslatedPDFWithOverlay } = await import('./pdfOverlayProcessor');
+    // Use format preservation method
+    const { createTranslatedPDFWithFormatPreservation } = await import('./pdfOverlayProcessor');
     
-    // Extract text positions from original PDF
-    const textPositions = await extractTextWithPositions(originalFileBuffer);
-    
-    // Create translated PDF with overlay
-    const buffer = await createTranslatedPDFWithOverlay(
+    // Create translated PDF with format preservation
+    const buffer = await createTranslatedPDFWithFormatPreservation(
       originalFileBuffer,
-      translatedContent,
-      textPositions
+      translatedContent
     );
     
     return {
