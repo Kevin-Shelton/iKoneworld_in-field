@@ -133,7 +133,8 @@ export async function extractTextFromDocument(
     switch (mimeType) {
       case 'application/pdf':
         // Use pdfjs-dist which is serverless-compatible (no canvas/DOM dependencies)
-        const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+        // Use dynamic import for ES modules
+        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
         
         // Add timeout protection for PDF parsing (30 seconds max)
         const pdfPromise = (async () => {
