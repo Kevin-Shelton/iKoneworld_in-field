@@ -141,12 +141,30 @@ export async function processDocxWithStructurePreservation(
     // Store original text
     const originalText = allTextSegments.join('\n');
     
-    // Translate all text segments together
-    const combinedText = allTextSegments.join('\n\n---SEGMENT---\n\n');
-    console.log(`[Structure Preserver] Translating ${allTextSegments.length} segments...`);
+    // Translate each segment individually to avoid separator translation issues
+    console.log(`[Structure Preserver] Translating ${allTextSegments.length} segments individually...`);
     
-    const translatedCombined = await translateFn(combinedText);
-    const translatedSegments = translatedCombined.split(/\n\n---SEGMENT---\n\n/);
+    const translatedSegments: string[] = [];
+    for (let i = 0; i < allTextSegments.length; i++) {
+      const segment = allTextSegments[i];
+      if (segment.trim()) {
+        try {
+          const translated = await translateFn(segment);
+          translatedSegments.push(translated);
+          
+          // Log progress every 10 segments
+          if ((i + 1) % 10 === 0) {
+            console.log(`[Structure Preserver] Translated ${i + 1}/${allTextSegments.length} segments`);
+          }
+        } catch (error) {
+          console.error(`[Structure Preserver] Error translating segment ${i}:`, error);
+          // Fallback to original text if translation fails
+          translatedSegments.push(segment);
+        }
+      } else {
+        translatedSegments.push(segment);
+      }
+    }
     
     console.log(`[Structure Preserver] Translation complete, got ${translatedSegments.length} segments`);
     
