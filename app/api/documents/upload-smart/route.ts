@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
       });
       
       // Update to completed status with full metadata
-      await supabase
+      const { error: updateError } = await supabase
         .from('conversations')
         .update({
           status: 'completed',
@@ -319,7 +319,12 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', conversation.id);
       
-      console.log(`[Upload Smart] ✓ Document saved with ID: ${conversation.id}`);
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update conversation status:', updateError);
+        throw new Error(`Failed to update conversation: ${updateError.message}`);
+      }
+      
+      console.log(`[Upload Smart] ✓ Document saved with ID: ${conversation.id} - Status set to completed`);
       
       // Return JSON response
       return NextResponse.json({
