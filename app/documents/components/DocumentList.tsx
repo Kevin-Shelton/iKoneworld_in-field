@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 interface DocumentListProps {
   userId: number;
   refreshTrigger: number;
+  optimisticDocuments?: any[];
+  onClearOptimistic?: () => void;
 }
 
 interface Document {
@@ -31,7 +33,7 @@ interface Document {
   chunkCount?: number;
 }
 
-export default function DocumentList({ userId, refreshTrigger }: DocumentListProps) {
+export default function DocumentList({ userId, refreshTrigger, optimisticDocuments = [], onClearOptimistic }: DocumentListProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,7 +61,13 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
       }
 
       const data = await response.json();
-      setDocuments(data.documents || []);
+      const fetchedDocs = data.documents || [];
+      setDocuments(fetchedDocs);
+      
+      // Clear optimistic documents once we have real data
+      if (fetchedDocs.length > 0 && onClearOptimistic) {
+        onClearOptimistic();
+      }
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
@@ -246,11 +254,14 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
     );
   }
 
+  // Merge optimistic documents with real documents
+  const allDocuments = [...optimisticDocuments, ...documents];
+  
   // Calculate pagination
-  const totalPages = Math.ceil(documents.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(allDocuments.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedDocuments = documents.slice(startIndex, endIndex);
+  const paginatedDocuments = allDocuments.slice(startIndex, endIndex);
 
   return (
     <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -412,11 +423,10 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {startIndex + 1}-{Math.min(endIndex, documents.length)} of {documents.length} documents
-            </div>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-20        {/* Pagination Info */}
+        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+          Showing {startIndex + 1}-{Math.min(endIndex, allDocuments.length)} of {allDocuments.length} documents
+        </div> <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}

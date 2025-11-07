@@ -15,6 +15,7 @@ export default function DocumentsPage() {
   const [dbUserId, setDbUserId] = useState<number | null>(null);
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [optimisticDocuments, setOptimisticDocuments] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -59,6 +60,29 @@ export default function DocumentsPage() {
     // Trigger refresh of document list and stats
     setRefreshTrigger(prev => prev + 1);
   };
+  
+  const handleUploadStart = (fileInfo: any) => {
+    // Add optimistic document to show immediately
+    const optimisticDoc = {
+      id: `temp-${Date.now()}`,
+      originalFilename: fileInfo.filename,
+      fileType: fileInfo.fileType,
+      fileSizeBytes: fileInfo.fileSize,
+      sourceLanguage: fileInfo.sourceLanguage,
+      targetLanguage: fileInfo.targetLanguage,
+      status: 'queued',
+      progressPercentage: 0,
+      createdAt: new Date().toISOString(),
+      method: fileInfo.method,
+      estimatedTimeSeconds: fileInfo.estimatedTime,
+      isOptimistic: true,
+    };
+    setOptimisticDocuments(prev => [optimisticDoc, ...prev]);
+  };
+  
+  const clearOptimisticDocuments = () => {
+    setOptimisticDocuments([]);
+  };
 
   if (!user || !dbUserId) {
     return (
@@ -94,12 +118,18 @@ export default function DocumentsPage() {
               userId={dbUserId}
               enterpriseId={enterpriseId ?? undefined}
               onUploadComplete={handleUploadComplete}
+              onUploadStart={handleUploadStart}
             />
           </div>
 
           {/* Document List - Right Column */}
           <div className="lg:col-span-2">
-            <DocumentList userId={dbUserId} refreshTrigger={refreshTrigger} />
+            <DocumentList 
+              userId={dbUserId} 
+              refreshTrigger={refreshTrigger}
+              optimisticDocuments={optimisticDocuments}
+              onClearOptimistic={clearOptimisticDocuments}
+            />
           </div>
         </div>
       </main>

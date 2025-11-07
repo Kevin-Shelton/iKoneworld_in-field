@@ -11,9 +11,10 @@ interface DocumentUploadProps {
   userId: number;
   enterpriseId?: string;
   onUploadComplete: () => void;
+  onUploadStart?: (fileInfo: any) => void;
 }
 
-export default function DocumentUpload({ userId, enterpriseId, onUploadComplete }: DocumentUploadProps) {
+export default function DocumentUpload({ userId, enterpriseId, onUploadComplete, onUploadStart }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -62,11 +63,26 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
     // Store file info before clearing
     const fileToUpload = selectedFile;
     
+    // Estimate method and time based on file size
+    const fileSizeKB = fileToUpload.size / 1024;
+    const useSkeletonMethod = fileToUpload.name.endsWith('.docx') && fileSizeKB < 100;
+    const estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
+    
+    // Notify parent to show optimistic UI immediately
+    if (onUploadStart) {
+      onUploadStart({
+        filename: fileToUpload.name,
+        fileType: fileToUpload.type,
+        fileSize: fileToUpload.size,
+        sourceLanguage,
+        targetLanguage,
+        method: useSkeletonMethod ? 'skeleton' : 'chunking',
+        estimatedTime,
+      });
+    }
+    
     // Clear the upload box immediately for better UX
     setSelectedFile(null);
-    
-    // Trigger refresh to show the document in history with progress
-    onUploadComplete();
 
     try {
       const formData = new FormData();
