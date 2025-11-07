@@ -26,10 +26,10 @@ export async function translateHtmlWithCheerio(
   
   // Collect all text nodes
   const textSegments: string[] = [];
-  const textNodes: Array<{ element: cheerio.Cheerio; originalText: string }> = [];
+  const textNodes: Array<{ element: cheerio.Cheerio<any>; originalText: string }> = [];
   
   // Walk through all elements and collect text
-  function collectText(element: cheerio.Cheerio) {
+  function collectText(element: cheerio.Cheerio<any>) {
     element.contents().each((_, node) => {
       if (node.type === 'text') {
         const text = $(node).text().trim();
