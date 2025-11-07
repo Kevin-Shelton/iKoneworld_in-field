@@ -235,8 +235,17 @@
 - [x] Fix: Convert all timestamps to ISO strings in API response using toISOString()
 
 ## Formatting Preservation - New Approach Research
-- [ ] Analyze what went wrong with HTML-based approach
-- [ ] Research alternative methods for DOCX formatting preservation
-- [ ] Evaluate external services vs local processing
-- [ ] Propose recommended solution with pros/cons
-- [ ] Implement in new branch (not main)
+- [x] Analyze what went wrong with HTML-based approach
+- [x] Research alternative methods for DOCX formatting preservation
+- [x] Evaluate external services vs local processing
+- [x] Propose recommended solution with pros/cons
+- [x] Created feature/formatting-preservation-v2 branch
+
+## Phase 1: Basic Formatting (Bold, Italic, Underline, Headings)
+- [x] Create DOCX parser to extract paragraphs with formatting metadata
+- [x] Implement translation that preserves text run boundaries
+- [x] Create DOCX rebuilder that applies formatting to translated text
+- [x] Update processDocxTranslation to use paragraph-level approach
+- [x] Added graceful fallback to plain-text if formatting preservation fails
+- [ ] Test with sample DOCX containing basic formatting
+- [ ] Verify no DOMMatrix errors in production

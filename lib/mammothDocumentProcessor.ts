@@ -330,18 +330,54 @@ export async function processDocxTranslation(
   originalBuffer: Buffer,
   translateFn: (text: string) => Promise<string>
 ): Promise<TranslationResult> {
-  // Extract plain text
-  const originalText = await extractTextFromDocx(originalBuffer);
+  console.log('[processDocxTranslation] Starting DOCX translation with formatting preservation');
   
-  // Translate plain text
-  const translatedText = await translateFn(originalText);
-  
-  // Create new DOCX from translated text
-  const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
-  
-  return {
-    translatedBuffer,
-    originalText,
-    translatedText,
-  };
+  try {
+    // Import paragraph-level processor
+    const { parseDocxStructure, translateDocxStructure, rebuildDocx } = await import('./docxFormattingProcessor');
+    
+    // Parse DOCX structure
+    console.log('[processDocxTranslation] Parsing DOCX structure...');
+    const structure = await parseDocxStructure(originalBuffer);
+    console.log('[processDocxTranslation] Parsed', structure.paragraphs.length, 'paragraphs');
+    
+    // Extract original text for metadata
+    const originalText = structure.paragraphs
+      .map(p => p.runs.map(r => r.text).join(''))
+      .join('\n');
+    
+    // Translate while preserving structure
+    console.log('[processDocxTranslation] Translating paragraphs...');
+    const translatedStructure = await translateDocxStructure(structure, translateFn);
+    
+    // Extract translated text for metadata
+    const translatedText = translatedStructure.paragraphs
+      .map(p => p.runs.map(r => r.text).join(''))
+      .join('\n');
+    
+    // Rebuild DOCX with formatting
+    console.log('[processDocxTranslation] Rebuilding DOCX with formatting...');
+    const translatedBuffer = await rebuildDocx(translatedStructure);
+    console.log('[processDocxTranslation] Created translated DOCX, size:', translatedBuffer.length);
+    
+    return {
+      translatedBuffer,
+      originalText,
+      translatedText,
+    };
+  } catch (error) {
+    console.error('[processDocxTranslation] Error with formatting preservation:', error);
+    console.log('[processDocxTranslation] Falling back to plain-text approach');
+    
+    // Fallback to plain-text approach if formatting preservation fails
+    const originalText = await extractTextFromDocx(originalBuffer);
+    const translatedText = await translateFn(originalText);
+    const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
+    
+    return {
+      translatedBuffer,
+      originalText,
+      translatedText,
+    };
+  }
 }

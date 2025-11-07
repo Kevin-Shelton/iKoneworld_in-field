@@ -101,6 +101,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.6
         version: 8.15.6
+      '@xmldom/xmldom':
+        specifier: ^0.8.11
+        version: 0.8.11
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
