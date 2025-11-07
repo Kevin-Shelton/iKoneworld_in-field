@@ -147,18 +147,36 @@ export async function POST(
       // Original file is stored in audio_url field
       const originalStoragePath = document.audio_url || document.metadata?.document_translation?.original_storage_path;
       
+      console.log('[Document Translate] Original storage path:', originalStoragePath);
+      
       if (originalStoragePath) {
-        const { data: fileData, error: downloadError } = await supabase
-          .storage
-          .from('documents')
-          .download(originalStoragePath);
-        
-        if (downloadError) {
-          console.error('[Document Translate] Failed to download original PDF:', downloadError);
-        } else if (fileData) {
+        try {
+          const { data: fileData, error: downloadError } = await supabase
+            .storage
+            .from('documents')
+            .download(originalStoragePath);
+          
+          if (downloadError) {
+            console.error('[Document Translate] Failed to download original PDF:', downloadError);
+            throw new Error(`Failed to download original PDF: ${downloadError.message}`);
+          }
+          
+          if (!fileData) {
+            console.error('[Document Translate] No file data returned from download');
+            throw new Error('No file data returned from Supabase storage');
+          }
+          
           originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
-          console.log('[Document Translate] Original PDF downloaded successfully');
+          console.log('[Document Translate] Original PDF downloaded successfully, size:', originalFileBuffer.length, 'bytes');
+        } catch (error) {
+          console.error('[Document Translate] Exception downloading original PDF:', error);
+          throw error;
         }
+      } else {
+        console.error('[Document Translate] No original storage path found in document');
+        console.error('[Document Translate] document.audio_url:', document.audio_url);
+        console.error('[Document Translate] document.metadata:', JSON.stringify(document.metadata));
+        throw new Error('Original PDF storage path not found');
       }
     }
     
