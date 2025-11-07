@@ -213,3 +213,9 @@
 - [ ] Check if processDocxTranslation function exists in working version
 - [ ] Check what translation approach working version used
 - [ ] Identify the actual difference causing translation failure
+
+## Revert to Plain-Text Translation (Temporary)
+- [x] Revert processDocxTranslation to plain-text approach from working version
+- [x] Add createTranslatedDocx function for small files with dynamic import
+- [ ] Confirm translation works with plain-text approach
+- [ ] Then develop better formatting preservation strategy

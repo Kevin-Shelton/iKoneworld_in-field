@@ -281,7 +281,46 @@ async function convertHtmlToDocx_DEPRECATED(html: string): Promise<Buffer> {
 }
 
 /**
- * Process DOCX translation with formatting preservation
+ * Create a new DOCX file with translated text
+ * Uses dynamic import to avoid DOMMatrix errors
+ * 
+ * @param originalBuffer - Original DOCX buffer (not used, kept for API compatibility)
+ * @param translatedText - Translated text to put in new DOCX
+ * @returns Buffer containing new DOCX file
+ */
+export async function createTranslatedDocx(
+  originalBuffer: Buffer,
+  translatedText: string
+): Promise<Buffer> {
+  // Dynamic import to avoid DOMMatrix errors
+  const { Document, Paragraph, TextRun, Packer } = await import('docx');
+  
+  // Split translated text into paragraphs
+  const paragraphs = translatedText
+    .split('\n')
+    .filter(p => p.trim() !== '')
+    .map(text => 
+      new Paragraph({
+        children: [new TextRun(text)],
+      })
+    );
+  
+  // Create new document with translated paragraphs
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: paragraphs,
+    }],
+  });
+  
+  // Generate DOCX buffer
+  const buffer = await Packer.toBuffer(doc);
+  return buffer;
+}
+
+/**
+ * Process DOCX translation (simple plain-text approach)
+ * This is the working version from 24b7fc2
  * 
  * @param originalBuffer - Original DOCX file
  * @param translateFn - Function that translates text (async)
@@ -291,27 +330,14 @@ export async function processDocxTranslation(
   originalBuffer: Buffer,
   translateFn: (text: string) => Promise<string>
 ): Promise<TranslationResult> {
-  console.log('[Mammoth] Starting DOCX translation with formatting preservation');
-  
-  // Step 1: Convert DOCX to HTML
-  const originalHtml = await convertDocxToHtml(originalBuffer);
-  console.log('[Mammoth] Converted to HTML, length:', originalHtml.length);
-  
-  // Extract plain text for reference
+  // Extract plain text
   const originalText = await extractTextFromDocx(originalBuffer);
   
-  // Step 2: Translate HTML while preserving structure
-  const translatedHtml = await translateHtml(originalHtml, translateFn);
-  console.log('[Mammoth] Translated HTML, length:', translatedHtml.length);
+  // Translate plain text
+  const translatedText = await translateFn(originalText);
   
-  // Step 3: Convert translated HTML back to DOCX
-  // Dynamic import to avoid DOMMatrix errors
-  const { convertHtmlToDocx } = await import('./htmlToDocxConverter');
-  const translatedBuffer = await convertHtmlToDocx(translatedHtml);
-  console.log('[Mammoth] Converted back to DOCX, size:', translatedBuffer.length);
-  
-  // Extract translated text for reference
-  const translatedText = extractTextFromHtml(translatedHtml);
+  // Create new DOCX from translated text
+  const translatedBuffer = await createTranslatedDocx(originalBuffer, translatedText);
   
   return {
     translatedBuffer,
