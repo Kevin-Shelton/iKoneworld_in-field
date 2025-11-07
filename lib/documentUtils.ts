@@ -65,12 +65,19 @@ export function chunkText(text: string, maxChunkSize: number = 5000): string[] {
 
 /**
  * Validate file type
+ * 
+ * Supported formats:
+ * - DOCX: Full structure preservation with field locking
+ * - PDF: Text extraction only (no formatting preservation)
+ * - TXT: Plain text translation
+ * 
+ * Deprecated:
+ * - DOC: Legacy format removed due to unreliable parsing
  */
 export function isValidFileType(mimeType: string): boolean {
   const validTypes = [
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
     'text/plain',
   ];
   
@@ -78,10 +85,17 @@ export function isValidFileType(mimeType: string): boolean {
 }
 
 /**
- * Validate file size (max 100MB)
+ * Validate file size (max 25MB)
+ * 
+ * Rationale for 25MB limit:
+ * - Vercel serverless timeout: 60s (Hobby), 300s (Pro)
+ * - Supabase free tier: 50MB per file
+ * - Translation API limits: Large files require many chunks
+ * - User experience: 25MB ≈ 250 pages (reasonable business document)
+ * - Processing time: 25MB ≈ 5-10 minutes (acceptable)
  */
 export function isValidFileSize(sizeInBytes: number): boolean {
-  const maxSize = 100 * 1024 * 1024; // 100MB
+  const maxSize = 25 * 1024 * 1024; // 25MB
   return sizeInBytes <= maxSize;
 }
 
