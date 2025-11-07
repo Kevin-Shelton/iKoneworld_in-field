@@ -138,11 +138,35 @@ export async function POST(
       translatedContent = reconstructDocument(translatedChunks);
     }
     
+    // Download original file if PDF (needed for format preservation)
+    let originalFileBuffer: Buffer | undefined;
+    const fileType = document.metadata?.document_translation?.file_type || 'text/plain';
+    
+    if (fileType === 'application/pdf') {
+      console.log('[Document Translate] Downloading original PDF for format preservation');
+      const originalStoragePath = document.metadata?.document_translation?.original_storage_path;
+      
+      if (originalStoragePath) {
+        const { data: fileData, error: downloadError } = await supabase
+          .storage
+          .from('documents')
+          .download(originalStoragePath);
+        
+        if (downloadError) {
+          console.error('[Document Translate] Failed to download original PDF:', downloadError);
+        } else if (fileData) {
+          originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
+          console.log('[Document Translate] Original PDF downloaded successfully');
+        }
+      }
+    }
+    
     // Create translated document buffer
     const { buffer, mimeType, extension } = await createTranslatedDocumentBuffer(
       translatedContent,
-      document.metadata?.document_translation?.file_type || 'text/plain',
-      isHtmlContent
+      fileType,
+      isHtmlContent,
+      originalFileBuffer
     );
     
     // Upload translated document to Supabase Storage

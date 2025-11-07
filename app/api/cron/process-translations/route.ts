@@ -182,12 +182,35 @@ export async function GET(request: NextRequest) {
             console.log('[Cron] Reconstructed plain text document');
           }
           
+          // Download original file if PDF (needed for format preservation)
+          let originalFileBuffer: Buffer | undefined;
+          
+          if (fileType === 'application/pdf') {
+            console.log('[Cron] Downloading original PDF for format preservation');
+            const originalStoragePath = conv.metadata?.document_translation?.original_storage_path;
+            
+            if (originalStoragePath) {
+              const { data: fileData, error: downloadError } = await supabaseAdmin
+                .storage
+                .from('documents')
+                .download(originalStoragePath);
+              
+              if (downloadError) {
+                console.error('[Cron] Failed to download original PDF:', downloadError);
+              } else if (fileData) {
+                originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
+                console.log('[Cron] Original PDF downloaded successfully');
+              }
+            }
+          }
+          
           // Create translated document buffer
           const { createTranslatedDocumentBuffer } = await import('@/lib/documentProcessor');
           const { buffer, mimeType, extension } = await createTranslatedDocumentBuffer(
             fullTranslatedContent,
             fileType,
-            isHtmlContent
+            isHtmlContent,
+            originalFileBuffer
           );
           
           console.log(`[Cron] Created document buffer: ${buffer.length} bytes, type: ${mimeType}`);

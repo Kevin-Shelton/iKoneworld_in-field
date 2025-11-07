@@ -244,7 +244,8 @@ export function reconstructDocument(translatedChunks: string[]): string {
 export async function createTranslatedDocumentBuffer(
   translatedContent: string,
   originalMimeType: string,
-  isHtml: boolean = false
+  isHtml: boolean = false,
+  originalFileBuffer?: Buffer
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   
   // If content is HTML and original was DOCX, convert back to DOCX
@@ -268,12 +269,24 @@ export async function createTranslatedDocumentBuffer(
   let extension = '.txt';
   
   if (originalMimeType === 'application/pdf') {
-    console.log('[Create Document] Creating PDF from translated text with structure preservation');
+    console.log('[Create Document] Creating PDF with complete format preservation (overlay method)');
     
-    // Use structured PDF reconstruction
-    // Note: originalStructure would ideally be passed from extraction phase
-    // For now, we reconstruct based on the formatted text structure
-    const buffer = await reconstructPDFWithStructure(translatedContent, { blocks: [], formattedText: '' });
+    if (!originalFileBuffer) {
+      throw new Error('Original PDF file buffer is required for format preservation');
+    }
+    
+    // Use overlay method to preserve images, colors, fonts, and layout
+    const { extractTextWithPositions, createTranslatedPDFWithOverlay } = await import('./pdfOverlayProcessor');
+    
+    // Extract text positions from original PDF
+    const textPositions = await extractTextWithPositions(originalFileBuffer);
+    
+    // Create translated PDF with overlay
+    const buffer = await createTranslatedPDFWithOverlay(
+      originalFileBuffer,
+      translatedContent,
+      textPositions
+    );
     
     return {
       buffer,
