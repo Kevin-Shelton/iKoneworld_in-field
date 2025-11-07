@@ -7,7 +7,7 @@
 
 import mammoth from 'mammoth';
 import { convertHtmlToDocx, wrapHtmlDocument } from './turbodocxConverter';
-import { translateHtmlWithDOM } from './translateHtmlProper';
+import { translateHtmlWithCheerio } from './translateHtmlServerless';
 
 export interface TranslationResult {
   translatedBuffer: Buffer;
@@ -229,7 +229,7 @@ export async function processDocxTranslation(
     
     // Step 2: Translate HTML while preserving structure
     console.log('[processDocxTranslation] Step 2: Translating HTML...');
-    const translatedHtml = await translateHtmlWithDOM(html, translateFn);
+    const translatedHtml = await translateHtmlWithCheerio(html, translateFn);
     console.log('[processDocxTranslation] Translated HTML, length:', translatedHtml.length);
     
     // Extract translated text for metadata
