@@ -175,7 +175,7 @@ export async function POST(
         fileBuffer: translatedBuffer,
         fileName: translatedFilename,
         contentType: 'application/pdf',
-        enterpriseId: document.enterprise_id!,
+        enterpriseId: document.enterprise_id || 'default',
         userId: document.userId,
         conversationId: conversationId,
         isTranslated: true,
