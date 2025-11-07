@@ -229,4 +229,7 @@
 - [x] Ensure creation timestamp displays in user's local timezone
 - [x] Updated toLocaleString with explicit format options
 - [x] Format: Nov 7, 2025, 01:30 AM (automatically converts to user's timezone)
-- [ ] Test with different timezones to confirm
+- [x] BUG: Showing 6 hour offset (2:19 AM instead of 8:19 AM)
+- [x] Check how createdAt is stored in database
+- [x] Check how API serializes the timestamp
+- [x] Fix: Convert all timestamps to ISO strings in API response using toISOString()

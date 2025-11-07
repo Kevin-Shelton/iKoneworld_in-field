@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
       method: doc.metadata?.document_translation?.method,
       estimatedTimeSeconds: doc.metadata?.document_translation?.estimated_time_seconds,
       chunkCount: doc.metadata?.document_translation?.chunk_count,
-      startedAt: doc.startedAt,
-      completedAt: doc.endedAt,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
+      startedAt: doc.startedAt ? new Date(doc.startedAt).toISOString() : null,
+      completedAt: doc.endedAt ? new Date(doc.endedAt).toISOString() : null,
+      createdAt: new Date(doc.createdAt).toISOString(),
+      updatedAt: new Date(doc.updatedAt).toISOString(),
     }));
     
     return NextResponse.json({
