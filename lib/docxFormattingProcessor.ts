@@ -19,9 +19,16 @@ export interface FormattedParagraph {
   runs: TextRun[];
   heading?: 'HEADING_1' | 'HEADING_2' | 'HEADING_3' | 'HEADING_4' | 'HEADING_5' | 'HEADING_6';
   alignment?: 'left' | 'center' | 'right' | 'justify';
-  numbering?: {
-    level: number;
-    reference: string;
+  spacing?: {
+    before?: number;  // Space before paragraph (in twips)
+    after?: number;   // Space after paragraph (in twips)
+    line?: number;    // Line spacing (in twips or percentage)
+    lineRule?: 'atLeast' | 'exactly' | 'auto'; // Line spacing rule
+  };
+  indent?: {
+    left?: number;    // Left indent (in twips)
+    right?: number;   // Right indent (in twips)
+    firstLine?: number; // First line indent (in twips)
   };
 }
 
@@ -73,8 +80,10 @@ function parseParagraph(pNode: any): FormattedParagraph {
   const runs: TextRun[] = [];
   let heading: FormattedParagraph['heading'];
   let alignment: FormattedParagraph['alignment'];
+  let spacing: FormattedParagraph['spacing'];
+  let indent: FormattedParagraph['indent'];
   
-  // Check for heading style
+  // Check for heading style and other paragraph properties
   const pPr = pNode.getElementsByTagName('w:pPr')[0];
   if (pPr) {
     const pStyle = pPr.getElementsByTagName('w:pStyle')[0];
@@ -98,6 +107,34 @@ function parseParagraph(pNode: any): FormattedParagraph {
       else if (jcVal === 'right') alignment = 'right';
       else if (jcVal === 'both') alignment = 'justify';
     }
+    
+    // Extract spacing
+    const spacingNode = pPr.getElementsByTagName('w:spacing')[0];
+    if (spacingNode) {
+      spacing = {};
+      const before = spacingNode.getAttribute('w:before');
+      const after = spacingNode.getAttribute('w:after');
+      const line = spacingNode.getAttribute('w:line');
+      const lineRule = spacingNode.getAttribute('w:lineRule');
+      
+      if (before) spacing.before = parseInt(before);
+      if (after) spacing.after = parseInt(after);
+      if (line) spacing.line = parseInt(line);
+      if (lineRule) spacing.lineRule = lineRule as any;
+    }
+    
+    // Extract indentation
+    const indNode = pPr.getElementsByTagName('w:ind')[0];
+    if (indNode) {
+      indent = {};
+      const left = indNode.getAttribute('w:left');
+      const right = indNode.getAttribute('w:right');
+      const firstLine = indNode.getAttribute('w:firstLine');
+      
+      if (left) indent.left = parseInt(left);
+      if (right) indent.right = parseInt(right);
+      if (firstLine) indent.firstLine = parseInt(firstLine);
+    }
   }
   
   // Parse text runs
@@ -110,7 +147,7 @@ function parseParagraph(pNode: any): FormattedParagraph {
     }
   }
   
-  return { runs, heading, alignment };
+  return { runs, heading, alignment, spacing, indent };
 }
 
 /**
@@ -143,12 +180,12 @@ function parseTextRun(rNode: any): TextRun {
       run.underline = true;
     }
     
-    // Color
+    // Color (store as hex without # prefix for easier application)
     const color = rPr.getElementsByTagName('w:color')[0];
     if (color) {
       const colorVal = color.getAttribute('w:val');
       if (colorVal && colorVal !== 'auto') {
-        run.color = '#' + colorVal;
+        run.color = colorVal; // Store without # prefix
       }
     }
     
@@ -241,7 +278,7 @@ export async function rebuildDocx(structure: DocxStructure): Promise<Buffer> {
         bold: r.bold,
         italics: r.italic,
         underline: r.underline ? {} : undefined,
-        color: r.color?.replace('#', ''),
+        color: r.color, // Already stored without # prefix
         font: r.font,
         size: r.size ? r.size * 2 : undefined, // Convert points to half-points
       })
@@ -256,11 +293,31 @@ export async function rebuildDocx(structure: DocxStructure): Promise<Buffer> {
     else if (p.alignment === 'right') alignment = AlignmentType.RIGHT;
     else if (p.alignment === 'justify') alignment = AlignmentType.JUSTIFIED;
     
-    return new Paragraph({
+    // Build paragraph options
+    const paragraphOptions: any = {
       children,
       heading: headingLevel,
       alignment,
-    });
+    };
+    
+    // Add spacing if present
+    if (p.spacing) {
+      paragraphOptions.spacing = {};
+      if (p.spacing.before !== undefined) paragraphOptions.spacing.before = p.spacing.before;
+      if (p.spacing.after !== undefined) paragraphOptions.spacing.after = p.spacing.after;
+      if (p.spacing.line !== undefined) paragraphOptions.spacing.line = p.spacing.line;
+      if (p.spacing.lineRule) paragraphOptions.spacing.lineRule = p.spacing.lineRule;
+    }
+    
+    // Add indentation if present
+    if (p.indent) {
+      paragraphOptions.indent = {};
+      if (p.indent.left !== undefined) paragraphOptions.indent.left = p.indent.left;
+      if (p.indent.right !== undefined) paragraphOptions.indent.right = p.indent.right;
+      if (p.indent.firstLine !== undefined) paragraphOptions.indent.firstLine = p.indent.firstLine;
+    }
+    
+    return new Paragraph(paragraphOptions);
   });
   
   const doc = new Document({

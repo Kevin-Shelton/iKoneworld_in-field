@@ -249,3 +249,16 @@
 - [x] Added graceful fallback to plain-text if formatting preservation fails
 - [ ] Test with sample DOCX containing basic formatting
 - [ ] Verify no DOMMatrix errors in production
+
+## Update Chunking for Large Files (Formatting Preservation)
+- [ ] DEFERRED: Current chunking uses old HTML approach (not paragraph-level)
+- [ ] Focus on small files first, then update chunking later
+
+## Phase 1.5: Improve Small File Formatting
+- [x] Better paragraph spacing preservation (before/after, line spacing)
+- [x] Fix font size preservation (extraction and application verified)
+- [x] Fix font color preservation (simplified hex handling)
+- [x] Preserve line spacing and paragraph spacing (added to interface)
+- [x] Added indentation preservation (left, right, first line)
+- [ ] Test with real document containing various formatting
+- [ ] Verify spacing matches original document
