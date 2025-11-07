@@ -40,12 +40,12 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
   useEffect(() => {
     fetchDocuments();
     
-    // Poll for updates every 5 seconds if there are active translations
+    // Poll for updates every 2 seconds if there are active translations
     const interval = setInterval(() => {
       if (documents.some(doc => doc.status === 'active' || doc.status === 'queued')) {
         fetchDocuments();
       }
-    }, 5000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [userId, refreshTrigger]);
@@ -325,13 +325,20 @@ export default function DocumentList({ userId, refreshTrigger }: DocumentListPro
                     </div>
                   </div>
 
-                  {/* Progress Bar for Active Translations */}
-                  {doc.status === 'active' && (
+                  {/* Progress Bar for Active and Queued Translations */}
+                  {(doc.status === 'active' || doc.status === 'queued') && (
                     <div className="mb-3">
-                      <Progress value={doc.progressPercentage} className="h-2 mb-1" />
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Estimated completion: {Math.ceil((100 - doc.progressPercentage) / 20)} minutes
-                      </p>
+                      <Progress value={doc.progressPercentage || 0} className="h-2 mb-1" />
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {doc.progressPercentage || 0}% complete
+                        </p>
+                        {doc.estimatedTimeSeconds && doc.progressPercentage < 100 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Est. {Math.ceil((doc.estimatedTimeSeconds * (100 - (doc.progressPercentage || 0)) / 100) / 60)} min remaining
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
