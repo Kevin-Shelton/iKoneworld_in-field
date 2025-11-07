@@ -187,3 +187,11 @@
 - [x] Fix "DOMMatrix is not defined" error during document upload
 - [x] Issue: docx library requires browser APIs not available in serverless
 - [x] Solution: Convert docx library imports to dynamic imports (only load when needed)
+
+## Translation Not Occurring Bug
+- [x] Documents upload and download successfully
+- [x] But content is not being translated (still in original language)
+- [x] Root cause: Regional language codes (en-US, es-MX) passed to Verbum API
+- [x] Verbum API only accepts generic codes (en, es) for most languages
+- [x] Solution: Added mapToVerbumLanguageCode function to upload-smart route
+- [x] Now maps regional codes to generic codes before calling Verbum API

@@ -132,10 +132,29 @@ export async function POST(request: NextRequest) {
         throw new Error('TEXT_TOO_LARGE');
       }
       
-      // Step 3: Process document with formatting preservation
+      // Step 3: Map language codes for Verbum API
+      // Verbum API uses generic codes (en, es) not regional codes (en-US, es-MX)
+      const mapToVerbumLanguageCode = (code: string): string => {
+        const specialCases: Record<string, string> = {
+          'zh-CN': 'zh-Hans',
+          'zh-TW': 'zh-Hant',
+          'zh-HK': 'zh-Hant',
+          'pt-PT': 'pt-pt',
+          'fr-CA': 'fr-ca',
+          'mn-MN': 'mn-Cyrl',
+          'sr-RS': 'sr-Cyrl',
+          'iu-CA': 'iu',
+        };
+        if (specialCases[code]) return specialCases[code];
+        return code.split('-')[0].toLowerCase();
+      };
+      
+      const mappedSourceLang = mapToVerbumLanguageCode(sourceLanguage);
+      const mappedTargetLang = mapToVerbumLanguageCode(targetLanguage);
+      
       console.log('[Upload Smart] Step 2: Processing document with formatting preservation');
-      console.log('[Upload Smart] Source language:', sourceLanguage);
-      console.log('[Upload Smart] Target language:', targetLanguage);
+      console.log('[Upload Smart] Source language:', sourceLanguage, '→', mappedSourceLang);
+      console.log('[Upload Smart] Target language:', targetLanguage, '→', mappedTargetLang);
       
       // Create translation function that calls Verbum API
       const translateFn = async (text: string): Promise<string> => {
@@ -151,8 +170,8 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
               texts: [{ text }],
-              from: sourceLanguage,
-              to: [targetLanguage],
+              from: mappedSourceLang,
+              to: [mappedTargetLang],
             }),
           }
         );
