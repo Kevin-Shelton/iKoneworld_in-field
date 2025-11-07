@@ -423,10 +423,8 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-20        {/* Pagination Info */}
-        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-          Showing {startIndex + 1}-{Math.min(endIndex, allDocuments.length)} of {allDocuments.length} documents
-        </div> <div className="flex gap-2">
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-2">
               <Button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
@@ -461,6 +459,11 @@ export default function DocumentList({ userId, refreshTrigger, optimisticDocumen
             </div>
           </div>
         )}
+        
+        {/* Pagination Info */}
+        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+          Showing {startIndex + 1}-{Math.min(endIndex, allDocuments.length)} of {allDocuments.length} documents
+        </div>
       </CardContent>
     </Card>
   );
