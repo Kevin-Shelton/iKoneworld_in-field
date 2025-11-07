@@ -58,10 +58,19 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
     }
 
     setUploading(true);
+    
+    // Store file info before clearing
+    const fileToUpload = selectedFile;
+    
+    // Clear the upload box immediately for better UX
+    setSelectedFile(null);
+    
+    // Trigger refresh to show the document in history with progress
+    onUploadComplete();
 
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('file', fileToUpload);
       formData.append('userId', userId.toString());
       if (enterpriseId) {
         formData.append('enterpriseId', enterpriseId);
@@ -113,8 +122,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
         toast.success('Document translation started');
       }
 
-      // Reset form
-      setSelectedFile(null);
+      // Refresh document list to show updated status
       onUploadComplete();
     } catch (error) {
       console.error('Upload error:', error);
