@@ -438,3 +438,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Next.js 15 App Router configuration for file uploads
+// Increase body size limit and timeout for large file uploads
+export const maxDuration = 60; // Maximum execution time in seconds (Vercel Pro: 60s, Hobby: 10s)
+export const dynamic = 'force-dynamic'; // Disable caching for upload endpoint

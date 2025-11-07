@@ -133,9 +133,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Configure Next.js to handle larger file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Next.js 15 App Router configuration for file uploads
+export const maxDuration = 60; // Maximum execution time in seconds
+export const dynamic = 'force-dynamic'; // Disable caching for upload endpoint
