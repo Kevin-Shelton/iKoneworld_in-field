@@ -5,7 +5,8 @@
  * with comprehensive format preservation (tables, images, lists, headings)
  */
 
-import HTMLtoDOCX from '@turbodocx/html-to-docx';
+import * as HTMLtoDOCXModule from '@turbodocx/html-to-docx';
+const HTMLtoDOCX = (HTMLtoDOCXModule as any).default || HTMLtoDOCXModule;
 
 export interface ConversionOptions {
   orientation?: 'portrait' | 'landscape';
@@ -56,7 +57,17 @@ export async function convertHtmlToDocx(
     const docxArrayBuffer = await HTMLtoDOCX(html, null, docOptions);
     
     // Convert ArrayBuffer to Buffer
-    const buffer = Buffer.from(docxArrayBuffer);
+    // HTMLtoDOCX returns ArrayBuffer | Buffer | Blob, need to handle all cases
+    let buffer: Buffer;
+    if (Buffer.isBuffer(docxArrayBuffer)) {
+      buffer = docxArrayBuffer;
+    } else if (docxArrayBuffer instanceof ArrayBuffer) {
+      buffer = Buffer.from(new Uint8Array(docxArrayBuffer));
+    } else {
+      // Blob case - convert to ArrayBuffer first
+      const arrayBuffer = await (docxArrayBuffer as Blob).arrayBuffer();
+      buffer = Buffer.from(new Uint8Array(arrayBuffer));
+    }
     console.log('[TurboDocx] Conversion complete, DOCX size:', buffer.length);
     
     return buffer;
