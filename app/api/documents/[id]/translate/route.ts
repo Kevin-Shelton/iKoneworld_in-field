@@ -73,27 +73,39 @@ export async function POST(
         progressPercentage: progress,
       });
       
-      // Call translation API
-      const translationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          texts: [{ text: message.originalText }],
-          from: document.language1,
-          to: [document.language2],
-        }),
-      });
+      // Call Verbum AI API directly (not through localhost)
+      const verbumApiKey = process.env.VERBUM_API_KEY;
+      
+      if (!verbumApiKey) {
+        throw new Error('VERBUM_API_KEY not configured');
+      }
+      
+      const translationResponse = await fetch(
+        'https://sdk.verbum.ai/v1/translator/translate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': verbumApiKey,
+          },
+          body: JSON.stringify({
+            texts: [{ text: message.original_text }],  // snake_case from database
+            from: document.language1,
+            to: [document.language2],
+          }),
+        }
+      );
       
       if (!translationResponse.ok) {
-        throw new Error(`Translation API failed for chunk ${i + 1}`);
+        const errorText = await translationResponse.text();
+        throw new Error(`Verbum API failed for chunk ${i + 1}: ${errorText}`);
       }
       
       const translationData = await translationResponse.json();
       
-      // Extract translated text
-      const translatedText = translationData.translations?.[0]?.[document.language2]?.text;
+      // Extract translated text from Verbum API response
+      // Verbum returns: translations[0][0].text (nested array)
+      const translatedText = translationData.translations?.[0]?.[0]?.text;
       
       if (!translatedText) {
         throw new Error(`No translation returned for chunk ${i + 1}`);
