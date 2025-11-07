@@ -63,8 +63,9 @@ export default function DocumentsPage() {
   
   const handleUploadStart = (fileInfo: any) => {
     // Add optimistic document to show immediately
+    const tempId = `temp-${Date.now()}`;
     const optimisticDoc = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       originalFilename: fileInfo.filename,
       fileType: fileInfo.fileType,
       fileSizeBytes: fileInfo.fileSize,
@@ -78,6 +79,35 @@ export default function DocumentsPage() {
       isOptimistic: true,
     };
     setOptimisticDocuments(prev => [optimisticDoc, ...prev]);
+    
+    // Simulate smooth progress growth
+    let currentProgress = 0;
+    const targetProgress = 85; // Stop at 85% to let server complete
+    const estimatedDuration = (fileInfo.estimatedTime || 30) * 1000; // Convert to ms
+    const updateInterval = 500; // Update every 500ms
+    const incrementPerUpdate = (targetProgress / estimatedDuration) * updateInterval;
+    
+    const progressInterval = setInterval(() => {
+      currentProgress += incrementPerUpdate;
+      
+      if (currentProgress >= targetProgress) {
+        currentProgress = targetProgress;
+        clearInterval(progressInterval);
+      }
+      
+      setOptimisticDocuments(prev => 
+        prev.map(doc => 
+          doc.id === tempId 
+            ? { ...doc, progressPercentage: Math.floor(currentProgress), status: 'active' }
+            : doc
+        )
+      );
+    }, updateInterval);
+    
+    // Clean up interval after estimated time + buffer
+    setTimeout(() => {
+      clearInterval(progressInterval);
+    }, estimatedDuration + 5000);
   };
   
   const clearOptimisticDocuments = () => {
