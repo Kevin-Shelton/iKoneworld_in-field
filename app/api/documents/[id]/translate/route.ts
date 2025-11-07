@@ -120,14 +120,91 @@ export async function POST(
     await storeTranslatedChunks({
       conversationId,
       translatedChunks,
-      targetLanguage: document.language2,
+      targetLanguage: document.target_language || 'es',
     });
     
-    // Check if content is HTML (for formatting preservation)
-    const isHtmlContent = document.metadata?.document_translation?.is_html_content || false;
+    const fileType = document.metadata?.document_translation?.file_type || 'text/plain';
     
-    // Reconstruct full document
+    // For PDFs, use DeepL Document Translation API directly
+    if (fileType === 'application/pdf') {
+      console.log('[Document Translate] Using DeepL API for PDF translation');
+      
+      // Download original PDF
+      const originalStoragePath = document.audio_url || document.metadata?.document_translation?.original_storage_path;
+      
+      if (!originalStoragePath) {
+        throw new Error('Original PDF storage path not found');
+      }
+      
+      console.log('[Document Translate] Downloading original PDF from:', originalStoragePath);
+      const { data: fileData, error: downloadError } = await supabase
+        .storage
+        .from('documents')
+        .download(originalStoragePath);
+      
+      if (downloadError || !fileData) {
+        throw new Error(`Failed to download original PDF: ${downloadError?.message}`);
+      }
+      
+      const originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
+      console.log('[Document Translate] Original PDF downloaded, size:', originalFileBuffer.length, 'bytes');
+      
+      // Get source and target languages
+      const sourceLanguage = document.metadata?.document_translation?.source_language || 'en';
+      const targetLanguage = document.target_language || 'es';
+      const originalFilename = document.metadata?.document_translation?.original_filename || 'document.pdf';
+      
+      console.log('[Document Translate] Translating with DeepL:', sourceLanguage, '->', targetLanguage);
+      
+      // Translate PDF using DeepL
+      const { translatePDFWithDeepL, mapToDeepLLanguageCode } = await import('@/lib/deeplPdfTranslator');
+      
+      const translatedBuffer = await translatePDFWithDeepL(
+        originalFileBuffer,
+        originalFilename,
+        mapToDeepLLanguageCode(sourceLanguage, true),
+        mapToDeepLLanguageCode(targetLanguage, false)
+      );
+      
+      console.log('[Document Translate] DeepL translation complete, size:', translatedBuffer.length, 'bytes');
+      
+      // Upload translated PDF to Supabase Storage
+      const translatedFilename = originalFilename.replace(/\.pdf$/i, '_translated.pdf');
+      
+      const translatedStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: translatedBuffer,
+        fileName: translatedFilename,
+        contentType: 'application/pdf',
+        enterpriseId: document.enterprise_id!,
+        userId: document.userId,
+        conversationId: conversationId,
+        isTranslated: true,
+      });
+      
+      console.log('[Document Translate] Translated PDF uploaded to:', translatedStoragePath);
+      
+      // Get download URL
+      const downloadUrl = await getDocumentDownloadUrl(translatedStoragePath);
+      
+      // Mark translation as complete
+      await completeDocumentTranslation({
+        conversationId,
+        translatedFileUrl: downloadUrl,
+      });
+      
+      console.log('[Document Translate] Translation completed successfully');
+      
+      return NextResponse.json({
+        success: true,
+        message: 'PDF translated successfully with DeepL',
+        downloadUrl,
+      });
+    }
+    
+    // For non-PDF files, use the existing text-based translation flow
+    console.log('[Document Translate] Reconstructing document from translated chunks');
     let translatedContent: string;
+    const isHtmlContent = document.metadata?.document_translation?.is_html_content || false;
     
     if (isHtmlContent) {
       console.log('[Document Translate] Reconstructing HTML document with formatting');
@@ -138,54 +215,14 @@ export async function POST(
       translatedContent = reconstructDocument(translatedChunks);
     }
     
-    // Download original file if PDF (needed for format preservation)
-    let originalFileBuffer: Buffer | undefined;
-    const fileType = document.metadata?.document_translation?.file_type || 'text/plain';
+    // Note: PDFs are handled above with DeepL and return early.
+    // This code path is only for DOCX and other document types.
     
-    if (fileType === 'application/pdf') {
-      console.log('[Document Translate] Downloading original PDF for format preservation');
-      // Original file is stored in audio_url field
-      const originalStoragePath = document.audio_url || document.metadata?.document_translation?.original_storage_path;
-      
-      console.log('[Document Translate] Original storage path:', originalStoragePath);
-      
-      if (originalStoragePath) {
-        try {
-          const { data: fileData, error: downloadError } = await supabase
-            .storage
-            .from('documents')
-            .download(originalStoragePath);
-          
-          if (downloadError) {
-            console.error('[Document Translate] Failed to download original PDF:', downloadError);
-            throw new Error(`Failed to download original PDF: ${downloadError.message}`);
-          }
-          
-          if (!fileData) {
-            console.error('[Document Translate] No file data returned from download');
-            throw new Error('No file data returned from Supabase storage');
-          }
-          
-          originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
-          console.log('[Document Translate] Original PDF downloaded successfully, size:', originalFileBuffer.length, 'bytes');
-        } catch (error) {
-          console.error('[Document Translate] Exception downloading original PDF:', error);
-          throw error;
-        }
-      } else {
-        console.error('[Document Translate] No original storage path found in document');
-        console.error('[Document Translate] document.audio_url:', document.audio_url);
-        console.error('[Document Translate] document.metadata:', JSON.stringify(document.metadata));
-        throw new Error('Original PDF storage path not found');
-      }
-    }
-    
-    // Create translated document buffer
+    // Create translated document buffer (for DOCX and other non-PDF formats)
     const { buffer, mimeType, extension } = await createTranslatedDocumentBuffer(
       translatedContent,
       fileType,
-      isHtmlContent,
-      originalFileBuffer
+      isHtmlContent
     );
     
     // Upload translated document to Supabase Storage

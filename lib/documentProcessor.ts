@@ -269,13 +269,20 @@ export async function createTranslatedDocumentBuffer(
   let extension = '.txt';
   
   if (originalMimeType === 'application/pdf') {
-    console.log('[Create Document] Creating PDF with complete format preservation (overlay method)');
+    console.log('[Create Document] Using DeepL API for PDF translation with format preservation');
     
+    // Note: For PDFs, we use DeepL's Document Translation API which handles
+    // translation directly from the original file, not from extracted text.
+    // The translatedContent parameter is ignored for PDFs.
+    // This will be handled by the translate route which calls DeepL directly.
+    
+    // This code path should not be reached for PDFs when using DeepL,
+    // but we keep it as a fallback
     if (!originalFileBuffer) {
       throw new Error('Original PDF file buffer is required for format preservation');
     }
     
-    // Use format preservation method
+    // Use format preservation method as fallback
     const { createTranslatedPDFWithFormatPreservation } = await import('./pdfOverlayProcessor');
     
     // Create translated PDF with format preservation
