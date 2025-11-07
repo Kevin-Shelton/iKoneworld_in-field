@@ -233,3 +233,10 @@
 - [x] Check how createdAt is stored in database
 - [x] Check how API serializes the timestamp
 - [x] Fix: Convert all timestamps to ISO strings in API response using toISOString()
+
+## Formatting Preservation - New Approach Research
+- [ ] Analyze what went wrong with HTML-based approach
+- [ ] Research alternative methods for DOCX formatting preservation
+- [ ] Evaluate external services vs local processing
+- [ ] Propose recommended solution with pros/cons
+- [ ] Implement in new branch (not main)
