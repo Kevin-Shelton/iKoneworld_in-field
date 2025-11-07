@@ -1,4 +1,5 @@
 import mammoth from 'mammoth';
+import { convertDocxToHtml, convertHtmlToDocx } from './mammothDocumentProcessor';
 // @ts-ignore - pdf-parse doesn't have proper ESM support
 const pdfParse = require('pdf-parse');
 
@@ -31,6 +32,39 @@ export async function extractTextFromDocument(
 }
 
 /**
+ * Extract HTML from DOCX with formatting preserved
+ * Used for chunking large documents while maintaining formatting
+ */
+export async function extractHtmlFromDocument(
+  fileBuffer: Buffer,
+  mimeType: string
+): Promise<string> {
+  try {
+    switch (mimeType) {
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      case 'application/msword':
+        return await convertDocxToHtml(fileBuffer);
+      
+      case 'text/plain':
+        // Wrap plain text in HTML
+        const text = extractTextFromTXT(fileBuffer);
+        return text.split('\n\n').map(p => `<p>${p}</p>`).join('\n');
+      
+      case 'application/pdf':
+        // For PDF, extract text and wrap in HTML
+        const pdfText = await extractTextFromPDF(fileBuffer);
+        return pdfText.split('\n\n').map(p => `<p>${p}</p>`).join('\n');
+      
+      default:
+        throw new Error(`Unsupported file type for HTML extraction: ${mimeType}`);
+    }
+  } catch (error) {
+    console.error('Error extracting HTML from document:', error);
+    throw new Error(`Failed to extract HTML: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
  * Extract text from PDF
  */
 async function extractTextFromPDF(fileBuffer: Buffer): Promise<string> {
@@ -54,7 +88,86 @@ function extractTextFromTXT(fileBuffer: Buffer): string {
 }
 
 /**
- * Split text into chunks for translation
+ * Split HTML into chunks for translation while preserving tags
+ * This is smarter than plain text chunking - it keeps HTML structure intact
+ */
+export function chunkHtml(html: string, maxChunkSize: number = 5000): string[] {
+  const chunks: string[] = [];
+  
+  // Split by paragraph tags
+  const paragraphPattern = /<(p|h[1-6]|li|div)[^>]*>.*?<\/\1>/gi;
+  const paragraphs = html.match(paragraphPattern) || [];
+  
+  if (paragraphs.length === 0) {
+    // Fallback: if no paragraphs found, chunk by plain text
+    console.warn('[Chunk HTML] No HTML paragraphs found, falling back to text chunking');
+    return chunkText(html, maxChunkSize);
+  }
+  
+  let currentChunk = '';
+  
+  for (const paragraph of paragraphs) {
+    // If adding this paragraph would exceed the limit
+    if (currentChunk.length + paragraph.length > maxChunkSize) {
+      // Save current chunk if it has content
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      
+      // If the paragraph itself is too long, we need to split it
+      if (paragraph.length > maxChunkSize) {
+        // Extract tag and content
+        const tagMatch = paragraph.match(/<([a-z0-9]+)([^>]*)>(.*)<\/\1>/i);
+        if (tagMatch) {
+          const [, tagName, attributes, content] = tagMatch;
+          
+          // Split content by sentences
+          const sentences = content.split(/([.!?]+\s+)/);
+          let sentenceChunk = '';
+          
+          for (let i = 0; i < sentences.length; i += 2) {
+            const sentence = sentences[i] + (sentences[i + 1] || '');
+            const wrappedSentence = `<${tagName}${attributes}>${sentence}</${tagName}>`;
+            
+            if (sentenceChunk.length + wrappedSentence.length > maxChunkSize) {
+              if (sentenceChunk.trim()) {
+                chunks.push(sentenceChunk.trim());
+              }
+              sentenceChunk = wrappedSentence;
+            } else {
+              sentenceChunk += wrappedSentence;
+            }
+          }
+          
+          if (sentenceChunk.trim()) {
+            currentChunk = sentenceChunk;
+          } else {
+            currentChunk = '';
+          }
+        } else {
+          // Can't parse, just add as is
+          currentChunk = paragraph;
+        }
+      } else {
+        currentChunk = paragraph;
+      }
+    } else {
+      currentChunk += paragraph;
+    }
+  }
+  
+  // Add the last chunk
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+  
+  console.log(`[Chunk HTML] Created ${chunks.length} chunks from ${paragraphs.length} paragraphs`);
+  
+  return chunks;
+}
+
+/**
+ * Split text into chunks for translation (plain text fallback)
  * Verbum API has a limit, so we need to chunk large documents
  */
 export function chunkText(text: string, maxChunkSize: number = 5000): string[] {
@@ -111,23 +224,41 @@ export function chunkText(text: string, maxChunkSize: number = 5000): string[] {
 }
 
 /**
- * Reconstruct document from translated chunks
+ * Reconstruct HTML document from translated chunks
+ */
+export function reconstructHtmlDocument(translatedChunks: string[]): string {
+  return translatedChunks.join('');
+}
+
+/**
+ * Reconstruct document from translated chunks (plain text)
  */
 export function reconstructDocument(translatedChunks: string[]): string {
   return translatedChunks.join('\n\n');
 }
 
 /**
- * Create a translated document buffer (for now, just text file)
- * In the future, we can add support for maintaining original formatting
+ * Create a translated document buffer with formatting preservation
  */
-export function createTranslatedDocumentBuffer(
-  translatedText: string,
-  originalMimeType: string
-): { buffer: Buffer; mimeType: string; extension: string } {
-  // For now, we'll output as text file
-  // Future enhancement: maintain original format
-  const buffer = Buffer.from(translatedText, 'utf-8');
+export async function createTranslatedDocumentBuffer(
+  translatedContent: string,
+  originalMimeType: string,
+  isHtml: boolean = false
+): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
+  
+  // If content is HTML and original was DOCX, convert back to DOCX
+  if (isHtml && (originalMimeType.includes('word') || originalMimeType.includes('document'))) {
+    console.log('[Create Document] Converting HTML back to DOCX with formatting');
+    const buffer = await convertHtmlToDocx(translatedContent);
+    return {
+      buffer,
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      extension: '.docx',
+    };
+  }
+  
+  // Otherwise, output as plain text
+  const buffer = Buffer.from(translatedContent, 'utf-8');
   
   // Determine output format based on input
   let mimeType = 'text/plain';
