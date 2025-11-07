@@ -9,7 +9,6 @@
  */
 
 import { extractDocumentXml, createModifiedDocx } from './docxHandler';
-import { translateText } from './verbumApi';
 
 interface ChunkingOptions {
   fileBuffer: Buffer;
@@ -65,12 +64,29 @@ export async function processLargeDocx(options: ChunkingOptions): Promise<Chunki
       const chunk = chunks[i];
       const chunkText = chunk.join('\n');
       
-      // Translate chunk
-      const translatedText = await translateText(
-        chunkText,
-        sourceLanguage,
-        targetLanguage
+      // Translate chunk via Verbum API
+      const response = await fetch(
+        'https://sdk.verbum.ai/v1/translator/translate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.VERBUM_API_KEY!,
+          },
+          body: JSON.stringify({
+            text: [{ text: chunkText }],
+            from: sourceLanguage,
+            to: [targetLanguage],
+          }),
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const translatedText = data.translations?.[0]?.text || chunkText;
       
       // Split back into individual nodes
       const translatedChunk = translatedText.split('\n');
@@ -198,11 +214,29 @@ export async function processLargePdf(options: ChunkingOptions): Promise<Chunkin
     const progressIncrement = 65 / chunks.length;
     
     for (let i = 0; i < chunks.length; i++) {
-      const translatedChunk = await translateText(
-        chunks[i],
-        sourceLanguage,
-        targetLanguage
+      // Translate chunk via Verbum API
+      const response = await fetch(
+        'https://sdk.verbum.ai/v1/translator/translate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.VERBUM_API_KEY!,
+          },
+          body: JSON.stringify({
+            text: [{ text: chunks[i] }],
+            from: sourceLanguage,
+            to: [targetLanguage],
+          }),
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const translatedChunk = data.translations?.[0]?.text || chunks[i];
       
       translatedChunks.push(translatedChunk);
       
