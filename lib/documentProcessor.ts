@@ -1,5 +1,6 @@
 import mammoth from 'mammoth';
 import { convertDocxToHtml } from './mammothDocumentProcessor';
+import { sanitizeForPDF } from './pdfTextSanitizer';
 // Note: convertHtmlToDocx is dynamically imported to avoid DOMMatrix errors
 
 /**
@@ -327,8 +328,11 @@ export async function createTranslatedDocumentBuffer(
     const lineHeight = fontSize * 1.2;
     const margin = 50;
     
+    // Sanitize text to remove unsupported Unicode characters
+    const sanitizedContent = sanitizeForPDF(translatedContent);
+    
     // Split text into lines and pages
-    const lines = translatedContent.split('\n');
+    const lines = sanitizedContent.split('\n');
     let currentPage = pdfDoc.addPage();
     let { width, height } = currentPage.getSize();
     let yPosition = height - margin;
