@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
-import { Mail, FileText } from 'lucide-react';
+import { Mail, FileText, Globe } from 'lucide-react';
 import { DefaultLanguagePrompt } from '@/components/DefaultLanguagePrompt';
 
 type Conversation = {
@@ -300,6 +300,13 @@ function DashboardContent() {
             <CardDescription className="text-gray-300">Begin a real-time translation session with a customer</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4">
+            <button
+              onClick={() => window.open('https://explore.ikoneworld.com/site-translate/index.php/https/www.verizon.com/business/', '_blank')}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              Website
+            </button>
             <button
               onClick={() => router.push('/select-language')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
