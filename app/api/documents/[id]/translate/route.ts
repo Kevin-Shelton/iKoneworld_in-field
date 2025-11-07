@@ -144,7 +144,8 @@ export async function POST(
     
     if (fileType === 'application/pdf') {
       console.log('[Document Translate] Downloading original PDF for format preservation');
-      const originalStoragePath = document.metadata?.document_translation?.original_storage_path;
+      // Original file is stored in audio_url field
+      const originalStoragePath = document.audio_url || document.metadata?.document_translation?.original_storage_path;
       
       if (originalStoragePath) {
         const { data: fileData, error: downloadError } = await supabase

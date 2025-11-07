@@ -187,7 +187,8 @@ export async function GET(request: NextRequest) {
           
           if (fileType === 'application/pdf') {
             console.log('[Cron] Downloading original PDF for format preservation');
-            const originalStoragePath = conv.metadata?.document_translation?.original_storage_path;
+            // Original file is stored in audio_url field
+            const originalStoragePath = conv.audio_url || conv.metadata?.document_translation?.original_storage_path;
             
             if (originalStoragePath) {
               const { data: fileData, error: downloadError } = await supabaseAdmin
