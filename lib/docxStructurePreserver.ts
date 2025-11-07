@@ -84,7 +84,8 @@ function lockFieldCodes(xmlString: string): string {
   let modifiedXml = xmlString;
   
   // Pattern to match complete field code blocks
-  const fieldPattern = /(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>\s*<\/w:r>)(.*?)(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>\s*<\/w:r>)/gs;
+  // Using [\s\S] instead of 's' flag for ES5 compatibility
+  const fieldPattern = /(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="begin"[^>]*\/>\s*<\/w:r>)([\s\S]*?)(<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end"[^>]*\/>\s*<\/w:r>)/g;
   
   modifiedXml = modifiedXml.replace(fieldPattern, (match, begin, middle, end) => {
     // Check if this is a DATE field
@@ -92,7 +93,8 @@ function lockFieldCodes(xmlString: string): string {
       console.log('[Field Lock] Found DATE field, locking...');
       
       // Extract the cached result value (text between separate and end)
-      const resultPattern = /<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>(.*?)(?=<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end")/s;
+      // Using [\s\S] instead of 's' flag for ES5 compatibility
+      const resultPattern = /<w:fldChar[^>]*w:fldCharType="separate"[^>]*\/>([\s\S]*?)(?=<w:r[^>]*>\s*<w:fldChar[^>]*w:fldCharType="end")/;
       const resultMatch = middle.match(resultPattern);
       
       if (resultMatch && resultMatch[1]) {
