@@ -1,5 +1,6 @@
 import mammoth from 'mammoth';
-import { convertDocxToHtml, convertHtmlToDocx } from './mammothDocumentProcessor';
+import { convertDocxToHtml } from './mammothDocumentProcessor';
+// Note: convertHtmlToDocx is dynamically imported to avoid DOMMatrix errors
 // @ts-ignore - pdf-parse doesn't have proper ESM support
 const pdfParse = require('pdf-parse');
 
@@ -249,6 +250,8 @@ export async function createTranslatedDocumentBuffer(
   // If content is HTML and original was DOCX, convert back to DOCX
   if (isHtml && (originalMimeType.includes('word') || originalMimeType.includes('document'))) {
     console.log('[Create Document] Converting HTML back to DOCX with formatting');
+    // Dynamic import to avoid loading docx library at module level
+    const { convertHtmlToDocx } = await import('./htmlToDocxConverter');
     const buffer = await convertHtmlToDocx(translatedContent);
     return {
       buffer,

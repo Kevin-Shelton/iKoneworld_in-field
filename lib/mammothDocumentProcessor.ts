@@ -173,11 +173,10 @@ function parseHtmlElement(html: string): ParsedElement {
 
 /**
  * Convert HTML back to DOCX with basic formatting
- * 
- * @param html - HTML string
- * @returns DOCX buffer
+ * DEPRECATED: Use htmlToDocxConverter.ts instead (dynamic import to avoid DOMMatrix)
+ * Keeping this for reference but should not be used
  */
-export async function convertHtmlToDocx(html: string): Promise<Buffer> {
+async function convertHtmlToDocx_DEPRECATED(html: string): Promise<Buffer> {
   // Dynamic import to avoid loading docx library at module level
   // This prevents DOMMatrix errors in serverless environments
   const { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } = await import('docx');
@@ -289,6 +288,8 @@ export async function processDocxTranslation(
   console.log('[Mammoth] Translated HTML, length:', translatedHtml.length);
   
   // Step 3: Convert translated HTML back to DOCX
+  // Dynamic import to avoid DOMMatrix errors
+  const { convertHtmlToDocx } = await import('./htmlToDocxConverter');
   const translatedBuffer = await convertHtmlToDocx(translatedHtml);
   console.log('[Mammoth] Converted back to DOCX, size:', translatedBuffer.length);
   

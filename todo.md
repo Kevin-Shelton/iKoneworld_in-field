@@ -186,7 +186,10 @@
 ## DOMMatrix Error in Serverless Environment
 - [x] Fix "DOMMatrix is not defined" error during document upload
 - [x] Issue: docx library requires browser APIs not available in serverless
-- [x] Solution: Convert docx library imports to dynamic imports (only load when needed)
+- [x] Solution: Move HTML→DOCX conversion to separate file with dynamic import
+- [x] Created htmlToDocxConverter.ts with static docx import
+- [x] Updated documentProcessor.ts and mammothDocumentProcessor.ts to dynamically import converter
+- [x] This prevents docx library from loading at module evaluation time
 
 ## Translation Not Occurring Bug
 - [ ] Documents upload and download successfully
@@ -200,3 +203,9 @@
 - [x] Compare language mapping logic with current implementation
 - [x] Working version did NOT have language mapping - used codes directly
 - [x] Reverted unnecessary language mapping changes
+
+## Deep Investigation - Translation Still Not Working
+- [ ] Compare entire skeleton method between working version (24b7fc2) and current
+- [ ] Check if processDocxTranslation function exists in working version
+- [ ] Check what translation approach working version used
+- [ ] Identify the actual difference causing translation failure
