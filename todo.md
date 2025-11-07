@@ -156,3 +156,29 @@
 ## Build Error - Next.js 16 Async Params
 - [x] Fix TypeScript error in delete route: params is now Promise<{ id: string }> in Next.js 16
 - [x] Update DELETE handler to await params before accessing id
+
+## Chunking Method - Formatting Preservation (Current Sprint)
+
+### Problem
+- Large documents (>100KB) use chunking method which loses ALL formatting
+- Currently extracts plain text, translates, outputs as .txt file
+- Small documents preserve formatting, but large ones don't
+
+### Implementation Tasks
+- [x] Create HTML chunking function that preserves tags
+- [x] Update documentProcessor.ts to convert DOCX → HTML for chunking
+- [x] Implement smart HTML chunking (split by sections without breaking tags)
+- [x] Update upload-smart route to use HTML for chunked documents
+- [x] Update translate route to handle HTML chunks
+- [x] Update createTranslatedDocumentBuffer to convert HTML → DOCX
+- [x] Store HTML chunks in database with is_html_content flag
+- [x] Update cron job to reconstruct HTML documents with formatting
+- [ ] Test with large document (>100KB) to verify formatting preservation
+
+### Technical Approach
+1. Convert DOCX → HTML (preserving formatting)
+2. Chunk HTML by sections/paragraphs (keep tags intact)
+3. Store HTML chunks in conversation_messages
+4. Translate each HTML chunk (preserve tags)
+5. Reassemble translated HTML chunks
+6. Convert HTML → DOCX with formatting

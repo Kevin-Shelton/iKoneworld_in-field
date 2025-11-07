@@ -308,21 +308,37 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await file.arrayBuffer();
       const fileBuffer = Buffer.from(arrayBuffer);
       
-      // Extract text from document
-      console.log('[Upload Smart] Extracting text from document...');
+      // Extract content from document (HTML for DOCX to preserve formatting)
+      console.log('[Upload Smart] Extracting content from document...');
       
-      // Dynamic import to avoid loading mammoth/xmldom in skeleton method
-      const { extractTextFromDocument } = await import('@/lib/documentUtils');
-      const extractedText = await extractTextFromDocument(fileBuffer, file.type);
+      // For DOCX files, extract HTML to preserve formatting
+      // For other files, extract plain text
+      const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                     file.type === 'application/msword';
       
-      if (!extractedText || extractedText.trim().length === 0) {
+      let extractedContent: string;
+      let isHtmlContent = false;
+      
+      if (isDocx) {
+        console.log('[Upload Smart] Extracting HTML from DOCX to preserve formatting');
+        const { extractHtmlFromDocument } = await import('@/lib/documentProcessor');
+        extractedContent = await extractHtmlFromDocument(fileBuffer, file.type);
+        isHtmlContent = true;
+        console.log('[Upload Smart] Extracted HTML length:', extractedContent.length);
+      } else {
+        console.log('[Upload Smart] Extracting plain text from document');
+        const { extractTextFromDocument } = await import('@/lib/documentUtils');
+        extractedContent = await extractTextFromDocument(fileBuffer, file.type);
+        isHtmlContent = false;
+        console.log('[Upload Smart] Extracted text length:', extractedContent.length);
+      }
+      
+      if (!extractedContent || extractedContent.trim().length === 0) {
         return NextResponse.json(
-          { error: 'No text could be extracted from the document' },
+          { error: 'No content could be extracted from the document' },
           { status: 400 }
         );
       }
-      
-      console.log('[Upload Smart] Extracted text length:', extractedText.length);
       
       // Create document translation record
       const conversation = await createDocumentTranslation({
@@ -351,9 +367,17 @@ export async function POST(request: NextRequest) {
       
       console.log('[Upload Smart] Uploaded file to Supabase:', uploadedFileUrl);
       
-      // Chunk text for translation
-      const chunks = chunkText(extractedText);
-      console.log('[Upload Smart] Created chunks:', chunks.length);
+      // Chunk content for translation (HTML or plain text)
+      let chunks: string[];
+      
+      if (isHtmlContent) {
+        const { chunkHtml } = await import('@/lib/documentProcessor');
+        chunks = chunkHtml(extractedContent);
+        console.log('[Upload Smart] Created HTML chunks:', chunks.length);
+      } else {
+        chunks = chunkText(extractedContent);
+        console.log('[Upload Smart] Created text chunks:', chunks.length);
+      }
       
       // Store chunks in database
       await storeDocumentChunks({
@@ -379,6 +403,7 @@ export async function POST(request: NextRequest) {
               method: 'chunking',
               chunk_count: chunks.length,
               estimated_time_seconds: estimatedTime,
+              is_html_content: isHtmlContent,
             },
           },
         })

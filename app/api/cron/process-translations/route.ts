@@ -145,24 +145,63 @@ export async function GET(request: NextRequest) {
         // Get all chunks
         const chunks = await getConversationChunks(chunk.conversationId);
         const translatedTexts = chunks.map(c => c.translatedText);
-        const fullTranslatedText = translatedTexts.join('\n\n');
         
         // Get conversation metadata for file info
         const { data: conv } = await supabaseAdmin
           .from('conversations')
-          .select('metadata, audio_url')
+          .select('metadata, audio_url, userId, enterprise_id')
           .eq('id', chunk.conversationId)
           .single();
         
         if (conv) {
           const originalFilename = conv.metadata?.document_translation?.original_filename || 'document.docx';
-          const fileType = conv.metadata?.document_translation?.file_type || 'docx';
+          const fileType = conv.metadata?.document_translation?.file_type || 'text/plain';
+          const isHtmlContent = conv.metadata?.document_translation?.is_html_content || false;
           
-          // Reconstruct document (this will be implemented based on file type)
-          // For now, we'll mark as completed and store the translated text
+          console.log(`[Cron] Reconstructing document (HTML: ${isHtmlContent})`);
+          
+          // Reconstruct document based on content type
+          let fullTranslatedContent: string;
+          
+          if (isHtmlContent) {
+            const { reconstructHtmlDocument } = await import('@/lib/documentProcessor');
+            fullTranslatedContent = reconstructHtmlDocument(translatedTexts);
+            console.log('[Cron] Reconstructed HTML document with formatting');
+          } else {
+            fullTranslatedContent = translatedTexts.join('\n\n');
+            console.log('[Cron] Reconstructed plain text document');
+          }
+          
+          // Create translated document buffer
+          const { createTranslatedDocumentBuffer } = await import('@/lib/documentProcessor');
+          const { buffer, mimeType, extension } = await createTranslatedDocumentBuffer(
+            fullTranslatedContent,
+            fileType,
+            isHtmlContent
+          );
+          
+          console.log(`[Cron] Created document buffer: ${buffer.length} bytes, type: ${mimeType}`);
+          
+          // Upload to Supabase Storage
+          const { uploadDocumentToSupabase } = await import('@/lib/supabaseStorage');
+          const translatedFilename = originalFilename.replace(/\.[^.]+$/, '') + '_translated' + extension;
+          
+          const translatedStoragePath = await uploadDocumentToSupabase({
+            fileBuffer: buffer,
+            fileName: translatedFilename,
+            contentType: mimeType,
+            enterpriseId: conv.enterprise_id || 'default',
+            userId: conv.userId,
+            conversationId: chunk.conversationId,
+            isTranslated: true,
+          });
+          
+          console.log(`[Cron] Uploaded translated document: ${translatedStoragePath}`);
+          
+          // Mark as completed
           await completeDocumentTranslation({
             conversationId: chunk.conversationId,
-            translatedFileUrl: '', // Will be implemented with document reconstruction
+            translatedFileUrl: translatedStoragePath,
           });
           
           console.log(`[Cron] Document translation completed for conversation ${chunk.conversationId}`);

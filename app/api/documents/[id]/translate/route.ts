@@ -111,13 +111,26 @@ export async function POST(
       targetLanguage: document.language2,
     });
     
+    // Check if content is HTML (for formatting preservation)
+    const isHtmlContent = document.metadata?.document_translation?.is_html_content || false;
+    
     // Reconstruct full document
-    const translatedText = reconstructDocument(translatedChunks);
+    let translatedContent: string;
+    
+    if (isHtmlContent) {
+      console.log('[Document Translate] Reconstructing HTML document with formatting');
+      const { reconstructHtmlDocument } = await import('@/lib/documentProcessor');
+      translatedContent = reconstructHtmlDocument(translatedChunks);
+    } else {
+      console.log('[Document Translate] Reconstructing plain text document');
+      translatedContent = reconstructDocument(translatedChunks);
+    }
     
     // Create translated document buffer
-    const { buffer, mimeType, extension } = createTranslatedDocumentBuffer(
-      translatedText,
-      document.metadata?.document_translation?.file_type || 'text/plain'
+    const { buffer, mimeType, extension } = await createTranslatedDocumentBuffer(
+      translatedContent,
+      document.metadata?.document_translation?.file_type || 'text/plain',
+      isHtmlContent
     );
     
     // Upload translated document to Supabase Storage
