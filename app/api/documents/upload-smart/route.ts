@@ -402,10 +402,18 @@ export async function POST(request: NextRequest) {
         console.log('[Upload Smart] Extracted HTML length:', extractedContent.length);
       } else {
         console.log('[Upload Smart] Extracting plain text from document');
-        const { extractTextFromDocument } = await import('@/lib/documentUtils');
-        extractedContent = await extractTextFromDocument(fileBuffer, file.type);
-        isHtmlContent = false;
-        console.log('[Upload Smart] Extracted text length:', extractedContent.length);
+        console.log('[Upload Smart] File type:', file.type);
+        console.log('[Upload Smart] File size:', file.size, 'bytes');
+        
+        try {
+          const { extractTextFromDocument } = await import('@/lib/documentUtils');
+          extractedContent = await extractTextFromDocument(fileBuffer, file.type);
+          isHtmlContent = false;
+          console.log('[Upload Smart] Extracted text length:', extractedContent.length);
+        } catch (extractError) {
+          console.error('[Upload Smart] Text extraction failed:', extractError);
+          throw new Error(`Failed to extract text from ${file.type}: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`);
+        }
       }
       
       if (!extractedContent || extractedContent.trim().length === 0) {

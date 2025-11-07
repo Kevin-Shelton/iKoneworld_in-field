@@ -134,7 +134,23 @@ export async function extractTextFromDocument(
       case 'application/pdf':
         // Lazy load pdf-parse only when needed
         const pdfParse = require('pdf-parse');
-        const pdfData = await pdfParse(fileBuffer);
+        
+        // Add timeout protection for PDF parsing (30 seconds max)
+        const pdfPromise = pdfParse(fileBuffer, {
+          max: 0, // Parse all pages
+          version: 'v2.0.550' // Use specific version
+        });
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('PDF parsing timeout after 30 seconds')), 30000);
+        });
+        
+        const pdfData = await Promise.race([pdfPromise, timeoutPromise]);
+        
+        if (!pdfData || !pdfData.text) {
+          throw new Error('PDF parsing returned empty result');
+        }
+        
         return pdfData.text;
       
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
