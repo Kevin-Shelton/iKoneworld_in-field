@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
 // During build time, create a dummy client that will be replaced at runtime
 const createSupabaseClient = () => {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // Check if we're in a build environment without real credentials
+  const isBuildTime = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (isBuildTime && typeof window === 'undefined') {
     // Return a proxy that throws only if actually used
     return new Proxy({} as any, {
       get() {

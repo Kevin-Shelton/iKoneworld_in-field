@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
  * DELETE /api/documents/[id]/delete
@@ -30,7 +25,7 @@ export async function DELETE(
     console.log(`[Delete Document] Starting deletion for conversation ${conversationId}`);
 
     // 1. Get conversation details to find file paths
-    const { data: conversation, error: fetchError } = await supabase
+    const { data: conversation, error: fetchError } = await supabaseAdmin
       .from('conversations')
       .select('audio_url, metadata')
       .eq('id', conversationId)
@@ -61,7 +56,7 @@ export async function DELETE(
     if (filesToDelete.length > 0) {
       console.log(`[Delete Document] Deleting ${filesToDelete.length} files from storage`);
       
-      const { error: storageError } = await supabase
+      const { error: storageError } = await supabaseAdmin
         .storage
         .from('documents')
         .remove(filesToDelete);
@@ -75,7 +70,7 @@ export async function DELETE(
     }
 
     // 3. Delete conversation messages (chunks)
-    const { error: messagesError } = await supabase
+    const { error: messagesError } = await supabaseAdmin
       .from('conversation_messages')
       .delete()
       .eq('conversationId', conversationId);
@@ -86,7 +81,7 @@ export async function DELETE(
     }
 
     // 4. Delete conversation record
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
       .from('conversations')
       .delete()
       .eq('id', conversationId);
