@@ -5,6 +5,7 @@ import { Upload, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { retryFetch } from '@/lib/retryUtils';
 
 interface DocumentUploadProps {
   userId: number;
@@ -68,10 +69,16 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
       formData.append('sourceLanguage', sourceLanguage);
       formData.append('targetLanguage', targetLanguage);
 
-      // Use smart routing endpoint
-      const response = await fetch('/api/documents/upload-smart', {
+      // Use smart routing endpoint with automatic retry (3 attempts)
+      const response = await retryFetch('/api/documents/upload-smart', {
         method: 'POST',
         body: formData,
+      }, {
+        maxAttempts: 3,
+        onRetry: (attempt, error) => {
+          toast.info(`Upload attempt ${attempt} failed. Retrying...`);
+          console.log(`[Upload Retry] Attempt ${attempt} failed:`, error.message);
+        }
       });
 
       if (!response.ok) {
@@ -89,10 +96,15 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete 
         const data = await response.json();
         toast.success('Document added to translation queue');
         
-        // Trigger translation for chunking method
+        // Trigger translation for chunking method with retry
         if (data.conversationId) {
-          await fetch(`/api/documents/${data.conversationId}/translate`, {
+          await retryFetch(`/api/documents/${data.conversationId}/translate`, {
             method: 'POST',
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[Translation Retry] Attempt ${attempt} failed, retrying...`);
+            }
           });
         }
       } else {
