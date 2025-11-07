@@ -183,14 +183,14 @@ export async function POST(
       
       console.log('[Document Translate] Translated PDF uploaded to:', translatedStoragePath);
       
-      // Get download URL
-      const downloadUrl = await getDocumentDownloadUrl(translatedStoragePath);
-      
-      // Mark translation as complete
+      // Mark translation as complete with storage path
       await completeDocumentTranslation({
         conversationId,
-        translatedFileUrl: downloadUrl,
+        translatedFileUrl: translatedStoragePath, // Store the storage path, not the download URL
       });
+      
+      // Get download URL for the response
+      const downloadUrl = await getDocumentDownloadUrl(translatedStoragePath);
       
       console.log('[Document Translate] Translation completed successfully');
       
