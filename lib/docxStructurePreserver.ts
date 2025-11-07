@@ -18,6 +18,34 @@ export interface TranslationResult {
 }
 
 /**
+ * Check if a text segment is a date or number that should not be translated
+ */
+function isDateOrNumber(text: string): boolean {
+  const trimmed = text.trim();
+  
+  // Check for date patterns: MM/DD/YYYY, DD/MM/YYYY, M/D/YYYY, etc.
+  const datePatterns = [
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,  // 11/7/2025, 7/30/2025
+    /^\d{1,2}-\d{1,2}-\d{4}$/,     // 11-7-2025
+    /^\d{4}-\d{1,2}-\d{1,2}$/,     // 2025-11-07
+    /^\d{1,2}\.\d{1,2}\.\d{4}$/,  // 11.7.2025
+  ];
+  
+  for (const pattern of datePatterns) {
+    if (pattern.test(trimmed)) {
+      return true;
+    }
+  }
+  
+  // Check if it's only numbers, slashes, dashes, or dots
+  if (/^[\d\/\-\.\s]+$/.test(trimmed)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Extract text nodes from XML for translation
  */
 function extractTextNodes(xmlString: string): string[] {
@@ -149,6 +177,13 @@ export async function processDocxWithStructurePreservation(
       const segment = allTextSegments[i];
       if (segment.trim()) {
         try {
+          // Check if segment is a date or number - skip translation
+          if (isDateOrNumber(segment)) {
+            console.log(`[Structure Preserver] Skipping translation for date/number: "${segment}"`);
+            translatedSegments.push(segment);
+            continue;
+          }
+          
           const translated = await translateFn(segment);
           translatedSegments.push(translated);
           
