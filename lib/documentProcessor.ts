@@ -315,9 +315,86 @@ export async function createTranslatedDocumentBuffer(
   let extension = '.txt';
   
   if (originalMimeType === 'application/pdf') {
-    // Future: use pdf-lib to create PDF
-    mimeType = 'text/plain';
-    extension = '.txt';
+    console.log('[Create Document] Creating PDF from translated text');
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    
+    // Create a new PDF document
+    const pdfDoc = await PDFDocument.create();
+    
+    // Embed a standard font
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontSize = 12;
+    const lineHeight = fontSize * 1.2;
+    const margin = 50;
+    
+    // Split text into lines and pages
+    const lines = translatedContent.split('\n');
+    let currentPage = pdfDoc.addPage();
+    let { width, height } = currentPage.getSize();
+    let yPosition = height - margin;
+    
+    for (const line of lines) {
+      // Wrap long lines
+      const maxWidth = width - (2 * margin);
+      const words = line.split(' ');
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (textWidth > maxWidth && currentLine) {
+          // Draw current line
+          currentPage.drawText(currentLine, {
+            x: margin,
+            y: yPosition,
+            size: fontSize,
+            font,
+            color: rgb(0, 0, 0),
+          });
+          
+          yPosition -= lineHeight;
+          currentLine = word;
+          
+          // Check if we need a new page
+          if (yPosition < margin) {
+            currentPage = pdfDoc.addPage();
+            yPosition = height - margin;
+          }
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      // Draw the last line
+      if (currentLine) {
+        currentPage.drawText(currentLine, {
+          x: margin,
+          y: yPosition,
+          size: fontSize,
+          font,
+          color: rgb(0, 0, 0),
+        });
+        
+        yPosition -= lineHeight;
+        
+        // Check if we need a new page
+        if (yPosition < margin) {
+          currentPage = pdfDoc.addPage();
+          yPosition = height - margin;
+        }
+      }
+    }
+    
+    // Serialize the PDF to bytes
+    const pdfBytes = await pdfDoc.save();
+    const buffer = Buffer.from(pdfBytes);
+    
+    return {
+      buffer,
+      mimeType: 'application/pdf',
+      extension: '.pdf',
+    };
   } else if (originalMimeType.includes('word')) {
     // Future: use docx library to create DOCX
     mimeType = 'text/plain';
