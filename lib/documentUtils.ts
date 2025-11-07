@@ -132,26 +132,44 @@ export async function extractTextFromDocument(
   try {
     switch (mimeType) {
       case 'application/pdf':
-        // Lazy load pdf-parse only when needed
-        const pdfParse = require('pdf-parse');
+        // Use pdfjs-dist which is serverless-compatible (no canvas/DOM dependencies)
+        const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
         
         // Add timeout protection for PDF parsing (30 seconds max)
-        const pdfPromise = pdfParse(fileBuffer, {
-          max: 0, // Parse all pages
-          version: 'v2.0.550' // Use specific version
-        });
+        const pdfPromise = (async () => {
+          const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(fileBuffer),
+            useSystemFonts: true,
+            standardFontDataUrl: undefined, // Don't load font data in serverless
+          });
+          
+          const pdf = await loadingTask.promise;
+          const textContent = [];
+          
+          // Extract text from each page
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const pageText = content.items
+              .map((item: any) => item.str)
+              .join(' ');
+            textContent.push(pageText);
+          }
+          
+          return textContent.join('\n\n');
+        })();
         
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('PDF parsing timeout after 30 seconds')), 30000);
         });
         
-        const pdfData = await Promise.race([pdfPromise, timeoutPromise]);
+        const extractedText = await Promise.race([pdfPromise, timeoutPromise]);
         
-        if (!pdfData || !pdfData.text) {
+        if (!extractedText || typeof extractedText !== 'string' || extractedText.trim().length === 0) {
           throw new Error('PDF parsing returned empty result');
         }
         
-        return pdfData.text;
+        return extractedText;
       
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       case 'application/msword':
