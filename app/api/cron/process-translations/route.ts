@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             'x-api-key': verbumApiKey,
           },
           body: JSON.stringify({
-            text: [{ text: chunk.original_text }],  // snake_case from database
+            texts: [{ text: chunk.original_text }],  // texts (plural) as per Verbum API
             from: conversation.language1,
             to: [conversation.language2],
           }),
@@ -122,7 +122,8 @@ export async function GET(request: NextRequest) {
       const translationData = await translationResponse.json();
       
       // Extract translated text from Verbum API response
-      const translatedText = translationData.translations?.[0]?.text;
+      // Verbum returns: translations[0][0].text (nested array)
+      const translatedText = translationData.translations?.[0]?.[0]?.text;
       
       if (!translatedText) {
         throw new Error('No translation returned from Verbum API');
