@@ -157,7 +157,9 @@ export async function translateHtml(
   }
   
   // Translate all segments together
-  const combinedText = textSegments.join('\n\n---SEGMENT---\n\n');
+  // Use a unique marker that's unlikely to be translated
+  const MARKER = '\n\n###XSEGX###\n\n';
+  const combinedText = textSegments.join(MARKER);
   console.log(`[Translate HTML] Translating ${textSegments.length} text segments`);
   console.log('[Translate HTML] Combined text length:', combinedText.length);
   console.log('[Translate HTML] First 200 chars of combined text:', combinedText.substring(0, 200));
@@ -166,7 +168,20 @@ export async function translateHtml(
   console.log('[Translate HTML] Translation complete, result length:', translatedCombined.length);
   console.log('[Translate HTML] First 200 chars of translated:', translatedCombined.substring(0, 200));
   
-  const translatedSegments = translatedCombined.split(/\n\n---SEGMENT---\n\n/);
+  // Try multiple split patterns in case the marker was partially translated
+  let translatedSegments: string[];
+  if (translatedCombined.includes(MARKER)) {
+    // Marker preserved perfectly
+    translatedSegments = translatedCombined.split(MARKER);
+  } else if (translatedCombined.includes('###XSEGX###')) {
+    // Marker preserved without newlines
+    translatedSegments = translatedCombined.split(/\s*###XSEGX###\s*/);
+  } else {
+    // Fallback: marker was translated or corrupted, use original segments
+    console.warn('[Translate HTML] Marker not found in translation, using original segments');
+    translatedSegments = textSegments;
+  }
+  
   console.log(`[Translate HTML] Split into ${translatedSegments.length} translated segments`);
   console.log('[Translate HTML] First 3 translated segments:', translatedSegments.slice(0, 3));
   
