@@ -332,8 +332,8 @@ export async function storeDocumentChunks({
   const messages = chunks.map((chunk, index) => ({
     conversationId,
     speaker: 'user',
-    originalText: chunk,
-    translatedText: '', // Empty string placeholder (will be updated after translation)
+    original_text: chunk, // snake_case to match database schema
+    translated_text: '', // Empty string placeholder (will be updated after translation)
     language: sourceLanguage,
     confidence: 0, // Will be updated after translation
     metadata: {
@@ -382,7 +382,7 @@ export async function storeTranslatedChunks({
     await supabase
       .from('conversation_messages')
       .update({
-        translatedText: translatedChunks[i],
+        translated_text: translatedChunks[i], // snake_case to match database schema
         language: targetLanguage, // Update to target language
         confidence: 95, // Default confidence for translations
       })

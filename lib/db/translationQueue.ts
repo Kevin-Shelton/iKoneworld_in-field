@@ -34,7 +34,7 @@ export async function getNextPendingChunk(): Promise<QueuedChunk | null> {
     const { data: messages, error } = await supabase
       .from('conversation_messages')
       .select('*')
-      .eq('translatedText', '') // Empty means not translated yet
+      .eq('translated_text', '') // Empty means not translated yet - snake_case
       .order('id', { ascending: true })
       .limit(1);
     
@@ -109,7 +109,7 @@ export async function updateChunkTranslation({
     const { error } = await supabase
       .from('conversation_messages')
       .update({
-        translatedText,
+        translated_text: translatedText, // snake_case column name
         language: targetLanguage,
         confidence,
         metadata: {
@@ -192,7 +192,7 @@ export async function getConversationProgress(conversationId: number): Promise<{
   try {
     const { data: messages, error } = await supabase
       .from('conversation_messages')
-      .select('translatedText, metadata')
+      .select('translated_text, metadata') // snake_case column names
       .eq('conversationId', conversationId);
     
     if (error || !messages) {
@@ -200,7 +200,7 @@ export async function getConversationProgress(conversationId: number): Promise<{
     }
     
     const total = messages.length;
-    const completed = messages.filter((m: any) => m.translatedText && m.translatedText !== '').length;
+    const completed = messages.filter((m: any) => m.translated_text && m.translated_text !== '').length;
     const failed = messages.filter((m: any) => m.metadata?.translation_status === 'failed').length;
     const pending = total - completed - failed;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -254,7 +254,7 @@ export async function getPendingChunkCount(): Promise<number> {
     const { count, error } = await supabase
       .from('conversation_messages')
       .select('*', { count: 'exact', head: true })
-      .eq('translatedText', '');
+      .eq('translated_text', ''); // snake_case column name
     
     if (error) {
       console.error('[Queue] Error getting pending count:', error);
