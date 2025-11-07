@@ -219,3 +219,8 @@
 - [x] Add createTranslatedDocx function for small files with dynamic import
 - [ ] Confirm translation works with plain-text approach
 - [ ] Then develop better formatting preservation strategy
+
+## UI Improvements
+- [x] Add create date/time stamp to document list
+- [x] Rename "Recent Translation Activity" to "Document Translation History"
+- [ ] Merge to main after testing confirms translation works
