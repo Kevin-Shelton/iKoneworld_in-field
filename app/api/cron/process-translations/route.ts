@@ -91,32 +91,41 @@ export async function GET(request: NextRequest) {
     }
     
     try {
-      // Call translation API
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const translationResponse = await fetch(`${baseUrl}/api/translate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          texts: [{ text: chunk.originalText }],
-          from: conversation.language1,
-          to: [conversation.language2],
-        }),
-      });
+      // Call Verbum AI API directly (not through localhost)
+      const verbumApiKey = process.env.VERBUM_API_KEY;
+      
+      if (!verbumApiKey) {
+        throw new Error('VERBUM_API_KEY not configured');
+      }
+      
+      const translationResponse = await fetch(
+        'https://sdk.verbum.ai/v1/translator/translate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': verbumApiKey,
+          },
+          body: JSON.stringify({
+            text: [{ text: chunk.original_text }],  // snake_case from database
+            from: conversation.language1,
+            to: [conversation.language2],
+          }),
+        }
+      );
       
       if (!translationResponse.ok) {
         const errorText = await translationResponse.text();
-        throw new Error(`Translation API failed: ${translationResponse.status} - ${errorText}`);
+        throw new Error(`Verbum API failed: ${translationResponse.status} - ${errorText}`);
       }
       
       const translationData = await translationResponse.json();
       
-      // Extract translated text
-      const translatedText = translationData.translations?.[0]?.texts?.[0]?.text;
+      // Extract translated text from Verbum API response
+      const translatedText = translationData.translations?.[0]?.text;
       
       if (!translatedText) {
-        throw new Error('No translation returned from API');
+        throw new Error('No translation returned from Verbum API');
       }
       
       // Update chunk with translation
@@ -144,7 +153,7 @@ export async function GET(request: NextRequest) {
         
         // Get all chunks
         const chunks = await getConversationChunks(chunk.conversationId);
-        const translatedTexts = chunks.map(c => c.translatedText);
+        const translatedTexts = chunks.map(c => c.translated_text);  // snake_case from database
         
         // Get conversation metadata for file info
         const { data: conv } = await supabaseAdmin

@@ -10,8 +10,8 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export interface QueuedChunk {
   id: number;
   conversationId: number;
-  originalText: string;
-  translatedText: string;
+  original_text: string;  // snake_case to match database
+  translated_text: string;  // snake_case to match database
   language: string;
   confidence: number;
   metadata: {
