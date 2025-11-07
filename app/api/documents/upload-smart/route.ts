@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
       // Validate file type
       if (!isValidFileType(file.type)) {
         return NextResponse.json(
-          { error: 'Invalid file type. Supported types: PDF, DOC, DOCX, TXT' },
+          { error: 'Invalid file type. Supported types: DOCX, PDF, TXT' },
           { status: 400 }
         );
       }
@@ -371,7 +371,7 @@ export async function POST(request: NextRequest) {
       // Validate file size
       if (!isValidFileSize(file.size)) {
         return NextResponse.json(
-          { error: 'File size exceeds 100MB limit' },
+          { error: 'File size exceeds 25MB limit' },
           { status: 400 }
         );
       }
