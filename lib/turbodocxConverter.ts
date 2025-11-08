@@ -63,6 +63,15 @@ export async function convertHtmlToDocx(
   console.log('[TurboDocx] Options:', JSON.stringify(options, null, 2));
   
   try {
+    // Log table structures for debugging
+    const tableMatches = html.match(/<table[\s\S]*?<\/table>/gi);
+    if (tableMatches) {
+      console.log('[TurboDocx] Found', tableMatches.length, 'tables');
+      tableMatches.forEach((table, index) => {
+        console.log(`[TurboDocx] Table ${index + 1} HTML:`, table.substring(0, 500));
+      });
+    }
+    
     // Normalize table HTML for TurboDocx compatibility
     const normalizedHtml = normalizeTableHtml(html);
     console.log('[TurboDocx] Normalized HTML, new length:', normalizedHtml.length);
