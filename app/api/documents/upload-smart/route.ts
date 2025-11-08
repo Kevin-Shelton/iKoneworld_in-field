@@ -210,7 +210,6 @@ export async function POST(request: NextRequest) {
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
       const { error: updateError } = await supabase.from('conversations').update({
-        status: 'processing',
         metadata: {
           ...existingMetadata,
           source_language: sourceLanguage,
@@ -263,7 +262,6 @@ export async function POST(request: NextRequest) {
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
       const { error: updateError } = await supabase.from('conversations').update({
-        status: 'processing',
         metadata: {
           ...existingMetadata,
           source_language: sourceLanguage,
@@ -389,7 +387,6 @@ export async function POST(request: NextRequest) {
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
       const { error: updateError } = await supabase.from('conversations').update({
-        status: 'processing',
         metadata: {
           ...existingMetadata,
           source_language: sourceLanguage,
