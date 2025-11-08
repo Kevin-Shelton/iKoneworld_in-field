@@ -63,10 +63,20 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     // Store file info before clearing
     const fileToUpload = selectedFile;
     
-    // Estimate method and time based on file size
+    // Estimate method and time based on file type and size
     const fileSizeKB = fileToUpload.size / 1024;
+    const isPdf = fileToUpload.name.endsWith('.pdf');
     const useSkeletonMethod = fileToUpload.name.endsWith('.docx') && fileSizeKB < 100;
-    const estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
+    
+    let method = 'chunking';
+    let estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
+    
+    if (isPdf) {
+      method = 'pdf-deepl-async';
+      estimatedTime = Math.ceil(fileSizeKB / 5); // PDFs take ~2x longer
+    } else if (useSkeletonMethod) {
+      method = 'skeleton';
+    }
     
     // Notify parent to show optimistic UI immediately
     if (onUploadStart) {
@@ -76,7 +86,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
         fileSize: fileToUpload.size,
         sourceLanguage,
         targetLanguage,
-        method: useSkeletonMethod ? 'skeleton' : 'chunking',
+        method,
         estimatedTime,
       });
     }
@@ -128,6 +138,27 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
             maxAttempts: 3,
             onRetry: (attempt) => {
               console.log(`[Translation Retry] Attempt ${attempt} failed, retrying...`);
+            }
+          });
+        }
+      } else if (data.method === 'pdf-deepl-async') {
+        // PDF DeepL method - trigger async translation
+        toast.success('PDF added to translation queue');
+        
+        // Trigger PDF translation with retry
+        if (data.conversationId) {
+          await retryFetch('/api/documents/process-pdf', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: data.conversationId,
+            }),
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[PDF Translation Retry] Attempt ${attempt} failed, retrying...`);
             }
           });
         }

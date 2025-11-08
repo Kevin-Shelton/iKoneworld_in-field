@@ -135,81 +135,34 @@ export async function POST(request: NextRequest) {
     
     if (usePdfDeepLMethod) {
       // ============================================
-      // PDF DEEPL METHOD (Synchronous)
+      // PDF DEEPL METHOD (Asynchronous)
       // ============================================
-      // Trigger asynchronous translation
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      processDeeplPdfTranslation(conversation.id, buffer, file.name, sourceLanguage, targetLanguage, enterpriseId || 'default', parseInt(userId));
 
-      // Return immediate response to user
+      // 1. Upload original file to storage
+      const originalStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: buffer,
+        fileName: file.name,
+        contentType: 'application/pdf',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
+
+      // 2. Update conversation with original file path
+      await supabase.from('conversations').update({
+        originalFileUrl: originalStoragePath,
+      }).eq('id', conversation.id);
+
+      // 3. Return immediate response to user
       return NextResponse.json({
         success: true,
         conversationId: conversation.id,
         method: 'pdf-deepl-async',
         status: 'processing',
       });
-      
-      const processingStartTime = Date.now();
-      
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        
-        if (!process.env.DEEPL_API_KEY) {
-          return NextResponse.json({ error: 'DeepL API key not configured' }, { status: 500 });
-        }
-        
-        const { translatePDFWithDeepL } = await import('@/lib/deeplPdfTranslator');
-        const translatedBuffer = await translatePDFWithDeepL(buffer, file.name, sourceLanguage, targetLanguage);
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const originalName = file.name.replace('.pdf', '');
-        const newFilename = `${originalName}_${sourceLanguage.toUpperCase()}_to_${targetLanguage.toUpperCase()}_${timestamp}.pdf`;
-        
-        const translatedStoragePath = await uploadDocumentToSupabase({
-          fileBuffer: translatedBuffer,
-          fileName: newFilename,
-          contentType: 'application/pdf',
-          enterpriseId: enterpriseId || 'default',
-          userId: parseInt(userId),
-          conversationId: conversation.id,
-          isTranslated: true,
-        });
-        
-        const processingDurationMs = Date.now() - processingStartTime;
-        
-        await supabase.from('conversations').update({
-          status: 'completed',
-          audio_url: translatedStoragePath,
-          metadata: {
-            conversation_type: 'document',
-            document_translation: {
-              original_filename: file.name,
-              translated_filename: newFilename,
-              file_type: 'pdf',
-              file_size_bytes: file.size,
-              translated_file_size_bytes: translatedBuffer.length,
-              translated_storage_path: translatedStoragePath,
-              progress_percentage: 100,
-              processing_duration_ms: processingDurationMs,
-              processing_duration_seconds: Math.round(processingDurationMs / 1000),
-              method: 'pdf-deepl',
-            },
-          },
-        }).eq('id', conversation.id);
-        
-        return NextResponse.json({
-          success: true,
-          conversationId: conversation.id,
-          filename: newFilename,
-          method: 'pdf-deepl',
-          status: 'completed',
-        });
-      } catch (pdfError) {
-        console.error('[Upload Smart] PDF DeepL error:', pdfError);
-        return NextResponse.json({ error: 'PDF translation failed', message: (pdfError as Error).message || 'Unknown error' }, { status: 500 });
-      }
 
     } else if (useSkeletonMethod) {
       // ============================================
