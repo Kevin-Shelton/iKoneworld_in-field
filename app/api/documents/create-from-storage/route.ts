@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
         language2: targetLanguage,
         status: 'active',
         metadata: {
+          conversation_type: 'document',
           original_filename: fileName,
           file_size: fileSize,
           file_type: fileType || 'application/octet-stream',
