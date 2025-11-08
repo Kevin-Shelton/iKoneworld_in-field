@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 /**
  * Upload a document directly to Supabase Storage from the client
@@ -20,7 +20,7 @@ export async function uploadDocumentToSupabaseClient({
   isTranslated?: boolean;
 }): Promise<string> {
   try {
-    const supabase = createClient();
+    // Use the pre-configured supabase client
     
     // Create a structured path: enterprise/user/conversation/filename
     const folder = isTranslated ? 'translated' : 'original';
@@ -60,7 +60,7 @@ export async function getDocumentDownloadUrlClient(
   expiresIn: number = 86400 // 24 hours default
 ): Promise<string> {
   try {
-    const supabase = createClient();
+    // Use the pre-configured supabase client
     
     // Generate signed URL
     const { data, error } = await supabase.storage
