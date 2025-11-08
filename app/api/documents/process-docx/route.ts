@@ -92,8 +92,10 @@ export async function POST(request: NextRequest) {
     console.log('[Process DOCX] Step 2: Stripping text from structure');
     const stripResult = stripDocument(documentXml);
     const skeleton = stripResult.map; // The skeleton XML with markers
-    const texts = stripResult.parsed; // The concatenated text
+    const texts = stripResult.parsed; // The concatenated text with delimiters
+    const special = stripResult.special; // The delimiter character
     console.log('[Process DOCX] Extracted text length:', texts.length, 'characters');
+    console.log('[Process DOCX] Using delimiter:', special);
     
     // Step 3: Translate text using Verbum API
     console.log('[Process DOCX] Step 3: Translating text');
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
     
     // Step 4: Build translated document
     console.log('[Process DOCX] Step 4: Building translated document');
-    const translatedXml = buildDocument(skeleton, translatedText, texts);
+    const translatedXml = buildDocument(translatedText, skeleton, special);
     
     // Step 5: Create translated DOCX
     console.log('[Process DOCX] Step 5: Creating translated DOCX');
