@@ -113,12 +113,11 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
         throw new Error(`${errorMessage}${errorDetails}`);
       }
 
-      // Check if response is a file (skeleton method) or JSON (chunking method)
-      const contentType = response.headers.get('Content-Type');
+      // Both methods now return JSON, check the method field
+      const data = await response.json();
       
-      if (contentType?.includes('application/json')) {
-        // Chunking method - async processing
-        const data = await response.json();
+      if (data.method === 'chunking') {
+        // Chunking method - trigger async translation
         toast.success('Document added to translation queue');
         
         // Trigger translation for chunking method with retry
@@ -132,10 +131,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
             }
           });
         }
-      } else {
-        // Skeleton method - save to database instead of immediate download
-        // For now, show success message - we'll update this to save to DB
-        toast.success('Document translation started');
+      } else if (data.method === 'skeleton') {
+        // Skeleton method - translation already completed
+        toast.success('Document translated successfully!');
       }
 
       // Refresh document list to show updated status
