@@ -98,14 +98,17 @@ export async function POST(request: NextRequest) {
         status: 'active',
         metadata: {
           conversation_type: 'document',
-          original_filename: fileName,
-          file_size: fileSize,
-          file_type: fileType || 'application/octet-stream',
           source_language: sourceLanguage,
           target_language: targetLanguage,
-          original_storage_path: storagePath,
-          method: method,
-          uploaded_via: 'client-direct',
+          document_translation: {
+            original_filename: fileName,
+            file_type: fileType || 'application/octet-stream',
+            file_size_bytes: fileSize,
+            original_storage_path: storagePath,
+            method: method,
+            uploaded_via: 'client-direct',
+            progress_percentage: 0,
+          },
         },
       })
       .select()
