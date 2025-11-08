@@ -76,22 +76,31 @@ export async function POST(request: NextRequest) {
     
     // Routing decision
     // - PDF: Always use DeepL async
-    // - Small DOCX (< 100KB): Use skeleton method (synchronous)
-    // - Large DOCX (>= 100KB): Use skeleton method (async for complete fidelity)
+    // - PPTX: Always use DeepL async (all sizes)
+    // - Small DOCX (< 100KB): Use DeepL async
+    // - Large DOCX (>= 100KB): Use DeepL async
+    // - Small TXT (< 100KB): Use Verbum sync
+    // - Large TXT (>= 100KB): Use Verbum async
     const usePdfDeepLMethod = fileExtension === 'pdf';
-    const useSkeletonMethod = 
-      fileExtension === 'docx' && 
-      sizeCategory === 'small';
-    const useAsyncSkeletonMethod = 
-      fileExtension === 'docx' && 
-      sizeCategory !== 'small';
+    const usePptxDeepLMethod = fileExtension === 'pptx';
+    const useDocxDeepLMethod = fileExtension === 'docx';
+    const useTxtVerbumSync = fileExtension === 'txt' && sizeCategory === 'small';
+    const useTxtVerbumAsync = fileExtension === 'txt' && sizeCategory !== 'small';
+    
+    // Legacy skeleton method flags (deprecated)
+    const useSkeletonMethod = false;
+    const useAsyncSkeletonMethod = false;
     
     console.log('[Upload Smart] File analysis:', {
       name: file.name,
       size: file.size,
       sizeCategory,
       extension: fileExtension,
-      method: usePdfDeepLMethod ? 'pdf-deepl-async' : (useSkeletonMethod ? 'skeleton' : 'docx-skeleton-async'),
+      method: usePdfDeepLMethod ? 'pdf-deepl-async' : 
+              usePptxDeepLMethod ? 'pptx-deepl-async' : 
+              useDocxDeepLMethod ? 'docx-deepl-async' : 
+              useTxtVerbumSync ? 'txt-verbum-sync' : 
+              useTxtVerbumAsync ? 'txt-verbum-async' : 'unknown',
       estimatedTime: `${estimatedTime}s`,
     });
     
@@ -119,7 +128,11 @@ export async function POST(request: NextRequest) {
             file_type: fileExtension || 'unknown',
             file_size_bytes: file.size,
             progress_percentage: 0,
-            method: usePdfDeepLMethod ? 'pdf-deepl-async' : (useSkeletonMethod ? 'skeleton' : 'docx-skeleton-async'),
+            method: usePdfDeepLMethod ? 'pdf-deepl-async' : 
+              usePptxDeepLMethod ? 'pptx-deepl-async' : 
+              useDocxDeepLMethod ? 'docx-deepl-async' : 
+              useTxtVerbumSync ? 'txt-verbum-sync' : 
+              useTxtVerbumAsync ? 'txt-verbum-async' : 'unknown',
             estimated_time_seconds: estimatedTime,
           },
         },
@@ -172,6 +185,235 @@ export async function POST(request: NextRequest) {
         success: true,
         conversationId: conversation.id,
         method: 'pdf-deepl-async',
+        status: 'processing',
+      });
+
+    } else if (usePptxDeepLMethod) {
+      // ============================================
+      // PPTX DEEPL METHOD (Asynchronous - All Sizes)
+      // ============================================
+      console.log('[Upload Smart] Using DeepL async method for PowerPoint');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // 1. Upload original file to storage
+      const originalStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: buffer,
+        fileName: file.name,
+        contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
+
+      // 2. Update conversation metadata with original file path
+      const existingMetadata = conversation.metadata || {};
+      const { error: updateError } = await supabase.from('conversations').update({
+        metadata: {
+          ...existingMetadata,
+          source_language: sourceLanguage,
+          target_language: targetLanguage,
+          document_translation: {
+            ...existingMetadata.document_translation,
+            original_storage_path: originalStoragePath,
+            original_filename: file.name,
+            file_type: 'pptx',
+            file_size_bytes: file.size,
+            method: 'pptx-deepl',
+          },
+        },
+      }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update PPTX metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] PPTX metadata updated successfully');
+
+      // 3. Return immediate response to user
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        method: 'pptx-deepl-async',
+        status: 'processing',
+      });
+
+    } else if (useDocxDeepLMethod) {
+      // ============================================
+      // DOCX DEEPL METHOD (Asynchronous - All Sizes)
+      // ============================================
+      console.log('[Upload Smart] Using DeepL async method for DOCX');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // 1. Upload original file to storage
+      const originalStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: buffer,
+        fileName: file.name,
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
+
+      // 2. Update conversation metadata with original file path
+      const existingMetadata = conversation.metadata || {};
+      const { error: updateError } = await supabase.from('conversations').update({
+        metadata: {
+          ...existingMetadata,
+          source_language: sourceLanguage,
+          target_language: targetLanguage,
+          document_translation: {
+            ...existingMetadata.document_translation,
+            original_storage_path: originalStoragePath,
+            original_filename: file.name,
+            file_type: 'docx',
+            file_size_bytes: file.size,
+            method: 'docx-deepl',
+          },
+        },
+      }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update DOCX metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] DOCX metadata updated successfully');
+
+      // 3. Return immediate response to user
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        method: 'docx-deepl-async',
+        status: 'processing',
+      });
+
+    } else if (useTxtVerbumSync) {
+      // ============================================
+      // TXT VERBUM METHOD (Synchronous - Small Files)
+      // ============================================
+      console.log('[Upload Smart] Using Verbum sync method for small text file');
+      const processingStartTime = Date.now();
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        // Translate with Verbum
+        const { translateTXTWithVerbum } = await import('@/lib/verbumTxtTranslator');
+        const translatedBuffer = await translateTXTWithVerbum(
+          buffer,
+          file.name,
+          sourceLanguage,
+          targetLanguage
+        );
+        
+        // Upload translated file
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const originalName = file.name.replace('.txt', '');
+        const newFilename = `${originalName}_${sourceLanguage.toUpperCase()}_to_${targetLanguage.toUpperCase()}_${timestamp}.txt`;
+        
+        const translatedStoragePath = await uploadDocumentToSupabase({
+          fileBuffer: translatedBuffer,
+          fileName: newFilename,
+          contentType: 'text/plain',
+          enterpriseId: enterpriseId || 'default',
+          userId: parseInt(userId),
+          conversationId: conversation.id,
+          isTranslated: true,
+        });
+        
+        const processingDurationMs = Date.now() - processingStartTime;
+        
+        // Update database with completed status
+        await supabase.from('conversations').update({
+          status: 'completed',
+          audio_url: translatedStoragePath,
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: file.name,
+              translated_filename: newFilename,
+              file_type: 'txt',
+              file_size_bytes: file.size,
+              translated_file_size_bytes: translatedBuffer.length,
+              translated_storage_path: translatedStoragePath,
+              progress_percentage: 100,
+              processing_duration_ms: processingDurationMs,
+              processing_duration_seconds: Math.round(processingDurationMs / 1000),
+              method: 'txt-verbum-sync',
+            },
+          },
+        }).eq('id', conversation.id);
+        
+        return NextResponse.json({
+          success: true,
+          conversationId: conversation.id,
+          filename: newFilename,
+          method: 'txt-verbum-sync',
+          status: 'completed',
+        });
+      } catch (error) {
+        console.error('[Upload Smart] TXT sync translation error:', error);
+        return NextResponse.json({
+          error: 'Text file translation failed',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        }, { status: 500 });
+      }
+
+    } else if (useTxtVerbumAsync) {
+      // ============================================
+      // TXT VERBUM METHOD (Asynchronous - Large Files)
+      // ============================================
+      console.log('[Upload Smart] Using Verbum async method for large text file');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // 1. Upload original file to storage
+      const originalStoragePath = await uploadDocumentToSupabase({
+        fileBuffer: buffer,
+        fileName: file.name,
+        contentType: 'text/plain',
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
+
+      // 2. Update conversation metadata with original file path
+      const existingMetadata = conversation.metadata || {};
+      const { error: updateError } = await supabase.from('conversations').update({
+        metadata: {
+          ...existingMetadata,
+          source_language: sourceLanguage,
+          target_language: targetLanguage,
+          document_translation: {
+            ...existingMetadata.document_translation,
+            original_storage_path: originalStoragePath,
+            original_filename: file.name,
+            file_type: 'txt',
+            file_size_bytes: file.size,
+            method: 'txt-verbum-async',
+          },
+        },
+      }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update TXT metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] TXT metadata updated successfully');
+
+      // 3. Return immediate response to user
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        method: 'txt-verbum-async',
         status: 'processing',
       });
 

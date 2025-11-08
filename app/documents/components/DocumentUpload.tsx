@@ -67,7 +67,8 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     const fileSizeKB = fileToUpload.size / 1024;
     const isPdf = fileToUpload.name.endsWith('.pdf');
     const isDocx = fileToUpload.name.endsWith('.docx');
-    const useSkeletonMethod = isDocx && fileSizeKB < 100;
+    const isPptx = fileToUpload.name.endsWith('.pptx');
+    const isTxt = fileToUpload.name.endsWith('.txt');
     
     let method = 'chunking';
     let estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
@@ -75,11 +76,18 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     if (isPdf) {
       method = 'pdf-deepl-async';
       estimatedTime = Math.ceil(fileSizeKB / 5); // PDFs take ~2x longer
-    } else if (useSkeletonMethod) {
-      method = 'skeleton';
-    } else if (isDocx && fileSizeKB >= 100) {
-      method = 'docx-skeleton-async';
-      estimatedTime = Math.ceil(fileSizeKB / 3); // Large DOCX takes longer
+    } else if (isPptx) {
+      method = 'pptx-deepl-async';
+      estimatedTime = Math.ceil(fileSizeKB / 4); // PowerPoint takes longer
+    } else if (isDocx) {
+      method = 'docx-deepl-async';
+      estimatedTime = Math.ceil(fileSizeKB / 5); // DOCX with DeepL
+    } else if (isTxt && fileSizeKB < 100) {
+      method = 'txt-verbum-sync';
+      estimatedTime = Math.ceil(fileSizeKB / 20); // Text is fast
+    } else if (isTxt && fileSizeKB >= 100) {
+      method = 'txt-verbum-async';
+      estimatedTime = Math.ceil(fileSizeKB / 15); // Large text
     }
     
     // Notify parent to show optimistic UI immediately
@@ -166,8 +174,8 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
             },
           });
         }
-      } else if (data.method === 'docx-skeleton-async') {
-        // Large DOCX skeleton method - trigger async translation
+      } else if (data.method === 'docx-deepl-async') {
+        // DOCX DeepL method - trigger async translation
         toast.success('DOCX added to translation queue with complete format preservation');
         
         // Trigger DOCX translation with retry
@@ -183,12 +191,57 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
           }, {
             maxAttempts: 3,
             onRetry: (attempt) => {
-              console.log(`[PDF Translation Retry] Attempt ${attempt} failed, retrying...`);
+              console.log(`[DOCX Translation Retry] Attempt ${attempt} failed, retrying...`);
             }
           });
         }
+      } else if (data.method === 'pptx-deepl-async') {
+        // PowerPoint DeepL method - trigger async translation
+        toast.success('PowerPoint added to translation queue with complete format preservation');
+        
+        // Trigger PPTX translation with retry
+        if (data.conversationId) {
+          await retryFetch('/api/documents/process-pptx', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: data.conversationId,
+            }),
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[PPTX Translation Retry] Attempt ${attempt} failed, retrying...`);
+            }
+          });
+        }
+      } else if (data.method === 'txt-verbum-async') {
+        // Large text file Verbum method - trigger async translation
+        toast.success('Text file added to translation queue');
+        
+        // Trigger TXT translation with retry
+        if (data.conversationId) {
+          await retryFetch('/api/documents/process-txt', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: data.conversationId,
+            }),
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[TXT Translation Retry] Attempt ${attempt} failed, retrying...`);
+            }
+          });
+        }
+      } else if (data.method === 'txt-verbum-sync') {
+        // Small text file - translation already completed
+        toast.success('Text file translated successfully!');
       } else if (data.method === 'skeleton') {
-        // Skeleton method - translation already completed
+        // Legacy skeleton method - translation already completed
         toast.success('Document translated successfully!');
       }
 
@@ -218,7 +271,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
               type="file"
               id="file-upload"
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".pdf,.doc,.docx,.txt,.pptx"
               onChange={handleFileSelect}
               disabled={uploading}
             />
