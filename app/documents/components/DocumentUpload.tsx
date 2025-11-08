@@ -66,7 +66,8 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     // Estimate method and time based on file type and size
     const fileSizeKB = fileToUpload.size / 1024;
     const isPdf = fileToUpload.name.endsWith('.pdf');
-    const useSkeletonMethod = fileToUpload.name.endsWith('.docx') && fileSizeKB < 100;
+    const isDocx = fileToUpload.name.endsWith('.docx');
+    const useSkeletonMethod = isDocx && fileSizeKB < 100;
     
     let method = 'chunking';
     let estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
