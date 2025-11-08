@@ -110,19 +110,19 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     
     if (isPdf) {
       method = 'pdf-deepl-async';
-      estimatedTime = Math.ceil(fileSizeKB / 5); // PDFs take ~2x longer
+      estimatedTime = Math.max(10, Math.ceil(fileSizeKB / 500)); // ~10-30s for most PDFs
     } else if (isPptx) {
       method = 'pptx-deepl-async';
-      estimatedTime = Math.ceil(fileSizeKB / 4); // PowerPoint takes longer
+      estimatedTime = Math.max(15, Math.ceil(fileSizeKB / 400)); // ~15-30s for most PowerPoints
     } else if (isDocx) {
       method = 'docx-deepl-async';
-      estimatedTime = Math.ceil(fileSizeKB / 5); // DOCX with DeepL
+      estimatedTime = Math.max(10, Math.ceil(fileSizeKB / 500)); // ~10-30s for most DOCX
     } else if (isTxt && fileSizeKB < 100) {
       method = 'txt-verbum-sync';
       estimatedTime = Math.ceil(fileSizeKB / 20); // Text is fast
     } else if (isTxt && fileSizeKB >= 100) {
       method = 'txt-verbum-async';
-      estimatedTime = Math.ceil(fileSizeKB / 15); // Large text
+      estimatedTime = Math.ceil(fileSizeKB / 50); // Large text
     }
     
     // Notify parent to show optimistic UI immediately
