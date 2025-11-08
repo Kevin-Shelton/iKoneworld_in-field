@@ -116,8 +116,8 @@ export async function POST(
       
       // If this is HTML content, use DOM-based translation to preserve structure
       if (isHtmlContent && message.original_text.includes('<')) {
-        console.log(`[Document Translate] Using DOM-based translation for HTML chunk ${i + 1}`);
-        const { translateHtmlWithDOM } = await import('@/lib/translateHtmlProper');
+        console.log(`[Document Translate] Using Cheerio-based translation for HTML chunk ${i + 1}`);
+        const { translateHtmlWithCheerio } = await import('@/lib/translateHtmlServerless');
         
         // Create a translation function that calls Verbum API
         const translateFn = async (text: string) => {
@@ -145,7 +145,7 @@ export async function POST(
           return data.translations?.[0]?.[0]?.text || text;
         };
         
-        translatedText = await translateHtmlWithDOM(message.original_text, translateFn);
+        translatedText = await translateHtmlWithCheerio(message.original_text, translateFn);
       }
       
       translatedChunks.push(translatedText);
