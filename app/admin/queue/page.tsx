@@ -40,6 +40,8 @@ interface QueueDocument {
   method?: 'skeleton' | 'chunking';
   estimatedTimeSeconds?: number;
   chunkCount?: number;
+  processingDurationMs?: number;
+  processingDurationSeconds?: number;
 }
 
 interface QueueStats {
@@ -402,6 +404,14 @@ export default function AdminQueuePage() {
                           <>
                             <span className="mx-2">•</span>
                             <span>Ended: {formatDate(doc.endedAt)}</span>
+                          </>
+                        )}
+                        {doc.processingDurationSeconds !== undefined && doc.processingDurationSeconds > 0 && (
+                          <>
+                            <span className="mx-2">•</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              Duration: {doc.processingDurationSeconds}s
+                            </span>
                           </>
                         )}
                       </div>

@@ -132,6 +132,9 @@ export async function POST(request: NextRequest) {
       // ============================================
       console.log('[Upload Smart] Using skeleton method');
       
+      // Track processing duration
+      const processingStartTime = Date.now();
+      
       try {
       // Convert file to buffer
       const arrayBuffer = await file.arrayBuffer();
@@ -175,22 +178,31 @@ export async function POST(request: NextRequest) {
       }
       
       // Helper function to update progress
-      const updateProgress = async (percentage: number) => {
+      const updateProgress = async (percentage: number, includeDuration?: boolean) => {
+        const metadata: any = {
+          conversation_type: 'document',
+          document_translation: {
+            original_filename: file.name,
+            file_type: fileExtension || 'unknown',
+            file_size_bytes: file.size,
+            progress_percentage: percentage,
+            method: 'skeleton',
+            estimated_time_seconds: estimatedTime,
+          },
+        };
+        
+        // Add duration if requested (for final update)
+        if (includeDuration) {
+          const processingDurationMs = Date.now() - processingStartTime;
+          metadata.document_translation.processing_duration_ms = processingDurationMs;
+          metadata.document_translation.processing_duration_seconds = Math.round(processingDurationMs / 1000);
+        }
+        
         await supabase
           .from('conversations')
           .update({
             status: 'active',
-            metadata: {
-              conversation_type: 'document',
-              document_translation: {
-                original_filename: file.name,
-                file_type: fileExtension || 'unknown',
-                file_size_bytes: file.size,
-                progress_percentage: percentage,
-                method: 'skeleton',
-                estimated_time_seconds: estimatedTime,
-              },
-            },
+            metadata,
           })
           .eq('id', conversation.id);
       };
@@ -212,10 +224,16 @@ export async function POST(request: NextRequest) {
         console.log('[Upload Smart] Translating text segment, length:', text.length);
         
         // Update progress (20% to 80% during translation)
+        // Throttle: Only update database every 20 segments to improve performance
         if (totalSegments > 0) {
           segmentsTranslated++;
           const translationProgress = 20 + Math.floor((segmentsTranslated / totalSegments) * 60);
-          await updateProgress(Math.min(translationProgress, 80));
+          
+          // Only update every 20 segments OR on the last segment
+          if (segmentsTranslated % 20 === 0 || segmentsTranslated === totalSegments) {
+            await updateProgress(Math.min(translationProgress, 80));
+            console.log(`[Upload Smart] Progress update: ${segmentsTranslated}/${totalSegments} segments (${translationProgress}%)`);
+          }
         }
         
         const response = await fetch(
@@ -297,6 +315,12 @@ export async function POST(request: NextRequest) {
         isTranslated: true,
       });
       
+      // Calculate final processing duration
+      const processingDurationMs = Date.now() - processingStartTime;
+      const processingDurationSeconds = Math.round(processingDurationMs / 1000);
+      
+      console.log(`[Upload Smart] Processing completed in ${processingDurationSeconds}s (${processingDurationMs}ms)`);
+      
       // Update to completed status with full metadata
       const { error: updateError } = await supabase
         .from('conversations')
@@ -315,6 +339,8 @@ export async function POST(request: NextRequest) {
               translated_file_url: translatedStoragePath,
               progress_percentage: 100,
               processing_time_ms: processingTime,
+              processing_duration_ms: processingDurationMs,
+              processing_duration_seconds: processingDurationSeconds,
               method: 'skeleton',
               estimated_time_seconds: estimatedTime,
               chunk_count: 1,

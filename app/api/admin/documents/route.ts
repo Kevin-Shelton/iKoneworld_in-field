@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
       method: conv.metadata?.document_translation?.method,
       estimatedTimeSeconds: conv.metadata?.document_translation?.estimated_time_seconds,
       chunkCount: conv.metadata?.document_translation?.chunk_count,
+      processingDurationMs: conv.metadata?.document_translation?.processing_duration_ms,
+      processingDurationSeconds: conv.metadata?.document_translation?.processing_duration_seconds,
       createdAt: conv.createdAt,
       startedAt: conv.startedAt,
       endedAt: conv.endedAt,
