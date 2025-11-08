@@ -95,8 +95,9 @@ function extractTextFromTXT(fileBuffer: Buffer): string {
 export function chunkHtml(html: string, maxChunkSize: number = 5000): string[] {
   const chunks: string[] = [];
   
-  // Split by paragraph tags
-  const paragraphPattern = /<(p|h[1-6]|li|div)[^>]*>.*?<\/\1>/gi;
+  // Split by block-level tags including tables
+  // Using [\s\S] instead of . with s flag for ES5 compatibility
+  const paragraphPattern = /<(p|h[1-6]|li|div|table)[^>]*>[\s\S]*?<\/\1>/gi;
   const paragraphs = html.match(paragraphPattern) || [];
   
   if (paragraphs.length === 0) {
@@ -118,9 +119,15 @@ export function chunkHtml(html: string, maxChunkSize: number = 5000): string[] {
       // If the paragraph itself is too long, we need to split it
       if (paragraph.length > maxChunkSize) {
         // Extract tag and content
-        const tagMatch = paragraph.match(/<([a-z0-9]+)([^>]*)>(.*)<\/\1>/i);
-        if (tagMatch) {
+        const tagMatch = paragraph.match(/<([a-z0-9]+)([^>]*)>([\s\S]*)<\/\1>/i);        if (tagMatch) {
           const [, tagName, attributes, content] = tagMatch;
+          
+          // Special handling: Keep tables intact, don't split them
+          if (tagName.toLowerCase() === 'table') {
+            chunks.push(paragraph);
+            currentChunk = '';
+            continue;
+          }
           
           // Split content by sentences
           const sentences = content.split(/([.!?]+\s+)/);
