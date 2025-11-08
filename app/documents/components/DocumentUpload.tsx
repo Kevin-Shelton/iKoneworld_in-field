@@ -74,15 +74,15 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
       return;
     }
 
-    // Validate file size (10MB limit for demo)
-    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+    // Validate file size (200MB limit for demo)
+    const maxSizeBytes = 200 * 1024 * 1024; // 200MB
     const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(1);
     
     if (selectedFile.size > maxSizeBytes) {
       toast.error(
         '📦 File too large for demo',
         {
-          description: `Your file is ${fileSizeMB}MB. Demo limit is 10MB. For larger files, please contact our team!`,
+          description: `Your file is ${fileSizeMB}MB. Demo limit is 200MB. For larger files, please contact our team!`,
           duration: 6000,
         }
       );

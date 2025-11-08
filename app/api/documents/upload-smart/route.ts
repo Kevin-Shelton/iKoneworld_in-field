@@ -85,16 +85,16 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate file size (10MB limit for demo)
-    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+    // Validate file size (200MB limit for demo)
+    const maxSizeBytes = 200 * 1024 * 1024; // 200MB
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     
     if (file.size > maxSizeBytes) {
       return NextResponse.json(
         { 
           error: 'File too large for demo',
-          message: `Your file is ${fileSizeMB}MB. Demo limit is 10MB. For larger files, please contact our team!`,
-          maxSizeMB: 10,
+          message: `Your file is ${fileSizeMB}MB. Demo limit is 200MB. For larger files, please contact our team!`,
+          maxSizeMB: 200,
           yourSizeMB: parseFloat(fileSizeMB),
         },
         { status: 400 }
