@@ -177,12 +177,18 @@ export async function getConversationsByUser(userId: number) {
     const conversationsWithFilePaths = data.map((conversation: any) => {
       if (conversation.audio_url) {
         try {
-          // Extract the file path from the public URL
-          const url = new URL(conversation.audio_url);
-          const pathParts = url.pathname.split('/audio-recordings/');
-          if (pathParts.length > 1) {
-            // Store the relative file path
-            conversation.audio_file_path = pathParts[1];
+          // Check if audio_url is already a storage path (for documents) or a full URL (for audio)
+          if (conversation.audio_url.startsWith('http://') || conversation.audio_url.startsWith('https://')) {
+            // Extract the file path from the public URL
+            const url = new URL(conversation.audio_url);
+            const pathParts = url.pathname.split('/audio-recordings/');
+            if (pathParts.length > 1) {
+              // Store the relative file path
+              conversation.audio_file_path = pathParts[1];
+            }
+          } else {
+            // Already a storage path (for documents), use as-is
+            conversation.audio_file_path = conversation.audio_url;
           }
         } catch (err) {
           console.error('Error processing audio URL:', err);

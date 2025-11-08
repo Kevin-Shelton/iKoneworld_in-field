@@ -101,11 +101,10 @@ export async function POST(request: NextRequest) {
       originalFileUrl: '', // Will be updated after upload
     });
     
-    // Update with initial metadata
-    await supabase
+    // Update with method-specific metadata (status already set to 'active' in createDocumentTranslation)
+    const { error: metadataError } = await supabase
       .from('conversations')
       .update({
-        status: 'active',
         metadata: {
           conversation_type: 'document',
           document_translation: {
@@ -119,6 +118,11 @@ export async function POST(request: NextRequest) {
         },
       })
       .eq('id', conversation.id);
+    
+    if (metadataError) {
+      console.error('[Upload Smart] Failed to update metadata:', metadataError);
+      throw new Error(`Failed to update conversation metadata: ${metadataError.message}`);
+    }
     
     console.log(`[Upload Smart] ✓ Database record created with ID: ${conversation.id}`);
     
