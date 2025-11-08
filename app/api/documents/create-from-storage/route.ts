@@ -93,6 +93,8 @@ export async function POST(request: NextRequest) {
       .insert({
         userId: parseInt(userId),
         enterprise_id: enterpriseId || null,
+        language1: sourceLanguage,
+        language2: targetLanguage,
         status: 'active',
         metadata: {
           original_filename: fileName,
