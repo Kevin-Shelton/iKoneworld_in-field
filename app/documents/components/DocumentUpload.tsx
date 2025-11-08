@@ -58,6 +58,37 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
       return;
     }
 
+    // Validate file type
+    const fileName = selectedFile.name.toLowerCase();
+    const validExtensions = ['.pdf', '.docx', '.pptx', '.txt'];
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!hasValidExtension) {
+      toast.error(
+        '📄 File type not supported for demo',
+        {
+          description: 'Please upload PDF, Word (.docx), PowerPoint (.pptx), or Text (.txt) files. Need help? Contact us!',
+          duration: 6000,
+        }
+      );
+      return;
+    }
+
+    // Validate file size (10MB limit for demo)
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+    const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(1);
+    
+    if (selectedFile.size > maxSizeBytes) {
+      toast.error(
+        '📦 File too large for demo',
+        {
+          description: `Your file is ${fileSizeMB}MB. Demo limit is 10MB. For larger files, please contact our team!`,
+          duration: 6000,
+        }
+      );
+      return;
+    }
+
     setUploading(true);
     
     // Store file info before clearing

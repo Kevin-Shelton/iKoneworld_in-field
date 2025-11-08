@@ -71,6 +71,35 @@ export async function POST(request: NextRequest) {
     
     // Analyze file
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    // Validate file type (demo restrictions)
+    const allowedExtensions = ['pdf', 'docx', 'pptx', 'txt'];
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      return NextResponse.json(
+        { 
+          error: 'File type not supported for demo',
+          message: 'Please upload PDF, Word (.docx), PowerPoint (.pptx), or Text (.txt) files. For other file types, please contact our team!',
+          allowedTypes: allowedExtensions,
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Validate file size (10MB limit for demo)
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    
+    if (file.size > maxSizeBytes) {
+      return NextResponse.json(
+        { 
+          error: 'File too large for demo',
+          message: `Your file is ${fileSizeMB}MB. Demo limit is 10MB. For larger files, please contact our team!`,
+          maxSizeMB: 10,
+          yourSizeMB: parseFloat(fileSizeMB),
+        },
+        { status: 400 }
+      );
+    }
     const sizeCategory = getFileSizeCategory(file.size);
     const estimatedTime = estimateProcessingTime(file.size);
     
