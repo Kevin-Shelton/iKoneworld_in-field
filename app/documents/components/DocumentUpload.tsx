@@ -329,7 +329,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
                       Drag and drop files here or click to browse
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      DOCX, PDF, TXT • Max 100MB
+                      PDF, DOCX, PPTX, TXT • Max 200MB
                     </p>
                   </>
                 )}
