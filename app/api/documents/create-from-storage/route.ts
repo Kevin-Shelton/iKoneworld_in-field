@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { data: conversation, error: dbError } = await supabase
       .from('conversations')
       .insert({
-        user_id: parseInt(userId),
+        userId: parseInt(userId),
         enterprise_id: enterpriseId || null,
         status: 'active',
         metadata: {
