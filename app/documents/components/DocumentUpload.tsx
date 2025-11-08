@@ -188,6 +188,7 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
 
       // Both methods now return JSON, check the method field
       const data = await response.json();
+      console.log('[Upload] Response data:', data);
       
       if (data.method === 'chunking') {
         // Chunking method - trigger async translation
