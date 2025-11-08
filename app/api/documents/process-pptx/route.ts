@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
     
-    // 2. Extract metadata
+    // 2. Extract metadata (supports both old and new structure)
     const metadata = conversation.metadata as any;
-    const originalFilename = metadata?.document_translation?.original_filename;
-    const originalStoragePath = metadata?.document_translation?.original_storage_path;
+    const originalFilename = metadata?.original_filename || metadata?.document_translation?.original_filename;
+    const originalStoragePath = metadata?.original_storage_path || metadata?.document_translation?.original_storage_path;
     const sourceLanguage = metadata?.source_language || 'en';
     const targetLanguage = metadata?.target_language || 'es';
-    const enterpriseId = metadata?.enterprise_id || 'default';
+    const enterpriseId = conversation.enterprise_id || metadata?.enterprise_id || 'default';
     const userId = conversation.user_id;
     
     if (!originalStoragePath) {

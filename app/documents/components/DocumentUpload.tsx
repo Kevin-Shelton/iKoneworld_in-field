@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { retryFetch } from '@/lib/retryUtils';
+import { uploadDocumentToSupabaseClient } from '@/lib/supabase/client-storage';
 
 interface DocumentUploadProps {
   userId: number;
@@ -94,6 +95,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     // Store file info before clearing
     const fileToUpload = selectedFile;
     
+    // Generate a temporary conversation ID for the upload path
+    const tempConversationId = Date.now();
+    
     // Estimate method and time based on file type and size
     const fileSizeKB = fileToUpload.size / 1024;
     const isPdf = fileToUpload.name.endsWith('.pdf');
@@ -138,23 +142,39 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     setSelectedFile(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', fileToUpload);
-      formData.append('userId', userId.toString());
-      if (enterpriseId) {
-        formData.append('enterpriseId', enterpriseId);
-      }
-      formData.append('sourceLanguage', sourceLanguage);
-      formData.append('targetLanguage', targetLanguage);
-
-      // Use smart routing endpoint with automatic retry (3 attempts)
-      const response = await retryFetch('/api/documents/upload-smart', {
+      // Step 1: Upload file directly to Supabase Storage (bypasses Vercel 4.5MB limit)
+      console.log('[Upload] Uploading to Supabase Storage...');
+      const storagePath = await uploadDocumentToSupabaseClient({
+        file: fileToUpload,
+        fileName: fileToUpload.name,
+        enterpriseId: enterpriseId || 'default',
+        userId: userId,
+        conversationId: tempConversationId,
+        isTranslated: false,
+      });
+      
+      console.log('[Upload] File uploaded to storage:', storagePath);
+      
+      // Step 2: Create document record with metadata only
+      const response = await retryFetch('/api/documents/create-from-storage', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          enterpriseId: enterpriseId || null,
+          fileName: fileToUpload.name,
+          fileSize: fileToUpload.size,
+          fileType: fileToUpload.type,
+          storagePath: storagePath,
+          sourceLanguage: sourceLanguage,
+          targetLanguage: targetLanguage,
+        }),
       }, {
         maxAttempts: 3,
         onRetry: (attempt, error) => {
-          toast.info(`Upload attempt ${attempt} failed. Retrying...`);
+          toast.info(`Creating document record (attempt ${attempt})...`);
           console.log(`[Upload Retry] Attempt ${attempt} failed:`, error.message);
         }
       });
