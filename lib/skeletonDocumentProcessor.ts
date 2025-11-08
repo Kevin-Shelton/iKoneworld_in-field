@@ -51,6 +51,18 @@ export interface StripResult {
  * @returns StripResult containing parsed text, skeleton map, and delimiter
  * @throws Error if no unique special character is available
  */
+/**
+ * Unescape XML entities to plain text
+ */
+function unescapeXml(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&'); // Must be last
+}
+
 export function stripDocument(xml: string): StripResult {
   // Find a special character not used in the document
   const special = SPECIAL_CHARACTERS.find(char => !xml.includes(char));
@@ -97,7 +109,9 @@ export function stripDocument(xml: string): StripResult {
   }
   
   // Build parsed string with delimiters
-  parsed = special + textSegments.join(special) + special;
+  // Unescape XML entities so Verbum translates clean text
+  const unescapedSegments = textSegments.map(seg => unescapeXml(seg));
+  parsed = special + unescapedSegments.join(special) + special;
   
   // Now process matches in reverse order to maintain string indices for skeleton
   for (let i = matches.length - 1; i >= 0; i--) {
@@ -165,13 +179,14 @@ export function buildDocument(
     const translation = segments[counter - 1];
     
     if (translation !== undefined) {
-      // Do NOT escape - text is already properly escaped in original document
-      // and Verbum API preserves the escaping. Re-escaping causes double-escaping.
+      // Escape XML entities in translated text before injecting
+      // We unescaped before translation, so we must re-escape now
+      const escapedTranslation = escapeXml(translation);
       
       // Replace all occurrences of this marker
       result = result.replace(
         new RegExp(`(<w:t[^>]*>)${escapeRegex(marker)}(<\/w:t>)`, 'g'),
-        `$1${translation}$2`
+        `$1${escapedTranslation}$2`
       );
     }
   }

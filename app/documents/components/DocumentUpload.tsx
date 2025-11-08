@@ -66,7 +66,8 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
     // Estimate method and time based on file type and size
     const fileSizeKB = fileToUpload.size / 1024;
     const isPdf = fileToUpload.name.endsWith('.pdf');
-    const useSkeletonMethod = fileToUpload.name.endsWith('.docx') && fileSizeKB < 100;
+    const isDocx = fileToUpload.name.endsWith('.docx');
+    const useSkeletonMethod = isDocx && fileSizeKB < 100;
     
     let method = 'chunking';
     let estimatedTime = Math.ceil(fileSizeKB / 10); // ~1 second per 10KB
@@ -76,6 +77,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
       estimatedTime = Math.ceil(fileSizeKB / 5); // PDFs take ~2x longer
     } else if (useSkeletonMethod) {
       method = 'skeleton';
+    } else if (isDocx && fileSizeKB >= 100) {
+      method = 'docx-skeleton-async';
+      estimatedTime = Math.ceil(fileSizeKB / 3); // Large DOCX takes longer
     }
     
     // Notify parent to show optimistic UI immediately
@@ -148,6 +152,27 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
         // Trigger PDF translation with retry
         if (data.conversationId) {
           await retryFetch('/api/documents/process-pdf', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: data.conversationId,
+            }),
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[Upload] Retrying PDF translation (attempt ${attempt})`);
+            },
+          });
+        }
+      } else if (data.method === 'docx-skeleton-async') {
+        // Large DOCX skeleton method - trigger async translation
+        toast.success('DOCX added to translation queue with complete format preservation');
+        
+        // Trigger DOCX translation with retry
+        if (data.conversationId) {
+          await retryFetch('/api/documents/process-docx', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

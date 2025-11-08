@@ -58,6 +58,9 @@ export async function POST(
     
     console.log(`[Document Translate] Status updated to 'active'`);
     
+    // Check if content is HTML (for formatting preservation)
+    const isHtmlContent = document.metadata?.document_translation?.is_html_content || false;
+    
     // Translate each chunk
     const translatedChunks: string[] = [];
     
@@ -105,10 +108,44 @@ export async function POST(
       
       // Extract translated text from Verbum API response
       // Verbum returns: translations[0][0].text (nested array)
-      const translatedText = translationData.translations?.[0]?.[0]?.text;
+      let translatedText = translationData.translations?.[0]?.[0]?.text;
       
       if (!translatedText) {
         throw new Error(`No translation returned for chunk ${i + 1}`);
+      }
+      
+      // If this is HTML content, use DOM-based translation to preserve structure
+      if (isHtmlContent && message.original_text.includes('<')) {
+        console.log(`[Document Translate] Using Cheerio-based translation for HTML chunk ${i + 1}`);
+        const { translateHtmlWithCheerio } = await import('@/lib/translateHtmlServerless');
+        
+        // Create a translation function that calls Verbum API
+        const translateFn = async (text: string) => {
+          const response = await fetch(
+            'https://sdk.verbum.ai/v1/translator/translate',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': verbumApiKey,
+              },
+              body: JSON.stringify({
+                texts: [{ text }],
+                from: document.language1,
+                to: [document.language2],
+              }),
+            }
+          );
+          
+          if (!response.ok) {
+            throw new Error('Translation failed');
+          }
+          
+          const data = await response.json();
+          return data.translations?.[0]?.[0]?.text || text;
+        };
+        
+        translatedText = await translateHtmlWithCheerio(message.original_text, translateFn);
       }
       
       translatedChunks.push(translatedText);
@@ -204,7 +241,6 @@ export async function POST(
     // For non-PDF files, use the existing text-based translation flow
     console.log('[Document Translate] Reconstructing document from translated chunks');
     let translatedContent: string;
-    const isHtmlContent = document.metadata?.document_translation?.is_html_content || false;
     
     if (isHtmlContent) {
       console.log('[Document Translate] Reconstructing HTML document with formatting');

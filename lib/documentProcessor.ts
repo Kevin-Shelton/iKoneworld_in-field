@@ -2,7 +2,7 @@ import mammoth from 'mammoth';
 import { convertDocxToHtml } from './mammothDocumentProcessor';
 import { sanitizeForPDF } from './pdfTextSanitizer';
 import { extractPDFStructure, reconstructPDFWithStructure, type PDFStructure } from './pdfStructureExtractor';
-// Note: convertHtmlToDocx is dynamically imported to avoid DOMMatrix errors
+// Note: convertHtmlToDocx is dynamically imported to avoid loading issues
 
 /**
  * Extract text from a document based on file type
@@ -95,8 +95,9 @@ function extractTextFromTXT(fileBuffer: Buffer): string {
 export function chunkHtml(html: string, maxChunkSize: number = 5000): string[] {
   const chunks: string[] = [];
   
-  // Split by paragraph tags
-  const paragraphPattern = /<(p|h[1-6]|li|div)[^>]*>.*?<\/\1>/gi;
+  // Split by block-level tags including tables
+  // Using [\s\S] instead of . with s flag for ES5 compatibility
+  const paragraphPattern = /<(p|h[1-6]|li|div|table)[^>]*>[\s\S]*?<\/\1>/gi;
   const paragraphs = html.match(paragraphPattern) || [];
   
   if (paragraphs.length === 0) {
@@ -118,9 +119,15 @@ export function chunkHtml(html: string, maxChunkSize: number = 5000): string[] {
       // If the paragraph itself is too long, we need to split it
       if (paragraph.length > maxChunkSize) {
         // Extract tag and content
-        const tagMatch = paragraph.match(/<([a-z0-9]+)([^>]*)>(.*)<\/\1>/i);
-        if (tagMatch) {
+        const tagMatch = paragraph.match(/<([a-z0-9]+)([^>]*)>([\s\S]*)<\/\1>/i);        if (tagMatch) {
           const [, tagName, attributes, content] = tagMatch;
+          
+          // Special handling: Keep tables intact, don't split them
+          if (tagName.toLowerCase() === 'table') {
+            chunks.push(paragraph);
+            currentChunk = '';
+            continue;
+          }
           
           // Split content by sentences
           const sentences = content.split(/([.!?]+\s+)/);
@@ -248,12 +255,17 @@ export async function createTranslatedDocumentBuffer(
   originalFileBuffer?: Buffer
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   
-  // If content is HTML and original was DOCX, convert back to DOCX
+  // If content is HTML and original was DOCX, convert back to DOCX using TurboDocx
   if (isHtml && (originalMimeType.includes('word') || originalMimeType.includes('document'))) {
-    console.log('[Create Document] Converting HTML back to DOCX with formatting');
+    console.log('[Create Document] Converting HTML back to DOCX with TurboDocx for format preservation');
     // Dynamic import to avoid loading docx library at module level
-    const { convertHtmlToDocx } = await import('./htmlToDocxConverter');
-    const buffer = await convertHtmlToDocx(translatedContent);
+    const { convertHtmlToDocx, wrapHtmlDocument } = await import('./turbodocxConverter');
+    // Wrap HTML in complete document structure if needed
+    const wrappedHtml = translatedContent.includes('<html') ? translatedContent : wrapHtmlDocument(translatedContent);
+    const buffer = await convertHtmlToDocx(wrappedHtml, {
+      title: 'Translated Document',
+      creator: 'iKoneworld Translation System',
+    });
     return {
       buffer,
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
