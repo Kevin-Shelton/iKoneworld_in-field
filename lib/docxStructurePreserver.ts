@@ -57,6 +57,13 @@ function extractTextNodes(xmlString: string): string[] {
   
   while ((match = textRegex.exec(xmlString)) !== null) {
     const text = match[1];
+    
+    // Skip text nodes that contain encoded XML tags (structural content, not translatable text)
+    if (text.includes('&lt;w:') || text.includes('&lt;/w:')) {
+      textNodes.push(''); // Placeholder to maintain index alignment
+      continue;
+    }
+    
     // Decode XML entities
     const decodedText = text
       .replace(/&lt;/g, '<')
@@ -67,6 +74,8 @@ function extractTextNodes(xmlString: string): string[] {
     
     if (decodedText.trim()) {
       textNodes.push(decodedText);
+    } else {
+      textNodes.push(''); // Placeholder for empty/whitespace nodes
     }
   }
   
@@ -120,6 +129,12 @@ function replaceTextNodes(xmlString: string, translatedTexts: string[]): string 
   
   // Replace each <w:t> content with translated text
   modifiedXml = modifiedXml.replace(/<w:t([^>]*)>(.*?)<\/w:t>/g, (match, attributes, originalText) => {
+    // Skip text nodes that contain encoded XML tags (keep original)
+    if (originalText.includes('&lt;w:') || originalText.includes('&lt;/w:')) {
+      textIndex++; // Increment index to stay aligned
+      return match; // Keep original XML structure
+    }
+    
     // Decode original text
     const decodedOriginal = originalText
       .replace(/&lt;/g, '<')
