@@ -21,6 +21,34 @@ export interface ConversionOptions {
 }
 
 /**
+ * Normalize table HTML for TurboDocx compatibility
+ * Adds explicit colspan and rowspan attributes to all table cells
+ * 
+ * @param html - HTML string potentially containing tables
+ * @returns HTML with normalized table attributes
+ */
+function normalizeTableHtml(html: string): string {
+  // Add colspan="1" and rowspan="1" to td/th tags that don't have them
+  return html.replace(/<(td|th)([^>]*)>/gi, (match, tag, attrs) => {
+    // Check if colspan already exists
+    const hasColspan = /colspan\s*=\s*["']?\d+["']?/i.test(attrs);
+    // Check if rowspan already exists
+    const hasRowspan = /rowspan\s*=\s*["']?\d+["']?/i.test(attrs);
+    
+    // Build new attributes
+    let newAttrs = attrs;
+    if (!hasColspan) {
+      newAttrs += ' colspan="1"';
+    }
+    if (!hasRowspan) {
+      newAttrs += ' rowspan="1"';
+    }
+    
+    return `<${tag}${newAttrs}>`;
+  });
+}
+
+/**
  * Convert HTML to DOCX with format preservation
  * 
  * @param html - HTML string with formatting
@@ -35,6 +63,9 @@ export async function convertHtmlToDocx(
   console.log('[TurboDocx] Options:', JSON.stringify(options, null, 2));
   
   try {
+    // Normalize table HTML for TurboDocx compatibility
+    const normalizedHtml = normalizeTableHtml(html);
+    console.log('[TurboDocx] Normalized HTML, new length:', normalizedHtml.length);
     // Prepare document options
     const docOptions: any = {
       orientation: options.orientation || 'portrait',
@@ -54,7 +85,7 @@ export async function convertHtmlToDocx(
     
     // Convert HTML to DOCX
     console.log('[TurboDocx] Starting conversion with HTMLtoDOCX...');
-    const docxArrayBuffer = await HTMLtoDOCX(html, null, docOptions);
+    const docxArrayBuffer = await HTMLtoDOCX(normalizedHtml, null, docOptions);
     
     // Convert ArrayBuffer to Buffer
     // HTMLtoDOCX returns ArrayBuffer | Buffer | Blob, need to handle all cases
