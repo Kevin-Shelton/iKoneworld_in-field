@@ -52,7 +52,8 @@ function extractTextNodes(xmlString: string): string[] {
   const textNodes: string[] = [];
   
   // Match text content in <w:t> tags
-  const textRegex = /<w:t[^>]*>(.*?)<\/w:t>/g;
+  // Only match content that doesn't contain < (pure text, no nested tags)
+  const textRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
   let match;
   
   while ((match = textRegex.exec(xmlString)) !== null) {
@@ -128,7 +129,8 @@ function replaceTextNodes(xmlString: string, translatedTexts: string[]): string 
   let textIndex = 0;
   
   // Replace each <w:t> content with translated text
-  modifiedXml = modifiedXml.replace(/<w:t([^>]*)>(.*?)<\/w:t>/g, (match, attributes, originalText) => {
+  // Only match content that doesn't contain < (pure text, no nested tags)
+  modifiedXml = modifiedXml.replace(/<w:t([^>]*)>([^<]*)<\/w:t>/g, (match, attributes, originalText) => {
     // Skip text nodes that contain encoded XML tags (keep original)
     if (originalText.includes('&lt;w:') || originalText.includes('&lt;/w:')) {
       textIndex++; // Increment index to stay aligned
