@@ -75,14 +75,14 @@ export async function POST(request: NextRequest) {
     const estimatedTime = estimateProcessingTime(file.size);
     
     // Routing decision
-    // - PDF: Always use DeepL (synchronous)
-    // - Small DOCX (< 100KB): Use Verbum AI skeleton method (synchronous)
-    // - Large DOCX (>= 100KB): Use Verbum AI chunking method (async)
+    // - PDF: Always use DeepL async
+    // - Small DOCX (< 100KB): Use skeleton method (synchronous)
+    // - Large DOCX (>= 100KB): Use skeleton method (async for complete fidelity)
     const usePdfDeepLMethod = fileExtension === 'pdf';
     const useSkeletonMethod = 
       fileExtension === 'docx' && 
       sizeCategory === 'small';
-    const useChunkingMethod = 
+    const useAsyncSkeletonMethod = 
       fileExtension === 'docx' && 
       sizeCategory !== 'small';
     
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       size: file.size,
       sizeCategory,
       extension: fileExtension,
-      method: usePdfDeepLMethod ? 'pdf-deepl' : (useSkeletonMethod ? 'skeleton' : 'chunking'),
+      method: usePdfDeepLMethod ? 'pdf-deepl-async' : (useSkeletonMethod ? 'skeleton' : 'docx-skeleton-async'),
       estimatedTime: `${estimatedTime}s`,
     });
     
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
             file_type: fileExtension || 'unknown',
             file_size_bytes: file.size,
             progress_percentage: 0,
-            method: usePdfDeepLMethod ? 'pdf-deepl' : (useSkeletonMethod ? 'skeleton' : 'chunking'),
+            method: usePdfDeepLMethod ? 'pdf-deepl-async' : (useSkeletonMethod ? 'skeleton' : 'docx-skeleton-async'),
             estimated_time_seconds: estimatedTime,
           },
         },
@@ -438,9 +438,67 @@ export async function POST(request: NextRequest) {
         }
       }
       
+    } else if (useAsyncSkeletonMethod) {
+      // ============================================
+      // ASYNC SKELETON METHOD (Large DOCX)
+      // ============================================
+      console.log('[Upload Smart] Using async skeleton method for large DOCX');
+      
+      // Convert file to buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const fileBuffer = Buffer.from(arrayBuffer);
+      
+      // Upload original DOCX to storage
+      const originalStoragePath = await uploadDocumentToSupabase({
+        fileBuffer,
+        fileName: file.name,
+        contentType: file.type,
+        enterpriseId: enterpriseId || 'default',
+        userId: parseInt(userId),
+        conversationId: conversation.id,
+        isTranslated: false,
+      });
+      
+      console.log('[Upload Smart] Uploaded original DOCX to:', originalStoragePath);
+      
+      // Store original file path in metadata
+      const { error: metadataError } = await supabase
+        .from('conversations')
+        .update({
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: file.name,
+              file_type: 'docx',
+              file_size_bytes: file.size,
+              progress_percentage: 0,
+              method: 'docx-skeleton-async',
+              estimated_time_seconds: estimatedTime,
+              original_storage_path: originalStoragePath,
+            },
+          },
+        })
+        .eq('id', conversation.id);
+      
+      if (metadataError) {
+        console.error('[Upload Smart] Failed to store metadata:', metadataError);
+      } else {
+        console.log('[Upload Smart] Stored original file path:', originalStoragePath);
+      }
+      
+      // Return immediately - frontend will trigger background processing
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        filename: file.name,
+        method: 'docx-skeleton-async',
+        status: 'processing',
+        message: 'DOCX added to translation queue. Processing in background with complete format preservation.',
+      });
+      
     } else {
       // ============================================
-      // CHUNKING METHOD (Asynchronous)
+      // CHUNKING METHOD (Fallback for non-DOCX)
       // ============================================
       console.log('[Upload Smart] Using chunking method');
       

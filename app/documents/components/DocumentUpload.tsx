@@ -76,6 +76,9 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
       estimatedTime = Math.ceil(fileSizeKB / 5); // PDFs take ~2x longer
     } else if (useSkeletonMethod) {
       method = 'skeleton';
+    } else if (isDocx && fileSizeKB >= 100) {
+      method = 'docx-skeleton-async';
+      estimatedTime = Math.ceil(fileSizeKB / 3); // Large DOCX takes longer
     }
     
     // Notify parent to show optimistic UI immediately
@@ -148,6 +151,27 @@ export default function DocumentUpload({ userId, enterpriseId, onUploadComplete,
         // Trigger PDF translation with retry
         if (data.conversationId) {
           await retryFetch('/api/documents/process-pdf', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId: data.conversationId,
+            }),
+          }, {
+            maxAttempts: 3,
+            onRetry: (attempt) => {
+              console.log(`[Upload] Retrying PDF translation (attempt ${attempt})`);
+            },
+          });
+        }
+      } else if (data.method === 'docx-skeleton-async') {
+        // Large DOCX skeleton method - trigger async translation
+        toast.success('DOCX added to translation queue with complete format preservation');
+        
+        // Trigger DOCX translation with retry
+        if (data.conversationId) {
+          await retryFetch('/api/documents/process-docx', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
