@@ -1,250 +1,189 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { translateDOCXWithDeepL } from '@/lib/deeplDocxTranslator';
+import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * POST /api/documents/process-docx
  * 
  * Background processing endpoint for large DOCX files
- * Uses skeleton method for complete format preservation
+ * Uses DeepL Document API for complete format preservation
  */
 export async function POST(request: NextRequest) {
+  const processingStartTime = Date.now();
+  
   try {
     const { conversationId } = await request.json();
     
     if (!conversationId) {
-      return NextResponse.json(
-        { error: 'conversationId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'conversationId is required' }, { status: 400 });
     }
     
-    console.log('[Process DOCX] Starting background translation for conversation', conversationId);
+    console.log(`[Process DOCX] Starting background translation for conversation ${conversationId}`);
     
-    // Import dependencies
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
-    const supabase = supabaseAdmin;
-    
-    // Get conversation details
-    const { data: document, error: fetchError } = await supabase
+    // 1. Fetch conversation details from database
+    const { data: conversation, error: fetchError } = await supabase
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
       .single();
     
-    if (fetchError || !document) {
+    if (fetchError || !conversation) {
       console.error('[Process DOCX] Failed to fetch conversation:', fetchError);
-      return NextResponse.json(
-        { error: 'Conversation not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
     
-    // Get original file path from metadata
-    const originalStoragePath = document.metadata?.document_translation?.original_storage_path;
+    // 2. Extract metadata
+    const metadata = conversation.metadata as any;
+    const originalFilename = metadata?.document_translation?.original_filename;
+    const originalStoragePath = metadata?.document_translation?.original_storage_path;
+    const sourceLanguage = metadata?.source_language || 'en';
+    const targetLanguage = metadata?.target_language || 'es';
+    const enterpriseId = metadata?.enterprise_id || 'default';
+    const userId = conversation.user_id;
     
     if (!originalStoragePath) {
-      console.error('[Process DOCX] No original file path found in conversation');
-      return NextResponse.json(
-        { error: 'Original file path not found' },
-        { status: 400 }
-      );
+      console.error('[Process DOCX] No original file path found in metadata');
+      await supabase.from('conversations').update({
+        status: 'failed',
+        metadata: {
+          ...metadata,
+          document_translation: {
+            ...metadata?.document_translation,
+            error: 'Original file path not found in metadata',
+          },
+        },
+      }).eq('id', conversationId);
+      return NextResponse.json({ error: 'Original file not found' }, { status: 404 });
     }
     
-    console.log('[Process DOCX] Downloading original DOCX from:', originalStoragePath);
+    console.log(`[Process DOCX] Downloading original DOCX from: ${originalStoragePath}`);
     
-    // Download original DOCX from storage
-    const { data: fileData, error: downloadError } = await supabase
-      .storage
+    // 3. Download original DOCX from Supabase storage
+    const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
       .download(originalStoragePath);
     
     if (downloadError || !fileData) {
       console.error('[Process DOCX] Failed to download original file:', downloadError);
-      await supabase
-        .from('conversations')
-        .update({ status: 'failed' })
-        .eq('id', conversationId);
-      
-      return NextResponse.json(
-        { error: 'Failed to download original file' },
-        { status: 500 }
-      );
-    }
-    
-    const originalFileBuffer = Buffer.from(await fileData.arrayBuffer());
-    console.log('[Process DOCX] Original DOCX downloaded, size:', originalFileBuffer.length, 'bytes');
-    
-    // Get language settings
-    const sourceLanguage = document.language1 || 'en';
-    const targetLanguage = document.language2 || 'es';
-    const originalFilename = document.metadata?.document_translation?.original_filename || 'document.docx';
-    
-    console.log('[Process DOCX] Translating with skeleton method:', sourceLanguage, '->', targetLanguage);
-    
-    // Import skeleton translation functions
-    const { stripDocument, buildDocument } = await import('@/lib/skeletonDocumentProcessor');
-    const { extractDocumentXml, createModifiedDocx } = await import('@/lib/docxHandler');
-    
-    // Step 1: Extract XML structure
-    console.log('[Process DOCX] Step 1: Extracting XML structure');
-    const documentXml = await extractDocumentXml(originalFileBuffer);
-    
-    // Step 2: Strip text from structure
-    console.log('[Process DOCX] Step 2: Stripping text from structure');
-    const stripResult = stripDocument(documentXml);
-    const skeleton = stripResult.map; // The skeleton XML with markers
-    const texts = stripResult.parsed; // The concatenated text with delimiters
-    const special = stripResult.special; // The delimiter character
-    console.log('[Process DOCX] Extracted text length:', texts.length, 'characters');
-    console.log('[Process DOCX] Using delimiter:', special);
-    
-    // Step 3: Translate text using Verbum API
-    console.log('[Process DOCX] Step 3: Translating text');
-    const verbumApiKey = process.env.VERBUM_API_KEY;
-    
-    if (!verbumApiKey) {
-      throw new Error('VERBUM_API_KEY not configured');
-    }
-    
-    // Map language codes to Verbum format
-    const mapToVerbumLanguageCode = (code: string): string => {
-      const specialCases: Record<string, string> = {
-        'zh-CN': 'zh-Hans',
-        'zh-TW': 'zh-Hant',
-        'zh-HK': 'zh-Hant',
-        'pt-PT': 'pt-pt',
-        'fr-CA': 'fr-ca',
-        'mn-MN': 'mn-Cyrl',
-        'sr-RS': 'sr-Cyrl',
-        'iu-CA': 'iu',
-      };
-      
-      if (specialCases[code]) {
-        return specialCases[code];
-      }
-      
-      return code.split('-')[0].toLowerCase();
-    };
-    
-    const mappedFrom = mapToVerbumLanguageCode(sourceLanguage);
-    const mappedTo = mapToVerbumLanguageCode(targetLanguage);
-    
-    const translationResponse = await fetch(
-      'https://sdk.verbum.ai/v1/translator/translate',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': verbumApiKey,
+      await supabase.from('conversations').update({
+        status: 'failed',
+        metadata: {
+          ...metadata,
+          document_translation: {
+            ...metadata?.document_translation,
+            error: 'Failed to download original file from storage',
+          },
         },
-        body: JSON.stringify({
-          texts: [{ text: texts }], // Send combined text as single item
-          from: mappedFrom,
-          to: [mappedTo],
-        }),
-      }
+      }).eq('id', conversationId);
+      return NextResponse.json({ error: 'Failed to download original file' }, { status: 500 });
+    }
+    
+    // 4. Convert Blob to Buffer
+    const arrayBuffer = await fileData.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    console.log(`[Process DOCX] Translating DOCX with DeepL (${sourceLanguage} → ${targetLanguage})`);
+    
+    // 5. Translate DOCX with DeepL
+    if (!process.env.DEEPL_API_KEY) {
+      console.error('[Process DOCX] DeepL API key not configured');
+      await supabase.from('conversations').update({
+        status: 'failed',
+        metadata: {
+          ...metadata,
+          document_translation: {
+            ...metadata?.document_translation,
+            error: 'DeepL API key not configured',
+          },
+        },
+      }).eq('id', conversationId);
+      return NextResponse.json({ error: 'DeepL API key not configured' }, { status: 500 });
+    }
+    
+    const translatedBuffer = await translateDOCXWithDeepL(
+      buffer,
+      originalFilename || 'document.docx',
+      sourceLanguage,
+      targetLanguage
     );
     
-    if (!translationResponse.ok) {
-      const errorText = await translationResponse.text();
-      throw new Error(`Verbum API failed: ${errorText}`);
-    }
+    console.log(`[Process DOCX] Translation completed, uploading translated DOCX`);
     
-    const translationData = await translationResponse.json();
-    const translatedTexts = translationData.translations[0].map((t: { text: string }) => t.text);
-    const translatedText = translatedTexts[0]; // Single combined translation
+    // 6. Generate translated filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const originalName = (originalFilename || 'document.docx').replace('.docx', '');
+    const newFilename = `${originalName}_${sourceLanguage.toUpperCase()}_to_${targetLanguage.toUpperCase()}_${timestamp}.docx`;
     
-    console.log('[Process DOCX] Translation complete, received', translatedTexts.length, 'translations');
-    
-    // Step 4: Build translated document
-    console.log('[Process DOCX] Step 4: Building translated document');
-    const translatedXml = buildDocument(translatedText, skeleton, special);
-    
-    // Step 5: Create translated DOCX
-    console.log('[Process DOCX] Step 5: Creating translated DOCX');
-    const translatedBuffer = await createModifiedDocx(originalFileBuffer, translatedXml);
-    
-    console.log('[Process DOCX] Translated DOCX created, size:', translatedBuffer.length, 'bytes');
-    
-    // Step 6: Upload translated DOCX to storage
-    console.log('[Process DOCX] Step 6: Uploading translated DOCX');
-    const { uploadDocumentToSupabase } = await import('@/lib/supabaseStorage');
-    
-    const translatedFilename = originalFilename.replace(/\.docx$/i, '_translated.docx');
-    
+    // 7. Upload translated DOCX to Supabase storage
     const translatedStoragePath = await uploadDocumentToSupabase({
       fileBuffer: translatedBuffer,
-      fileName: translatedFilename,
+      fileName: newFilename,
       contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      enterpriseId: document.enterprise_id || 'default',
-      userId: document.userId,
-      conversationId: conversationId,
+      enterpriseId,
+      userId,
+      conversationId,
       isTranslated: true,
     });
     
-    console.log('[Process DOCX] Uploaded translated DOCX to:', translatedStoragePath);
+    const processingDurationMs = Date.now() - processingStartTime;
     
-    // Step 7: Update database with completion
-    const { error: updateError } = await supabase
-      .from('conversations')
-      .update({
-        status: 'completed',
-        audio_url: translatedStoragePath,
-        metadata: {
-          conversation_type: 'document',
-          document_translation: {
-            ...document.metadata?.document_translation,
-            translated_filename: translatedFilename,
-            translated_storage_path: translatedStoragePath,
-            translated_file_url: translatedStoragePath,
-            translated_file_size_bytes: translatedBuffer.length,
-            progress_percentage: 100,
-            completed_at: new Date().toISOString(),
-          },
+    console.log(`[Process DOCX] Translation completed in ${Math.round(processingDurationMs / 1000)}s`);
+    
+    // 8. Update database with completed status
+    await supabase.from('conversations').update({
+      status: 'completed',
+      audio_url: translatedStoragePath,
+      metadata: {
+        ...metadata,
+        document_translation: {
+          ...metadata?.document_translation,
+          translated_filename: newFilename,
+          translated_file_size_bytes: translatedBuffer.length,
+          translated_storage_path: translatedStoragePath,
+          progress_percentage: 100,
+          processing_duration_ms: processingDurationMs,
+          processing_duration_seconds: Math.round(processingDurationMs / 1000),
+          method: 'docx-deepl',
         },
-      })
-      .eq('id', conversationId);
-    
-    if (updateError) {
-      console.error('[Process DOCX] Failed to update conversation:', updateError);
-      throw new Error(`Failed to update conversation: ${updateError.message}`);
-    }
-    
-    console.log('[Process DOCX] Translation completed successfully');
+      },
+    }).eq('id', conversationId);
     
     return NextResponse.json({
       success: true,
       conversationId,
-      translatedStoragePath,
+      filename: newFilename,
+      status: 'completed',
     });
     
   } catch (error) {
-    console.error('[Process DOCX] Error:', error);
+    console.error('[Process DOCX] Translation error:', error);
     
-    // Try to update conversation status to failed
+    // Try to update database with failed status
     try {
       const { conversationId } = await request.json();
       if (conversationId) {
-        const { supabaseAdmin } = await import('@/lib/supabase/server');
-        await supabaseAdmin
-          .from('conversations')
-          .update({ 
-            status: 'failed',
-            metadata: {
-              error: error instanceof Error ? error.message : 'Unknown error',
+        await supabase.from('conversations').update({
+          status: 'failed',
+          metadata: {
+            document_translation: {
+              error: (error as Error).message || 'Unknown error',
             },
-          })
-          .eq('id', conversationId);
+          },
+        }).eq('id', conversationId);
       }
     } catch (updateError) {
       console.error('[Process DOCX] Failed to update error status:', updateError);
     }
     
-    return NextResponse.json(
-      { 
-        error: 'Translation failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: 'DOCX translation failed',
+      message: (error as Error).message || 'Unknown error',
+    }, { status: 500 });
   }
 }
