@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     // 3. Download original PDF from Supabase storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
-      .download(originalStoragePath.replace('documents/', ''));
+      .download(originalStoragePath);
     
     if (downloadError || !fileData) {
       console.error('[Process PDF] Failed to download original file:', downloadError);

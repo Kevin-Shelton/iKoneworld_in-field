@@ -25,7 +25,7 @@ export async function uploadDocumentToSupabase({
     
     // Create a structured path: enterprise/user/conversation/filename
     const folder = isTranslated ? 'translated' : 'original';
-    const filePath = `documents/${enterpriseId}/${userId}/${conversationId}/${folder}/${fileName}`;
+    const filePath = `${enterpriseId}/${userId}/${conversationId}/${folder}/${fileName}`;
     
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
@@ -158,7 +158,7 @@ export async function getUserStorageUsage(
   try {
     const supabase = supabaseAdmin;
     
-    const folderPath = `documents/${enterpriseId}/${userId}`;
+    const folderPath = `${enterpriseId}/${userId}`;
     const { data, error } = await supabase.storage
       .from('documents')
       .list(folderPath, {
