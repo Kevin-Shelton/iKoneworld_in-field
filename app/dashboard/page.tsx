@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
-import { Mail, FileText, Globe } from 'lucide-react';
+import { Mail, FileText, Globe, Mic } from 'lucide-react';
 import { DefaultLanguagePrompt } from '@/components/DefaultLanguagePrompt';
 
 type Conversation = {
@@ -299,18 +299,19 @@ function DashboardContent() {
             <CardTitle className="text-white text-xl">Start New Conversation</CardTitle>
             <CardDescription className="text-gray-300">Begin a real-time translation session with a customer</CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-4">
+          <CardContent className="flex flex-wrap gap-3">
             <button
               onClick={() => window.open('https://explore.ikoneworld.com/site-translate/index.php/https/www.verizon.com/business/', '_blank')}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
             >
-              <Globe className="w-4 h-4" />
+              <Globe className="w-5 h-5" />
               Website
             </button>
             <button
               onClick={() => router.push('/select-language')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
             >
+              <Mic className="w-5 h-5" />
               In-Field
             </button>
             {dbUserId ? (
@@ -318,24 +319,31 @@ function DashboardContent() {
             ) : (
               <button
                 disabled
-                className="bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg cursor-not-allowed"
+                className="bg-gray-400 text-white font-semibold py-3 px-6 rounded-xl cursor-not-allowed opacity-60"
               >
                 Loading...
               </button>
             )}
             <button
               onClick={() => router.push('/email')}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
             >
-              <Mail className="w-4 h-4" />
+              <Mail className="w-5 h-5" />
               Email
             </button>
             <button
               onClick={() => router.push('/documents')}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-5 h-5" />
               Documents
+            </button>
+            <button
+              onClick={() => window.open('https://qa-web.ikunnect.com/auth/login', '_blank')}
+              className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
+            >
+              <Mic className="w-5 h-5" />
+              Voice
             </button>
           </CardContent>
         </Card>

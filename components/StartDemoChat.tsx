@@ -70,15 +70,14 @@ export function StartDemoChat({ userId, employeeName }: StartDemoChatProps) {
 
   return (
     <>
-      <Button
+      <button
         onClick={handleStartDemo}
         disabled={loading}
-        className="w-full sm:w-auto"
-        size="lg"
+        className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
       >
-        <MessageSquare className="mr-2 h-5 w-5" />
+        <MessageSquare className="w-5 h-5" />
         {loading ? "Starting..." : "Chat"}
-      </Button>
+      </button>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-md">
