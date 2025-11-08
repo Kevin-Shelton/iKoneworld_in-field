@@ -3,6 +3,7 @@ import { getFileSizeCategory, estimateProcessingTime, stripDocument, buildDocume
 import { extractTextFromDocx, processDocxTranslation } from '@/lib/mammothDocumentProcessor';
 import { extractDocumentXml, createModifiedDocx, validateDocxStructure } from '@/lib/docxHandler';
 import { createDocumentTranslation, storeDocumentChunks, failDocumentTranslation } from '@/lib/db/documents';
+import { processDeeplPdfTranslation } from '@/lib/deeplAsyncPdfTranslator';
 import { uploadDocumentToSupabase } from '@/lib/supabaseStorage';
 import {
   chunkText,
@@ -136,7 +137,18 @@ export async function POST(request: NextRequest) {
       // ============================================
       // PDF DEEPL METHOD (Synchronous)
       // ============================================
-console.log('[Upload Smart] Using PDF DeepL method');
+      // Trigger asynchronous translation
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      processDeeplPdfTranslation(conversation.id, buffer, file.name, sourceLanguage, targetLanguage, enterpriseId || 'default', parseInt(userId));
+
+      // Return immediate response to user
+      return NextResponse.json({
+        success: true,
+        conversationId: conversation.id,
+        method: 'pdf-deepl-async',
+        status: 'processing',
+      });
       
       const processingStartTime = Date.now();
       
@@ -196,7 +208,7 @@ console.log('[Upload Smart] Using PDF DeepL method');
         });
       } catch (pdfError) {
         console.error('[Upload Smart] PDF DeepL error:', pdfError);
-        return NextResponse.json({ error: 'PDF translation failed', message: pdfError instanceof Error ? pdfError.message : 'Unknown error' }, { status: 500 });
+        return NextResponse.json({ error: 'PDF translation failed', message: (pdfError as Error).message || 'Unknown error' }, { status: 500 });
       }
 
     } else if (useSkeletonMethod) {
