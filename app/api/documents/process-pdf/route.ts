@@ -35,33 +35,33 @@ export async function POST(request: NextRequest) {
     // 2. Extract metadata
     const metadata = conversation.metadata as any;
     const originalFilename = metadata?.document_translation?.original_filename;
+    const originalStoragePath = metadata?.document_translation?.original_storage_path;
     const sourceLanguage = metadata?.source_language || 'en';
     const targetLanguage = metadata?.target_language || 'es';
     const enterpriseId = metadata?.enterprise_id || 'default';
     const userId = conversation.user_id;
-    const originalFileUrl = conversation.originalFileUrl;
     
-    if (!originalFileUrl) {
-      console.error('[Process PDF] No original file URL found in conversation');
+    if (!originalStoragePath) {
+      console.error('[Process PDF] No original file path found in metadata');
       await supabase.from('conversations').update({
         status: 'failed',
         metadata: {
           ...metadata,
           document_translation: {
             ...metadata?.document_translation,
-            error: 'Original file not found in storage',
+            error: 'Original file path not found in metadata',
           },
         },
       }).eq('id', conversationId);
       return NextResponse.json({ error: 'Original file not found' }, { status: 404 });
     }
     
-    console.log(`[Process PDF] Downloading original PDF from: ${originalFileUrl}`);
+    console.log(`[Process PDF] Downloading original PDF from: ${originalStoragePath}`);
     
     // 3. Download original PDF from Supabase storage
     const { data: fileData, error: downloadError } = await supabase.storage
       .from('documents')
-      .download(originalFileUrl.replace('documents/', ''));
+      .download(originalStoragePath.replace('documents/', ''));
     
     if (downloadError || !fileData) {
       console.error('[Process PDF] Failed to download original file:', downloadError);

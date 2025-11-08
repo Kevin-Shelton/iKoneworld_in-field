@@ -151,9 +151,20 @@ export async function POST(request: NextRequest) {
         isTranslated: false,
       });
 
-      // 2. Update conversation with original file path
+      // 2. Update conversation metadata with original file path
+      const existingMetadata = conversation.metadata || {};
       await supabase.from('conversations').update({
-        originalFileUrl: originalStoragePath,
+        metadata: {
+          ...existingMetadata,
+          document_translation: {
+            ...existingMetadata.document_translation,
+            original_storage_path: originalStoragePath,
+            original_filename: file.name,
+            file_type: 'pdf',
+            file_size_bytes: file.size,
+            method: 'pdf-deepl',
+          },
+        },
       }).eq('id', conversation.id);
 
       // 3. Return immediate response to user
