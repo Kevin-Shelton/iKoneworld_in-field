@@ -74,17 +74,23 @@ export async function POST(request: NextRequest) {
     const estimatedTime = estimateProcessingTime(file.size);
     
     // Routing decision
-    // Only use skeleton method for small files (< 100KB) to avoid Verbum API size limits
+    // - PDF: Always use DeepL (synchronous)
+    // - Small DOCX (< 100KB): Use Verbum AI skeleton method (synchronous)
+    // - Large DOCX (>= 100KB): Use Verbum AI chunking method (async)
+    const usePdfDeepLMethod = fileExtension === 'pdf';
     const useSkeletonMethod = 
       fileExtension === 'docx' && 
       sizeCategory === 'small';
+    const useChunkingMethod = 
+      fileExtension === 'docx' && 
+      sizeCategory !== 'small';
     
     console.log('[Upload Smart] File analysis:', {
       name: file.name,
       size: file.size,
       sizeCategory,
       extension: fileExtension,
-      method: useSkeletonMethod ? 'skeleton' : 'chunking',
+      method: usePdfDeepLMethod ? 'pdf-deepl' : (useSkeletonMethod ? 'skeleton' : 'chunking'),
       estimatedTime: `${estimatedTime}s`,
     });
     
@@ -112,7 +118,7 @@ export async function POST(request: NextRequest) {
             file_type: fileExtension || 'unknown',
             file_size_bytes: file.size,
             progress_percentage: 0,
-            method: useSkeletonMethod ? 'skeleton' : 'chunking',
+            method: usePdfDeepLMethod ? 'pdf-deepl' : (useSkeletonMethod ? 'skeleton' : 'chunking'),
             estimated_time_seconds: estimatedTime,
           },
         },
@@ -126,7 +132,74 @@ export async function POST(request: NextRequest) {
     
     console.log(`[Upload Smart] ✓ Database record created with ID: ${conversation.id}`);
     
-    if (useSkeletonMethod) {
+    if (usePdfDeepLMethod) {
+      // ============================================
+      // PDF DEEPL METHOD (Synchronous)
+      // ============================================
+console.log('[Upload Smart] Using PDF DeepL method');
+      
+      const processingStartTime = Date.now();
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        if (!process.env.DEEPL_API_KEY) {
+          return NextResponse.json({ error: 'DeepL API key not configured' }, { status: 500 });
+        }
+        
+        const { translatePDFWithDeepL } = await import('@/lib/deeplPdfTranslator');
+        const translatedBuffer = await translatePDFWithDeepL(buffer, file.name, sourceLanguage, targetLanguage);
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const originalName = file.name.replace('.pdf', '');
+        const newFilename = `${originalName}_${sourceLanguage.toUpperCase()}_to_${targetLanguage.toUpperCase()}_${timestamp}.pdf`;
+        
+        const translatedStoragePath = await uploadDocumentToSupabase({
+          fileBuffer: translatedBuffer,
+          fileName: newFilename,
+          contentType: 'application/pdf',
+          enterpriseId: enterpriseId || 'default',
+          userId: parseInt(userId),
+          conversationId: conversation.id,
+          isTranslated: true,
+        });
+        
+        const processingDurationMs = Date.now() - processingStartTime;
+        
+        await supabase.from('conversations').update({
+          status: 'completed',
+          audio_url: translatedStoragePath,
+          metadata: {
+            conversation_type: 'document',
+            document_translation: {
+              original_filename: file.name,
+              translated_filename: newFilename,
+              file_type: 'pdf',
+              file_size_bytes: file.size,
+              translated_file_size_bytes: translatedBuffer.length,
+              translated_storage_path: translatedStoragePath,
+              progress_percentage: 100,
+              processing_duration_ms: processingDurationMs,
+              processing_duration_seconds: Math.round(processingDurationMs / 1000),
+              method: 'pdf-deepl',
+            },
+          },
+        }).eq('id', conversation.id);
+        
+        return NextResponse.json({
+          success: true,
+          conversationId: conversation.id,
+          filename: newFilename,
+          method: 'pdf-deepl',
+          status: 'completed',
+        });
+      } catch (pdfError) {
+        console.error('[Upload Smart] PDF DeepL error:', pdfError);
+        return NextResponse.json({ error: 'PDF translation failed', message: pdfError instanceof Error ? pdfError.message : 'Unknown error' }, { status: 500 });
+      }
+
+    } else if (useSkeletonMethod) {
       // ============================================
       // SKELETON METHOD (Synchronous)
       // ============================================
