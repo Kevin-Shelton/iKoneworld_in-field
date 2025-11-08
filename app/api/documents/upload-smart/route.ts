@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
 
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
-      await supabase.from('conversations').update({
+      const { error: updateError } = await supabase.from('conversations').update({
         status: 'processing',
         metadata: {
           ...existingMetadata,
@@ -225,6 +225,13 @@ export async function POST(request: NextRequest) {
           },
         },
       }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update PPTX metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] PPTX metadata updated successfully');
 
       // 3. Return immediate response to user
       return NextResponse.json({
@@ -255,7 +262,7 @@ export async function POST(request: NextRequest) {
 
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
-      await supabase.from('conversations').update({
+      const { error: updateError } = await supabase.from('conversations').update({
         status: 'processing',
         metadata: {
           ...existingMetadata,
@@ -271,6 +278,13 @@ export async function POST(request: NextRequest) {
           },
         },
       }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update DOCX metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] DOCX metadata updated successfully');
 
       // 3. Return immediate response to user
       return NextResponse.json({
@@ -374,7 +388,7 @@ export async function POST(request: NextRequest) {
 
       // 2. Update conversation metadata with original file path
       const existingMetadata = conversation.metadata || {};
-      await supabase.from('conversations').update({
+      const { error: updateError } = await supabase.from('conversations').update({
         status: 'processing',
         metadata: {
           ...existingMetadata,
@@ -390,6 +404,13 @@ export async function POST(request: NextRequest) {
           },
         },
       }).eq('id', conversation.id);
+      
+      if (updateError) {
+        console.error('[Upload Smart] Failed to update TXT metadata:', updateError);
+        throw new Error(`Failed to update metadata: ${updateError.message}`);
+      }
+      
+      console.log('[Upload Smart] TXT metadata updated successfully');
 
       // 3. Return immediate response to user
       return NextResponse.json({
