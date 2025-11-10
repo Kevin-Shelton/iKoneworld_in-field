@@ -29,7 +29,11 @@ export default function LoginPage() {
         router.push('/reset-password');
       } else {
         toast.success('Welcome back!');
-        router.push('/dashboard');
+        
+        // Redirect to the path specified in the URL, or /dashboard as a fallback
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirectTo') || '/dashboard';
+        router.push(redirectTo);
       }
     } catch (error) {
       toast.error('Invalid email or password');
