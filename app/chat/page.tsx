@@ -6,10 +6,40 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { QRCodeSVG } from "qrcode.react";
+import { Copy, MessageSquare, Loader2, Link as LinkIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { useEffect } from "react";
 
 export default function ChatLandingPage() {
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [employeeLanguage, setEmployeeLanguage] = useState("en");
+  const [customerLanguage, setCustomerLanguage] = useState("es");
+  const [customerUrl, setCustomerUrl] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // If not logged in, redirect to login
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleStartChat = async () => {
     setLoading(true);
@@ -26,8 +56,15 @@ export default function ChatLandingPage() {
 
       if (response.ok) {
         const data = await response.json();
-        // Redirect to the conversation page
-        router.push(`/chat/${data.conversationId}`);
+        const id = data.conversationId;
+        setConversationId(id);
+        
+        // Construct the customer URL
+        const url = `${window.location.origin}/chat/${id}/customer`;
+        setCustomerUrl(url);
+        
+        // Redirect the employee to the conversation page
+        router.push(`/chat/${id}`);
       } else {
         toast.error("Failed to start chat. Please try again.");
         setLoading(false);
@@ -50,18 +87,41 @@ export default function ChatLandingPage() {
             Welcome to iKoneworld Chat
           </CardTitle>
           <CardDescription className="text-lg text-gray-600">
-            Start a real-time translation conversation with our team
+            Start a real-time translation conversation with a customer
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-            <h3 className="font-semibold text-blue-900">How it works:</h3>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li>Click "Start Chat" to begin</li>
-              <li>Speak in your language</li>
-              <li>Get instant translation</li>
-              <li>Communicate effortlessly</li>
-            </ul>
+          <div className="space-y-4">
+            {/* Language Selectors */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="employee-lang">Your Language</Label>
+                <LanguageSelector
+                  id="employee-lang"
+                  value={employeeLanguage}
+                  onChange={setEmployeeLanguage}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customer-lang">Customer Language</Label>
+                <LanguageSelector
+                  id="customer-lang"
+                  value={customerLanguage}
+                  onChange={setCustomerLanguage}
+                />
+              </div>
+            </div>
+            
+            {/* Info Box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+              <h3 className="font-semibold text-blue-900">How it works:</h3>
+              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                <li>Click "Start Chat" to generate a unique customer link and QR code.</li>
+                <li>Share the link or QR code with your customer.</li>
+                <li>The customer joins the chat in their selected language.</li>
+                <li>You will be redirected to the employee chat view.</li>
+              </ul>
+            </div>
           </div>
 
           <Button
@@ -82,6 +142,48 @@ export default function ChatLandingPage() {
               </>
             )}
           </Button>
+          
+          {/* QR Code and URL Display */}
+          {conversationId && customerUrl && (
+            <div className="mt-6 border-t pt-6 space-y-4">
+              <h3 className="text-xl font-bold text-gray-900 text-center">Share with Customer</h3>
+              
+              {/* QR Code */}
+              <div className="flex justify-center">
+                <div className="p-4 bg-white rounded-lg shadow-lg">
+                  <QRCodeSVG value={customerUrl} size={180} level="H" />
+                </div>
+              </div>
+              
+              {/* Customer URL */}
+              <div className="space-y-2">
+                <Label htmlFor="customer-url" className="text-base">Customer Link</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="customer-url"
+                    type="text"
+                    value={customerUrl}
+                    readOnly
+                    className="flex-1 bg-gray-100"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(customerUrl);
+                      toast.success("Customer link copied!");
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500 flex items-center">
+                  <LinkIcon className="h-4 w-4 mr-1" />
+                  Conversation ID: {conversationId}
+                </p>
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-sm text-gray-500">
             By starting a chat, you agree to our terms of service
