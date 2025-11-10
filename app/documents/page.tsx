@@ -19,8 +19,7 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     if (!user) {
-      // Redirect to login, passing the current path as a query parameter
-      router.push(`/login?redirectTo=${encodeURIComponent(router.pathname)}`);
+      router.push('/');
       return;
     }
 
