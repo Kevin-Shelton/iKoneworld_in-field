@@ -12,34 +12,16 @@ import { Copy, MessageSquare, Loader2, Link as LinkIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { useEffect } from "react";
+
 
 export default function ChatLandingPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [employeeLanguage, setEmployeeLanguage] = useState("en");
   const [customerLanguage, setCustomerLanguage] = useState("es");
   const [customerUrl, setCustomerUrl] = useState("");
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      // If not logged in, redirect to login
-      router.push("/login");
-    }
-  }, [user, authLoading, router]);
-
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleStartChat = async () => {
     setLoading(true);
