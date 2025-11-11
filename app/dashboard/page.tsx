@@ -336,6 +336,7 @@ function DashboardContent() {
               Email
             </button>
             <button
+              data-testid="documents-button"
               onClick={() => router.push('/documents')}
               className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105"
             >
