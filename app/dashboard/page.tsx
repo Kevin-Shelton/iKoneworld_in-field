@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { getAudioUrl } from '@/lib/hooks/useAudioUrl';
 import { StartDemoChat } from '@/components/StartDemoChat';
 import { Mail, FileText, Globe, Mic } from 'lucide-react';
+import { ChatInitTrigger } from '@/components/ChatInitTrigger';
 import { DefaultLanguagePrompt } from '@/components/DefaultLanguagePrompt';
 
 type Conversation = {
@@ -316,6 +317,7 @@ function DashboardContent() {
             </button>
             {dbUserId ? (
               <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />
+              <ChatInitTrigger />
             ) : (
               <button
                 disabled
