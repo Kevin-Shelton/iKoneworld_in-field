@@ -141,8 +141,8 @@ export default function CustomerChatPage() {
       {/* Header */}
       <div className="p-4 bg-white border-b shadow-sm space-y-2">
         <div>
-          <h1 className="text-xl font-bold text-center">Chat Support</h1>
-          <p className="text-sm text-center text-gray-600">Welcome, {customerName}!</p>
+          <h1 className="text-xl font-bold text-center text-gray-900">Chat Support</h1>
+          <p className="text-sm text-center text-gray-700">Welcome, {customerName}!</p>
         </div>
         <div className="flex justify-center">
           <LanguageSelector
