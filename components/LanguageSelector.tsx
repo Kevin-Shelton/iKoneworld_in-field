@@ -53,7 +53,7 @@ export function LanguageSelector({
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        {label && <span className="text-sm font-medium">{label}</span>}
+        {label && <span className="text-sm font-medium text-gray-900">{label}</span>}
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
@@ -61,14 +61,14 @@ export function LanguageSelector({
 
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
-      {label && <span className="text-sm font-medium whitespace-nowrap">{label}</span>}
+      {label && <span className="text-sm font-medium text-gray-900 whitespace-nowrap">{label}</span>}
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder={placeholder} />
+        <SelectTrigger className="w-[200px] text-gray-900">
+          <SelectValue placeholder={placeholder} className="text-gray-900" />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
           {languages.map((lang) => (
-            <SelectItem key={lang.code} value={lang.code}>
+            <SelectItem key={lang.code} value={lang.code} className="text-gray-900">
               {lang.name} ({lang.nativeName})
             </SelectItem>
           ))}
