@@ -11,17 +11,21 @@ import DocumentList from './components/DocumentList';
 
 export default function DocumentsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth(); // ← Added loading
   const [dbUserId, setDbUserId] = useState<number | null>(null);
   const [enterpriseId, setEnterpriseId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [optimisticDocuments, setOptimisticDocuments] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) {
+    // ← Added loading check
+    if (!loading && !user) {
       router.push('/');
       return;
     }
+
+    // ← Added loading check to prevent sync before user is loaded
+    if (!user) return;
 
     // Sync user and get database ID
     const syncUser = async () => {
@@ -54,7 +58,7 @@ export default function DocumentsPage() {
     };
 
     syncUser();
-  }, [user, router]);
+  }, [user, loading, router]); // ← Added loading to dependencies
 
   const handleUploadComplete = () => {
     // Trigger refresh of document list and stats
@@ -114,7 +118,8 @@ export default function DocumentsPage() {
     setOptimisticDocuments([]);
   };
 
-  if (!user || !dbUserId) {
+  // ← Added loading check to the loading state
+  if (loading || !user || !dbUserId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
