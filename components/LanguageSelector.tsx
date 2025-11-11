@@ -20,6 +20,7 @@ interface LanguageSelectorProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  textColor?: string; // New prop for text color
 }
 
 export function LanguageSelector({
@@ -28,6 +29,7 @@ export function LanguageSelector({
   label,
   placeholder = "Select language",
   className,
+  textColor = "text-gray-900", // Default to black/dark gray
 }: LanguageSelectorProps) {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export function LanguageSelector({
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        {label && <span className="text-sm font-medium text-gray-900">{label}</span>}
+        {label && <span className={`text-sm font-medium ${textColor}`}>{label}</span>}
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
@@ -61,14 +63,14 @@ export function LanguageSelector({
 
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
-      {label && <span className="text-sm font-medium text-gray-900 whitespace-nowrap">{label}</span>}
+      {label && <span className={`text-sm font-medium ${textColor} whitespace-nowrap`}>{label}</span>}
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[200px] text-gray-900">
-          <SelectValue placeholder={placeholder} className="text-gray-900" />
+        <SelectTrigger className={`w-[200px] ${textColor}`}>
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
           {languages.map((lang) => (
-            <SelectItem key={lang.code} value={lang.code} className="text-gray-900">
+            <SelectItem key={lang.code} value={lang.code}>
               {lang.name} ({lang.nativeName})
             </SelectItem>
           ))}
