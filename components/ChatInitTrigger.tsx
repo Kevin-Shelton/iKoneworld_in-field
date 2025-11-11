@@ -13,7 +13,7 @@ export function ChatInitTrigger() {
       // in the "Start New Conversation" section.
       // We will use a more robust selector if possible, but for now, we'll rely on the structure.
       // The StartDemoChat component renders a button with the text "Chat"
-      const chatButton = document.querySelector('button:has(svg.lucide-message-square)');
+      const chatButton = document.querySelector('button:has(svg.lucide-message-square)') as HTMLElement | null;
 
       if (chatButton) {
         // Programmatically click the button to open the modal
