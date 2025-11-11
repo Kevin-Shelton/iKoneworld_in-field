@@ -316,8 +316,10 @@ function DashboardContent() {
               In-Field
             </button>
             {dbUserId ? (
-              <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />
-              <ChatInitTrigger />
+              <>
+                <StartDemoChat userId={dbUserId} employeeName={dbUserName || user?.email || 'Employee'} />
+                <ChatInitTrigger />
+              </>
             ) : (
               <button
                 disabled
