@@ -7,6 +7,9 @@ interface SSOLoginPageProps {
   searchParams: Promise<{ token?: string; redirect?: string }>;
 }
 
+// Force dynamic rendering because we use cookies
+export const dynamic = 'force-dynamic';
+
 export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) {
   // Await searchParams in Next.js 15+
   const params = await searchParams;

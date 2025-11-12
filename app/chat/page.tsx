@@ -2,6 +2,8 @@ import { getServerUser } from "@/lib/supabase/server-utils";
 import ChatLandingClient from "@/components/ChatLandingClient";
 
 // This page is now a Server Component, fetching data server-side to avoid the useAuth context error.
+// Force dynamic rendering because we use cookies
+export const dynamic = 'force-dynamic';
 
 export default async function ChatLandingPage() {
   // Fetch user session server-side
