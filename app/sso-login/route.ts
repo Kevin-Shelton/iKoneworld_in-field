@@ -173,7 +173,11 @@ export async function GET(request: NextRequest) {
 
     console.log('[SSO] Session created successfully');
 
-    // Return HTML page that sets localStorage and redirects
+    // Get Supabase config for client-side initialization
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // Return HTML page that uses Supabase client to set session properly
     const html = `
 <!DOCTYPE html>
 <html>
@@ -208,6 +212,7 @@ export async function GET(request: NextRequest) {
       100% { transform: rotate(360deg); }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="container">
@@ -216,34 +221,47 @@ export async function GET(request: NextRequest) {
     <p>Please wait while we complete your authentication.</p>
   </div>
   <script>
-    (function() {
+    (async function() {
       try {
-        // Store session in localStorage using the same key as the client
-        const session = ${JSON.stringify(sessionData.session)};
-        const storageKey = 'ikoneworld-auth';
-        
-        // Store the session data in the format Supabase expects
-        const authData = {
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-          expires_at: session.expires_at,
-          expires_in: session.expires_in,
-          token_type: session.token_type,
-          user: session.user
-        };
-        
-        localStorage.setItem(
-          storageKey + '-auth-token',
-          JSON.stringify(authData)
+        // Initialize Supabase client with same config as the app
+        const { createClient } = supabase;
+        const supabaseClient = createClient(
+          '${supabaseUrl}',
+          '${supabaseAnonKey}',
+          {
+            auth: {
+              flowType: 'pkce',
+              autoRefreshToken: true,
+              detectSessionInUrl: true,
+              persistSession: true,
+              storage: window.localStorage,
+              storageKey: 'ikoneworld-auth',
+            }
+          }
         );
         
-        console.log('[SSO] Session stored in localStorage');
+        // Set the session using Supabase's official method
+        const session = ${JSON.stringify(sessionData.session)};
+        
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token
+        });
+        
+        if (error) {
+          console.error('[SSO] Error setting session:', error);
+          window.location.href = '/login?error=session_set_failed';
+          return;
+        }
+        
+        console.log('[SSO] Session set successfully via Supabase client');
+        console.log('[SSO] User:', data.user?.email);
         
         // Redirect to the intended page
         window.location.href = '${redirectPath}';
       } catch (error) {
-        console.error('[SSO] Error storing session:', error);
-        window.location.href = '/login?error=storage_failed';
+        console.error('[SSO] Error in SSO flow:', error);
+        window.location.href = '/login?error=sso_failed';
       }
     })();
   </script>
