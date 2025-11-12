@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -61,13 +59,12 @@ export async function GET(request: NextRequest) {
     if (!existingUser) {
       console.log('[SSO] Creating new user for:', decoded.email);
       
-      const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
+      const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email: decoded.email,
         password: Math.random().toString(36).slice(-16),
-        options: {
-          data: {
-            name: decoded.name || decoded.email.split('@')[0],
-          },
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          name: decoded.name || decoded.email.split('@')[0],
         },
       });
 
@@ -81,7 +78,7 @@ export async function GET(request: NextRequest) {
       console.log('[SSO] User already exists:', existingUser.id);
     }
 
-    // Generate magic link using admin client
+    // Generate magic link using admin client to get session tokens
     const { data: adminAuthData, error: adminError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: decoded.email,
@@ -101,55 +98,103 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=auth_failed', request.url));
     }
 
-    // Create a server client with cookie support for setting the session
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get: (name: string) => {
-            const cookie = cookieStore.get(name);
-            console.log('[SSO] Getting cookie:', name, '=', cookie?.value ? 'present' : 'missing');
-            return cookie?.value;
-          },
-          set: (name: string, value: string, options: CookieOptions) => {
-            try {
-              console.log('[SSO] Setting cookie:', name, 'with options:', JSON.stringify(options));
-              // Don't override Supabase's cookie options, just pass them through
-              cookieStore.set({ name, value, ...options });
-            } catch (error) {
-              console.error('[SSO] Error setting cookie:', error);
-            }
-          },
-          remove: (name: string, options: CookieOptions) => {
-            try {
-              console.log('[SSO] Removing cookie:', name);
-              cookieStore.set({ name, value: '', ...options, maxAge: 0 });
-            } catch (error) {
-              console.error('[SSO] Error removing cookie:', error);
-            }
-          },
-        },
-      }
-    );
-
-    // Verify the OTP to establish the session with cookies
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    // Use the admin client to verify OTP and get session
+    const { data: sessionData, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
       type: 'email',
       token_hash: hashedToken,
     });
 
-    if (verifyError) {
+    if (verifyError || !sessionData.session) {
       console.error('[SSO] Error verifying OTP:', verifyError);
       return NextResponse.redirect(new URL('/login?error=session_failed', request.url));
     }
 
-    console.log('[SSO] Session established successfully with cookies');
-    console.log('[SSO] Redirecting to:', redirectPath);
+    console.log('[SSO] Session created successfully');
 
-    // Redirect to the intended page
-    return NextResponse.redirect(new URL(redirectPath, request.url));
+    // Return HTML page that sets localStorage and redirects
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Signing in...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .container {
+      text-align: center;
+      color: white;
+    }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid white;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h2>Signing you in...</h2>
+    <p>Please wait while we complete your authentication.</p>
+  </div>
+  <script>
+    (function() {
+      try {
+        // Store session in localStorage using the same key as the client
+        const session = ${JSON.stringify(sessionData.session)};
+        const storageKey = 'ikoneworld-auth';
+        
+        // Store the session data in the format Supabase expects
+        const authData = {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at,
+          expires_in: session.expires_in,
+          token_type: session.token_type,
+          user: session.user
+        };
+        
+        localStorage.setItem(
+          storageKey + '-auth-token',
+          JSON.stringify(authData)
+        );
+        
+        console.log('[SSO] Session stored in localStorage');
+        
+        // Redirect to the intended page
+        window.location.href = '${redirectPath}';
+      } catch (error) {
+        console.error('[SSO] Error storing session:', error);
+        window.location.href = '/login?error=storage_failed';
+      }
+    })();
+  </script>
+</body>
+</html>
+    `;
+
+    return new NextResponse(html, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
 
   } catch (error) {
     console.error('[SSO] Unexpected error:', error);
