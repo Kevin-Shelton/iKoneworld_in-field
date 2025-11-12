@@ -160,8 +160,6 @@ export async function POST(request: NextRequest) {
 }
 
 // Configure Next.js to handle larger file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// In Next.js 15+, use route segment config instead of the deprecated config export
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Maximum execution time in seconds
