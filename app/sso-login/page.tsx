@@ -30,9 +30,9 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       portalUserId: string;
     };
 
-    // Create Supabase admin client
+    // Create Supabase admin client for user management
     const cookieStore = await cookies();
-    const supabase = createServerClient(
+    const adminClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
@@ -51,7 +51,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
     );
 
     // Check if user exists in Supabase
-    const { data: existingUser, error: fetchError } = await supabase.auth.admin.listUsers();
+    const { data: existingUser, error: fetchError } = await adminClient.auth.admin.listUsers();
     
     const userExists = existingUser?.users.find(u => u.email === decoded.email);
 
@@ -59,7 +59,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
 
     if (!userExists) {
       // Create new user in Supabase
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
         email: decoded.email,
         email_confirm: true,
         user_metadata: {
@@ -78,28 +78,54 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       userId = userExists.id;
     }
 
-    // Generate a session token for the user
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+    // Generate a magic link to get access and refresh tokens
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email: decoded.email,
     });
 
-    if (sessionError || !sessionData) {
-      console.error('Error generating session:', sessionError);
+    if (linkError || !linkData) {
+      console.error('Error generating magic link:', linkError);
       redirect('/login?error=session_creation_failed');
     }
 
-    // Set the session cookies
-    const { data: { session }, error: signInError } = await supabase.auth.signInWithOtp({
-      email: decoded.email,
-      options: {
-        shouldCreateUser: false,
-      },
+    // Extract tokens from the generated link
+    // The linkData contains properties that we can use to set the session
+    const { properties } = linkData;
+    
+    if (!properties?.access_token || !properties?.refresh_token) {
+      console.error('No tokens in magic link response');
+      redirect('/login?error=no_tokens');
+    }
+
+    // Create a regular Supabase client (not admin) to set the session
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options });
+          },
+        },
+      }
+    );
+
+    // Set the session using the tokens
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: properties.access_token,
+      refresh_token: properties.refresh_token,
     });
 
-    if (signInError) {
-      console.error('Error signing in:', signInError);
-      redirect('/login?error=sign_in_failed');
+    if (sessionError) {
+      console.error('Error setting session:', sessionError);
+      redirect('/login?error=session_set_failed');
     }
 
     // Redirect to the intended page
