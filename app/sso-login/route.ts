@@ -108,17 +108,31 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get: (name: string) => cookieStore.get(name)?.value,
+          get: (name: string) => {
+            const cookie = cookieStore.get(name);
+            console.log('[SSO] Getting cookie:', name, '=', cookie?.value ? 'present' : 'missing');
+            return cookie?.value;
+          },
           set: (name: string, value: string, options: CookieOptions) => {
             try {
-              cookieStore.set({ name, value, ...options });
+              console.log('[SSO] Setting cookie:', name, 'with options:', JSON.stringify(options));
+              cookieStore.set({ 
+                name, 
+                value, 
+                ...options,
+                path: '/',
+                httpOnly: true,
+                secure: true,
+                sameSite: 'lax'
+              });
             } catch (error) {
               console.error('[SSO] Error setting cookie:', error);
             }
           },
           remove: (name: string, options: CookieOptions) => {
             try {
-              cookieStore.set({ name, value: '', ...options });
+              console.log('[SSO] Removing cookie:', name);
+              cookieStore.set({ name, value: '', ...options, maxAge: 0 });
             } catch (error) {
               console.error('[SSO] Error removing cookie:', error);
             }
