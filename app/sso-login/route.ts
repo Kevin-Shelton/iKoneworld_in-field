@@ -47,13 +47,16 @@ export async function GET(request: NextRequest) {
     // Try to get existing user from auth
     const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
-    const existingUser = users?.find((u: any) => u.email === decoded.email);
+    const existingAuthUser = users?.find((u: any) => u.email === decoded.email);
     
-    if (existingUser) {
-      console.log('[SSO] User already exists:', existingUser.id);
+    let authUserId: string;
+    
+    if (existingAuthUser) {
+      console.log('[SSO] Auth user already exists:', existingAuthUser.id);
+      authUserId = existingAuthUser.id;
     } else {
-      // Create new user
-      console.log('[SSO] Creating new user for:', decoded.email);
+      // Create new auth user
+      console.log('[SSO] Creating new auth user for:', decoded.email);
       
       const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email: decoded.email,
@@ -65,16 +68,75 @@ export async function GET(request: NextRequest) {
       });
 
       if (signUpError) {
-        console.error('[SSO] Error creating user:', signUpError);
+        console.error('[SSO] Error creating auth user:', signUpError);
         
-        // If user already exists (race condition), continue anyway
+        // If user already exists (race condition), try to find them
         if (signUpError.message?.includes('already been registered')) {
-          console.log('[SSO] User was created by another request, continuing...');
+          console.log('[SSO] Auth user was created by another request, fetching...');
+          const { data: { users: retryUsers } } = await supabaseAdmin.auth.admin.listUsers();
+          const retryUser = retryUsers?.find((u: any) => u.email === decoded.email);
+          if (retryUser) {
+            authUserId = retryUser.id;
+          } else {
+            return NextResponse.redirect(new URL('/login?error=user_creation_failed', request.url));
+          }
         } else {
           return NextResponse.redirect(new URL('/login?error=user_creation_failed', request.url));
         }
       } else {
-        console.log('[SSO] User created successfully:', authData.user?.id);
+        console.log('[SSO] Auth user created successfully:', authData.user?.id);
+        authUserId = authData.user!.id;
+      }
+    }
+
+    // Check if user exists in users table
+    const { data: existingDbUser } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('openId', authUserId)
+      .single();
+
+    if (existingDbUser) {
+      console.log('[SSO] Users table record already exists:', existingDbUser.id);
+      
+      // Update lastSignedIn
+      await supabaseAdmin
+        .from('users')
+        .update({
+          lastSignedIn: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .eq('openId', authUserId);
+    } else {
+      // Create new user in users table
+      console.log('[SSO] Creating users table record for:', decoded.email);
+      
+      const { data: newDbUser, error: insertError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          openId: authUserId,
+          email: decoded.email,
+          name: decoded.name || decoded.email.split('@')[0],
+          role: 'user',
+          loginMethod: 'sso',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastSignedIn: new Date().toISOString(),
+        })
+        .select('*')
+        .single();
+
+      if (insertError) {
+        console.error('[SSO] Error creating users table record:', insertError);
+        
+        // If record already exists (race condition), continue anyway
+        if (insertError.code === '23505') { // Unique constraint violation
+          console.log('[SSO] Users table record was created by another request, continuing...');
+        } else {
+          return NextResponse.redirect(new URL('/login?error=db_user_creation_failed', request.url));
+        }
+      } else {
+        console.log('[SSO] Users table record created successfully:', newDbUser?.id);
       }
     }
 
