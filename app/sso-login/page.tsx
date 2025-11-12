@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -49,11 +50,8 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       redirect('/login?error=invalid_token');
     }
 
-    // Use Supabase admin client
-    const supabase = supabaseAdmin;
-
-    // Check if user exists, if not create them
-    const { data: existingUser, error: getUserError } = await supabase
+    // Check if user exists using admin client
+    const { data: existingUser, error: getUserError } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('email', decoded.email)
@@ -63,13 +61,13 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       console.error('[SSO] Error checking user:', getUserError);
     }
 
+    // Create user if doesn't exist
     if (!existingUser) {
       console.log('[SSO] Creating new user for:', decoded.email);
       
-      // Create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
         email: decoded.email,
-        password: Math.random().toString(36).slice(-16), // Random password
+        password: Math.random().toString(36).slice(-16),
         options: {
           data: {
             name: decoded.name || decoded.email.split('@')[0],
@@ -87,8 +85,8 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       console.log('[SSO] User already exists:', existingUser.id);
     }
 
-    // Sign in the user using admin API
-    const { data: adminAuthData, error: adminError } = await supabase.auth.admin.generateLink({
+    // Generate magic link using admin client
+    const { data: adminAuthData, error: adminError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: decoded.email,
     });
@@ -100,7 +98,6 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
 
     console.log('[SSO] Magic link generated successfully');
 
-    // Get the hashed token from the magic link
     const hashedToken = adminAuthData.properties?.hashed_token;
     
     if (!hashedToken) {
@@ -108,7 +105,33 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       redirect('/login?error=auth_failed');
     }
 
-    // Verify the OTP to establish the session
+    // Create a server client with cookie support for setting the session
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get: (name: string) => cookieStore.get(name)?.value,
+          set: (name: string, value: string, options: CookieOptions) => {
+            try {
+              cookieStore.set({ name, value, ...options });
+            } catch (error) {
+              console.error('[SSO] Error setting cookie:', error);
+            }
+          },
+          remove: (name: string, options: CookieOptions) => {
+            try {
+              cookieStore.set({ name, value: '', ...options });
+            } catch (error) {
+              console.error('[SSO] Error removing cookie:', error);
+            }
+          },
+        },
+      }
+    );
+
+    // Verify the OTP to establish the session with cookies
     const { error: verifyError } = await supabase.auth.verifyOtp({
       type: 'email',
       token_hash: hashedToken,
@@ -119,7 +142,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       redirect('/login?error=session_failed');
     }
 
-    console.log('[SSO] Session established successfully');
+    console.log('[SSO] Session established successfully with cookies');
     console.log('[SSO] Redirecting to:', redirectPath);
 
     // Redirect to the intended page
