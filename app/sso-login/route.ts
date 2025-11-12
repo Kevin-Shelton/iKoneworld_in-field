@@ -116,15 +116,8 @@ export async function GET(request: NextRequest) {
           set: (name: string, value: string, options: CookieOptions) => {
             try {
               console.log('[SSO] Setting cookie:', name, 'with options:', JSON.stringify(options));
-              cookieStore.set({ 
-                name, 
-                value, 
-                ...options,
-                path: '/',
-                httpOnly: true,
-                secure: true,
-                sameSite: 'lax'
-              });
+              // Don't override Supabase's cookie options, just pass them through
+              cookieStore.set({ name, value, ...options });
             } catch (error) {
               console.error('[SSO] Error setting cookie:', error);
             }
