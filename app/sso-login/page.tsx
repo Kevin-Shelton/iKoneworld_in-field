@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +49,8 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       redirect('/login?error=invalid_token');
     }
 
-    // Create Supabase admin client
-    const supabase = await createClient();
+    // Use Supabase admin client
+    const supabase = supabaseAdmin;
 
     // Check if user exists, if not create them
     const { data: existingUser, error: getUserError } = await supabase
