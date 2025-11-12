@@ -44,19 +44,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=invalid_token', request.url));
     }
 
-    // Check if user exists using admin client
-    const { data: existingUser, error: getUserError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('email', decoded.email)
-      .single();
-
-    if (getUserError && getUserError.code !== 'PGRST116') {
-      console.error('[SSO] Error checking user:', getUserError);
-    }
-
-    // Create user if doesn't exist
-    if (!existingUser) {
+    // Try to get existing user from auth
+    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    const existingUser = users?.find((u: any) => u.email === decoded.email);
+    
+    if (existingUser) {
+      console.log('[SSO] User already exists:', existingUser.id);
+    } else {
+      // Create new user
       console.log('[SSO] Creating new user for:', decoded.email);
       
       const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
@@ -70,12 +66,16 @@ export async function GET(request: NextRequest) {
 
       if (signUpError) {
         console.error('[SSO] Error creating user:', signUpError);
-        return NextResponse.redirect(new URL('/login?error=user_creation_failed', request.url));
+        
+        // If user already exists (race condition), continue anyway
+        if (signUpError.message?.includes('already been registered')) {
+          console.log('[SSO] User was created by another request, continuing...');
+        } else {
+          return NextResponse.redirect(new URL('/login?error=user_creation_failed', request.url));
+        }
+      } else {
+        console.log('[SSO] User created successfully:', authData.user?.id);
       }
-
-      console.log('[SSO] User created successfully:', authData.user?.id);
-    } else {
-      console.log('[SSO] User already exists:', existingUser.id);
     }
 
     // Generate magic link using admin client to get session tokens
