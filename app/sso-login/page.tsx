@@ -1,4 +1,4 @@
-import { redirect } from 'next/headers';
+// No imports needed for this debug version
 
 interface SSOLoginPageProps {
   searchParams: Promise<{ token?: string; redirect?: string }>;
