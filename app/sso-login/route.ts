@@ -1,13 +1,9 @@
-import { redirect } from 'next/navigation';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
-
-interface SSOLoginPageProps {
-  searchParams: Promise<{ token?: string; redirect?: string }>;
-}
 
 interface JWTPayload {
   email: string;
@@ -15,19 +11,19 @@ interface JWTPayload {
   exp?: number;
 }
 
-export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) {
-  const params = await searchParams;
-  const token = params.token;
-  const redirectPath = params.redirect || '/dashboard';
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const token = searchParams.get('token');
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
 
-  console.log('[SSO] SSO login page accessed');
+  console.log('[SSO] SSO login route accessed');
   console.log('[SSO] Token present:', !!token);
   console.log('[SSO] Redirect path:', redirectPath);
 
   // If no token provided, redirect to login
   if (!token) {
     console.error('[SSO] No token provided');
-    redirect('/login?error=missing_token');
+    return NextResponse.redirect(new URL('/login?error=missing_token', request.url));
   }
 
   try {
@@ -35,7 +31,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
       console.error('[SSO] JWT_SECRET not configured');
-      redirect('/login?error=server_config');
+      return NextResponse.redirect(new URL('/login?error=server_config', request.url));
     }
 
     // Decode and verify the JWT
@@ -47,7 +43,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       console.log('[SSO] JWT verified successfully for email:', decoded.email);
     } catch (error) {
       console.error('[SSO] JWT verification failed:', error);
-      redirect('/login?error=invalid_token');
+      return NextResponse.redirect(new URL('/login?error=invalid_token', request.url));
     }
 
     // Check if user exists using admin client
@@ -77,7 +73,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
 
       if (signUpError) {
         console.error('[SSO] Error creating user:', signUpError);
-        redirect('/login?error=user_creation_failed');
+        return NextResponse.redirect(new URL('/login?error=user_creation_failed', request.url));
       }
 
       console.log('[SSO] User created successfully:', authData.user?.id);
@@ -93,7 +89,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
 
     if (adminError || !adminAuthData) {
       console.error('[SSO] Error generating magic link:', adminError);
-      redirect('/login?error=auth_failed');
+      return NextResponse.redirect(new URL('/login?error=auth_failed', request.url));
     }
 
     console.log('[SSO] Magic link generated successfully');
@@ -102,7 +98,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
     
     if (!hashedToken) {
       console.error('[SSO] No hashed token in magic link response');
-      redirect('/login?error=auth_failed');
+      return NextResponse.redirect(new URL('/login?error=auth_failed', request.url));
     }
 
     // Create a server client with cookie support for setting the session
@@ -139,17 +135,17 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
 
     if (verifyError) {
       console.error('[SSO] Error verifying OTP:', verifyError);
-      redirect('/login?error=session_failed');
+      return NextResponse.redirect(new URL('/login?error=session_failed', request.url));
     }
 
     console.log('[SSO] Session established successfully with cookies');
     console.log('[SSO] Redirecting to:', redirectPath);
 
     // Redirect to the intended page
-    redirect(redirectPath);
+    return NextResponse.redirect(new URL(redirectPath, request.url));
 
   } catch (error) {
     console.error('[SSO] Unexpected error:', error);
-    redirect('/login?error=unexpected_error');
+    return NextResponse.redirect(new URL('/login?error=unexpected_error', request.url));
   }
 }
