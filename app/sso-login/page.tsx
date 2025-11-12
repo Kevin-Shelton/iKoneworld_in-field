@@ -78,7 +78,7 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       userId = userExists.id;
     }
 
-    // Generate a magic link to get access and refresh tokens
+    // Generate a magic link to get the hashed token
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email: decoded.email,
@@ -89,16 +89,15 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       redirect('/login?error=session_creation_failed');
     }
 
-    // Extract tokens from the generated link
-    // The linkData contains properties that we can use to set the session
+    // Extract hashed_token from the generated link properties
     const { properties } = linkData;
     
-    if (!properties?.access_token || !properties?.refresh_token) {
-      console.error('No tokens in magic link response');
-      redirect('/login?error=no_tokens');
+    if (!properties?.hashed_token) {
+      console.error('No hashed_token in magic link response');
+      redirect('/login?error=no_token');
     }
 
-    // Create a regular Supabase client (not admin) to set the session
+    // Create a regular Supabase client (not admin) to verify OTP and set the session
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -117,15 +116,15 @@ export default async function SSOLoginPage({ searchParams }: SSOLoginPageProps) 
       }
     );
 
-    // Set the session using the tokens
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token: properties.access_token,
-      refresh_token: properties.refresh_token,
+    // Verify the OTP using the hashed token to establish the session
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      type: 'email',
+      token_hash: properties.hashed_token,
     });
 
-    if (sessionError) {
-      console.error('Error setting session:', sessionError);
-      redirect('/login?error=session_set_failed');
+    if (verifyError) {
+      console.error('Error verifying OTP:', verifyError);
+      redirect('/login?error=session_verification_failed');
     }
 
     // Redirect to the intended page
