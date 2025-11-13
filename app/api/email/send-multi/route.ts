@@ -151,6 +151,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+	    // Helper function to introduce a delay
+	    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+	    
 	    // Send actual emails via Resend and update contacts
 	    const emailResults = [];
 	    
@@ -158,6 +161,10 @@ export async function POST(request: NextRequest) {
 	    console.log(`[Send Multi] Processing ${recipients.length} recipients...`);
 	    
 	    for (const recipient of recipients as Recipient[]) {
+	      // Introduce a 500ms delay to avoid Resend's 2 req/sec rate limit
+	      if (emailResults.length > 0) {
+	        await delay(500);
+	      }
       try {
         // Send the translated email
         const result = await sendTranslatedEmail({
