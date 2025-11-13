@@ -8,6 +8,8 @@ interface WelcomeEmailRequest {
   name?: string;
   portalUrl?: string;
   language?: string;
+  resetToken?: string;
+  isResend?: boolean;
 }
 
 /**
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json() as WelcomeEmailRequest;
-    const { email, name, portalUrl, language } = body;
+    const { email, name, portalUrl, language, resetToken, isResend } = body;
 
     // Validate required fields
     if (!email || !email.includes('@')) {
@@ -68,6 +70,8 @@ export async function POST(request: NextRequest) {
         email,
         portalUrl: portal,
         chatUrl,
+        resetToken,
+        isResend: isResend || false,
       }),
       replyTo: process.env.RESEND_REPLY_TO_EMAIL || 'support@ikoneworld.net',
     });
@@ -108,11 +112,15 @@ function formatWelcomeEmail({
   email,
   portalUrl,
   chatUrl,
+  resetToken,
+  isResend,
 }: {
   name: string;
   email: string;
   portalUrl: string;
   chatUrl: string;
+  resetToken?: string;
+  isResend?: boolean;
 }): string {
   return `
 <!DOCTYPE html>
@@ -333,7 +341,12 @@ function formatWelcomeEmail({
     <p class="greeting">Hi ${name},</p>
     
     <div class="content">
-      <p>Welcome to iKoneworld! We're excited to have you on board. Your account has been successfully created and you're ready to explore our multilingual customer experience platform.</p>
+      ${resetToken ? `
+        <p>${isResend ? 'Your activation link has been resent!' : 'Welcome to iKoneworld! We\'re excited to have you on board.'} Your account has been successfully created.</p>
+        <p><strong>To complete your account setup, please set your password by clicking the button below:</strong></p>
+      ` : `
+        <p>Welcome to iKoneworld! We're excited to have you on board. Your account has been successfully created and you're ready to explore our multilingual customer experience platform.</p>
+      `}
     </div>
     
     <div class="account-box">
@@ -351,6 +364,15 @@ function formatWelcomeEmail({
     <div class="steps-section">
       <h3>🚀 Getting Started</h3>
       
+      ${resetToken ? `
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <strong>Set Your Password</strong><br>
+          Click the "Set Password" button below to create your secure password.
+        </div>
+      </div>
+      ` : `
       <div class="step">
         <div class="step-number">1</div>
         <div class="step-content">
@@ -358,6 +380,7 @@ function formatWelcomeEmail({
           Use your email and the password provided by your administrator to access the portal.
         </div>
       </div>
+      `}
       
       <div class="step">
         <div class="step-number">2</div>
@@ -376,10 +399,20 @@ function formatWelcomeEmail({
       </div>
     </div>
     
+    ${resetToken ? `
+    <div class="button-container">
+      <a href="${portalUrl}/set-password?token=${resetToken}" class="button">Set Your Password</a>
+    </div>
+    <div style="text-align: center; margin: 20px 0;">
+      <p style="color: #dc2626; font-size: 14px; font-weight: 600;">⏰ This link expires in 24 hours</p>
+      <p style="color: #6b7280; font-size: 13px; margin-top: 5px;">If you didn't request this, please contact your administrator.</p>
+    </div>
+    ` : `
     <div class="button-container">
       <a href="${portalUrl}" class="button">Access Portal</a>
       <a href="${chatUrl}" class="button button-secondary">View Chat System</a>
     </div>
+    `}
     
     <div class="features-section">
       <h3>✨ What You Can Do</h3>
