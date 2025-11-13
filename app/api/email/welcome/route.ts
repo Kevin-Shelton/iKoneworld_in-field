@@ -393,7 +393,7 @@ function formatWelcomeEmail({
       <div class="step">
         <div class="step-number">3</div>
         <div class="step-content">
-          <strong>Access the Chat System</strong><br>
+          <strong>Access the POC Experience System</strong><br>
           Experience seamless multilingual communication with automatic translation and SSO authentication.
         </div>
       </div>
@@ -407,12 +407,7 @@ function formatWelcomeEmail({
       <p style="color: #dc2626; font-size: 14px; font-weight: 600;">⏰ This link expires in 24 hours</p>
       <p style="color: #6b7280; font-size: 13px; margin-top: 5px;">If you didn't request this, please contact your administrator.</p>
     </div>
-    ` : `
-    <div class="button-container">
-      <a href="${portalUrl}" class="button">Access Portal</a>
-      <a href="${chatUrl}" class="button button-secondary">View Chat System</a>
-    </div>
-    `}
+    ` : ''}
     
     <div class="features-section">
       <h3>✨ What You Can Do</h3>
