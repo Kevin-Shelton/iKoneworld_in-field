@@ -400,8 +400,10 @@ function formatWelcomeEmail({
     </div>
     
     ${resetToken ? `
-    <div class="button-container">
-      <a href="${portalUrl}/set-password?token=${resetToken}" class="button">Set Your Password</a>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${portalUrl}/set-password?token=${resetToken}" style="display: inline-block; background: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); mso-padding-alt: 0; text-align: center;">
+        <span style="color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Set Your Password</span>
+      </a>
     </div>
     <div style="text-align: center; margin: 20px 0;">
       <p style="color: #dc2626; font-size: 14px; font-weight: 600;">⏰ This link expires in 24 hours</p>
