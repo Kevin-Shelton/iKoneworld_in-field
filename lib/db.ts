@@ -23,15 +23,28 @@ import {
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  // Diagnostic logging
+  const dbUrl = process.env.DATABASE_URL;
+  console.log("[Database] Checking DATABASE_URL:", {
+    exists: !!dbUrl,
+    length: dbUrl?.length || 0,
+    starts: dbUrl?.substring(0, 20) || 'undefined'
+  });
+
+  if (!_db && dbUrl) {
     try {
-      const client = postgres(process.env.DATABASE_URL);
+      console.log("[Database] Attempting connection...");
+      const client = postgres(dbUrl);
       _db = drizzle(client);
+      console.log("[Database] Connection established successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
+  } else if (!dbUrl) {
+    console.error("[Database] DATABASE_URL environment variable is not set");
   }
+  
   return _db;
 }
 
