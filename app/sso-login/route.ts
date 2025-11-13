@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
           name: decoded.name || decoded.email.split('@')[0],
           role: 'user',
           loginMethod: 'sso',
+          default_language: 'en-US', // Set default language for SSO users
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           lastSignedIn: new Date().toISOString(),
