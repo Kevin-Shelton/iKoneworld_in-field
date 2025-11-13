@@ -151,9 +151,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send actual emails via Resend and update contacts
-    const emailResults = [];
-    for (const recipient of recipients as Recipient[]) {
+	    // Send actual emails via Resend and update contacts
+	    const emailResults = [];
+	    
+	    // Log the number of recipients we are about to process
+	    console.log(`[Send Multi] Processing ${recipients.length} recipients...`);
+	    
+	    for (const recipient of recipients as Recipient[]) {
       try {
         // Send the translated email
         const result = await sendTranslatedEmail({
@@ -195,13 +199,15 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    return NextResponse.json({
-      success: true,
-      message,
-      threadId: finalThreadId,
-      recipientCount: recipients.length,
-      emailResults,
-    });
+	    console.log('[Send Multi] Final email results:', emailResults);
+	    
+	    return NextResponse.json({
+	      success: true,
+	      message,
+	      threadId: finalThreadId,
+	      recipientCount: recipients.length,
+	      emailResults,
+	    });
   } catch (error) {
     console.error('Error in send-multi API:', error);
     return NextResponse.json(
