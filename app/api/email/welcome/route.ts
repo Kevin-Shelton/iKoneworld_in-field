@@ -426,16 +426,8 @@ function formatWelcomeEmail({
       </ul>
     </div>
     
-    <div class="support-section">
-      <h3>💬 Need Help?</h3>
-      <p>Our support team is here to assist you.</p>
-      <p>Email us at <a href="mailto:support@ikoneworld.net">support@ikoneworld.net</a></p>
-    </div>
-    
     <div class="footer">
-      <p><small>This email was sent by iKoneworld Customer Experience Platform.</small></p>
-      <p><small>© ${new Date().getFullYear()} iKoneworld. All rights reserved.</small></p>
-      <p><small>Powered by <a href="https://ikoneworld.net">iKoneworld.net</a></small></p>
+      <p><small>Powered by Invictus</small></p>
     </div>
   </div>
 </body>
