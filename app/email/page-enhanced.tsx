@@ -843,18 +843,25 @@ export default function EmailInboxPage() {
               <div className="p-4 border-b border-slate-800">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-white mb-1">
-                      {selectedThread.subject}
-                    </h2>
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
-                      <span>{selectedThread.participants.length} participants</span>
-                      <span>•</span>
-                      {selectedThread.participants.map(p => (
-                        <span key={p.email} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                          {p.language.toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
+	                    <h2 className="text-xl font-semibold text-white mb-1">
+	                      {selectedThread.subject}
+	                    </h2>
+	                    <div className="text-sm text-slate-400 mb-2">
+	                      <span className="font-semibold text-slate-300">To: </span>
+	                      {selectedThread.participants
+	                        .filter(p => p.email !== userEmail)
+	                        .map(p => p.name || p.email)
+	                        .join(', ')}
+	                    </div>
+	                    <div className="flex items-center gap-2 text-sm text-slate-400">
+	                      <span>{selectedThread.participants.length} participants</span>
+	                      <span>•</span>
+	                      {selectedThread.participants.map(p => (
+	                        <span key={p.email} className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+	                          {p.language.toUpperCase()}
+	                        </span>
+	                      ))}
+	                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {selectedFolder === 'trash' ? (
