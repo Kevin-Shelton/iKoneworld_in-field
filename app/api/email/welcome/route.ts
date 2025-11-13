@@ -417,11 +417,12 @@ function formatWelcomeEmail({
     <div class="features-section">
       <h3>✨ What You Can Do</h3>
       <ul>
-        <li><strong>Multilingual Support:</strong> Communicate in 30+ languages with automatic translation</li>
-        <li><strong>Customer Personas:</strong> Explore journey maps for different customer segments</li>
-        <li><strong>Document Translation:</strong> Translate documents while preserving formatting</li>
-        <li><strong>Email Translation:</strong> Send and receive emails in multiple languages</li>
-        <li><strong>Real-time Chat:</strong> Engage with customers in their preferred language</li>
+        <li><strong>Website - Instant Global Presence:</strong> Provides full-site translation via a simple language icon, instantly transforming all website content into the user's chosen language for a truly localized experience.</li>
+        <li><strong>In-Field - Audible, Two-Way Clarity:</strong> Enables voice-integrated, real-time, two-way translation for face-to-face conversations. The employee's spoken words are translated, displayed as text, and repeated audibly in the customer's language.</li>
+        <li><strong>Chat - Instant Multilingual Support:</strong> Integrates seamlessly with existing chat platforms to offer immediate, translated customer support, reducing response times and increasing customer satisfaction.</li>
+        <li><strong>Email - Professional International Correspondence:</strong> Translates inbound and outbound customer emails, ensuring professional, context-aware communication without the need for multilingual staff.</li>
+        <li><strong>Documents - Accurate Content Localization:</strong> Handles complex document translation (PDF, DOCX, PPTX) while preserving the original formatting and structure, ensuring legal and technical accuracy.</li>
+        <li><strong>Voice - Full-Featured Contact Center Solution:</strong> Powered by iKunnect, this experience provides a complete Contact Center as a Service (CCAAS) solution, featuring real-time voice translation and transcription capabilities for all spoken interactions.</li>
       </ul>
     </div>
     
